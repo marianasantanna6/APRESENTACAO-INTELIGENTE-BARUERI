@@ -1,0 +1,28 @@
+# =========================
+# FRONTEND (VITE / REACT)
+# =========================
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# =========================
+# BACKEND (quando tiver libs)
+# =========================
+backend/node_modules/
+backend/.env
+backend/logs/
+
+# =========================
+# IA
+# =========================
+ia/venv/
+ia/__pycache__/
+ia/*.pyc
+
+# =========================
+# GERAL
+# =========================
+.env
+*.log
+.vscode/
+.DS_Store
