@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  FaUser,
-  FaQuestion,
   FaSearch,
   FaFilter,
   FaChevronDown,
 } from "react-icons/fa";
+import { FiHelpCircle, FiUser } from "react-icons/fi";
 import createLogo from "../assets/images/create-logo.png";
 
 const createCategories = [
@@ -20,7 +19,19 @@ const createCategories = [
   { label: "Saúde", color: "bg-[#ef91c2]", width: "w-[260px]" },
 ];
 
-const availableYears = ["Todos", "2025", "2024", "2023", "2022"];
+const availableYears = [
+  "Todos",
+  ...Array.from({ length: 2025 - 1950 + 1 }, (_, index) =>
+    String(2025 - index),
+  ),
+];
+
+const iconButtonClass =
+  "inline-flex h-11 items-center justify-center gap-2.5 rounded-[8px] px-3 text-[1rem] font-bold !text-white transition-all hover:-translate-y-0.5 hover:bg-white/12 focus:outline-none focus:ring-4 focus:ring-white/25 sm:px-4 lg:text-[1.08rem]";
+const navPillClass =
+  "flex h-10 items-center justify-center rounded-[50px] px-4 text-[1rem] font-semibold !text-white transition-all hover:-translate-y-0.5 hover:border-[#1675b8] hover:bg-[rgba(22,117,184,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] focus:outline-none focus:ring-4 focus:ring-white/25 lg:h-11 lg:px-5 lg:text-[1.05rem]";
+const activeNavPillClass =
+  "border border-[#1675b8] bg-[rgba(22,117,184,0.5)] shadow-[0_4px_12px_rgba(0,0,0,0.12)]";
 
 function CreatePresentationPage() {
   const [selectedCategory, setSelectedCategory] = useState("Educação");
@@ -29,7 +40,7 @@ function CreatePresentationPage() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-[#1e1e1e]">
-      <header className="border-b border-white/20 bg-[linear-gradient(90deg,#ffffff_8.654%,#1675b8_100%)]">
+      <header className="sticky top-0 z-20 border-b border-white/20 bg-[linear-gradient(90deg,#ffffff_8.654%,#1675b8_100%)] backdrop-blur">
         <div className="mx-auto flex max-w-310 items-center justify-between gap-6 px-4 py-4 sm:px-6 lg:px-8">
           <Link
             to="/criar"
@@ -39,45 +50,50 @@ function CreatePresentationPage() {
             <img
               src={createLogo}
               alt="Logo Barueri"
-              className="h-auto w-29.5 sm:w-42.5"
+              className="h-auto w-29 sm:w-37.5"
             />
           </Link>
 
-          <div className="hidden items-center gap-4 text-white md:flex">
+          <nav
+            aria-label="Área logada"
+            className="hidden items-center gap-3 text-[15px] font-semibold text-white md:flex lg:text-[16px]"
+          >
             <Link
               to="/criar"
-              className="flex h-14 w-44 items-center justify-center rounded-[50px] border border-[#1675b8] bg-[rgba(22,117,184,0.5)] text-[1.35rem] font-semibold shadow-[0_4px_12px_rgba(0,0,0,0.12)]"
+              aria-current="page"
+              className={`${navPillClass} ${activeNavPillClass} w-28 lg:w-32`}
             >
               Criar
             </Link>
 
             <div
               aria-hidden="true"
-              className="h-8.25 w-0.5 rounded-sm bg-white/30"
+              className="h-6 w-0.5 bg-white/30"
             />
 
             <button
               type="button"
-              className="text-[1.2rem] font-semibold tracking-[0.01em] text-white transition-opacity hover:opacity-80"
+              className={`${navPillClass} border border-transparent`}
             >
-              Minhas apresentações
+              Minhas Apresentações
             </button>
-          </div>
+          </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               type="button"
               aria-label="Conta"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm transition-transform hover:scale-105 sm:h-13 sm:w-13"
+              className={iconButtonClass}
             >
-              <FaUser className="h-5 w-5 text-[#1675b8]" />
+              <FiUser className="h-5.5 w-5.5 text-white" />
             </button>
             <button
               type="button"
               aria-label="Ajuda"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm transition-transform hover:scale-105 sm:h-13 sm:w-13"
+              className={iconButtonClass}
             >
-              <FaQuestion className="h-5 w-5 text-[#1675b8]" />
+              <FiHelpCircle className="h-5.5 w-5.5 text-white" />
+              <span className="hidden text-white sm:inline">Ajuda</span>
             </button>
           </div>
         </div>
@@ -85,14 +101,23 @@ function CreatePresentationPage() {
 
       <main className="mx-auto max-w-310 px-5 pb-20 pt-24 sm:px-6 lg:px-8">
         <section className="mx-auto flex max-w-302.5 flex-col items-center">
-          <h1 className="text-center text-[2.6rem] font-extrabold leading-[1.05] tracking-[-0.05em] text-[#1e1e1e] sm:text-[3.6rem] lg:text-[5rem]">
+          <h1 className="reveal-on-scroll text-center text-[2.6rem] font-extrabold leading-[1.05] tracking-[-0.05em] text-[#1e1e1e] sm:text-[3.6rem] lg:text-[5rem]">
             Crie uma Apresentação{" "}
-            <span className="bg-[linear-gradient(90deg,#0a3452_0%,#1675b8_25.962%)] bg-clip-text text-transparent">
+            <span
+              className="typewriter-word bg-[linear-gradient(90deg,#0a3452_0%,#1675b8_25.962%)] bg-clip-text text-transparent"
+              style={{
+                "--typewriter-width": "10.5ch",
+                "--typewriter-steps": 10,
+              }}
+            >
               Inteligente
             </span>
           </h1>
 
-          <div className="relative mt-10 w-full">
+          <div
+            className="reveal-on-scroll relative mt-10 w-full"
+            style={{ "--reveal-delay": "120ms" }}
+          >
             <input
               type="search"
               value={search}
@@ -112,7 +137,10 @@ function CreatePresentationPage() {
             </button>
           </div>
 
-          <div className="mt-10 flex w-full flex-col gap-6">
+          <div
+            className="reveal-on-scroll mt-10 flex w-full flex-col gap-6"
+            style={{ "--reveal-delay": "220ms" }}
+          >
             <div className="flex flex-wrap justify-center gap-5 xl:justify-between">
               {createCategories.map((category) => {
                 const isSelected = category.label === selectedCategory;

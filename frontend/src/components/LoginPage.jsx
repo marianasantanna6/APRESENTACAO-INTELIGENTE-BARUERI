@@ -78,21 +78,29 @@ function LoginPage() {
         />
       ))}
 
-      <section className="relative z-10 mx-auto mt-10 flex min-h-209.5 w-full max-w-224.25 flex-col items-center rounded-[20px] bg-white/81 px-6 pb-12 pt-16 shadow-[0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-[2px] sm:px-12 sm:pt-20 lg:px-27">
-        <Link to="/" aria-label="Voltar para a página inicial">
+      <section className="relative z-10 mx-auto mt-28 flex w-full max-w-224.25 flex-col items-center rounded-[20px] bg-white/81 px-6 pb-14 pt-18 shadow-[0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-[2px] sm:mt-34 sm:px-12 sm:pb-16 sm:pt-22 lg:px-27">
+        <Link
+          to="/"
+          aria-label="Voltar para a página inicial"
+          className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2"
+        >
           <img
             src={loginLogo}
             alt="Logo Barueri"
-            className="h-auto w-45 sm:w-60"
+            className="reveal-on-scroll h-auto w-56 drop-shadow-[0_8px_16px_rgba(0,0,0,0.12)] sm:w-72"
           />
         </Link>
 
-        <h1 className="mt-8 text-center text-[2.1rem] font-extrabold tracking-[-0.04em] text-[#1e1e1e] sm:mt-10 sm:text-[3rem]">
+        <h1
+          className="reveal-on-scroll mt-4 text-center text-[2.1rem] font-extrabold tracking-[-0.04em] text-[#1e1e1e] sm:mt-5 sm:text-[3rem]"
+          style={{ "--reveal-delay": "100ms" }}
+        >
           Faça seu Login
         </h1>
 
         <form
-          className="mt-8 flex w-full flex-col gap-7 sm:mt-10"
+          className="reveal-on-scroll mt-7 flex w-full flex-col gap-6 sm:mt-8"
+          style={{ "--reveal-delay": "180ms" }}
           onSubmit={handleSubmit}
         >
           <div>
@@ -144,7 +152,7 @@ function LoginPage() {
 
           <button
             type="submit"
-            className="mt-1 h-19.5 rounded-[20px] bg-[#1675b8] text-[1.85rem] font-bold tracking-[0.02em] text-white shadow-[0_4px_10px_rgba(0,0,0,0.25)] transition-transform hover:-translate-y-0.5"
+            className="mt-1 h-19.5 rounded-[20px] bg-[#1675b8] text-[1.15rem] font-semibold tracking-[0.02em] text-white shadow-[0_4px_10px_rgba(0,0,0,0.25)] transition-transform hover:-translate-y-0.5 sm:text-[1.9rem]"
           >
             Entrar
           </button>

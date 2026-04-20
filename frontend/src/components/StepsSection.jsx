@@ -31,10 +31,12 @@ function StepsSection() {
   return (
     <section id="como-funciona" className="px-5 py-20 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-325.5">
-        <SectionHeader
-          title="Como funciona"
-          description="Três passos simples para apresentações inteligentes"
-        />
+        <div className="reveal-on-scroll">
+          <SectionHeader
+            title="Como funciona"
+            description="Três passos simples para apresentações inteligentes"
+          />
+        </div>
 
         <div className="mt-12 flex flex-col items-stretch justify-center gap-4 lg:flex-row lg:items-center lg:gap-6">
           {steps.map((step, index) => {
@@ -42,7 +44,8 @@ function StepsSection() {
             return (
               <div
                 key={step.step}
-                className="flex flex-col items-center gap-4 lg:flex-row"
+                className="reveal-on-scroll flex flex-col items-center gap-4 lg:flex-row"
+                style={{ "--reveal-delay": `${index * 110}ms` }}
               >
                 <article
                   className={`${cardBase} flex h-full w-full max-w-92 flex-col items-center px-6 pb-10 pt-11 text-center`}
@@ -76,13 +79,13 @@ function StepsSection() {
           })}
         </div>
 
-        <div className="mt-10 flex justify-center">
+        <div className="reveal-on-scroll mt-10 flex justify-center">
           <a
             href="#inicio"
-            className="inline-flex h-14.5 items-center justify-center gap-3 rounded-[18px] bg-[linear-gradient(100.26deg,rgba(10,52,82,0.63)_1.91%,#1675b8_68.48%)] px-7 text-[1rem] font-bold text-[#f8fafc] shadow-[0_4px_4px_rgba(0,0,0,0.15)] transition-transform hover:-translate-y-0.5 sm:h-17.25 sm:px-8 sm:text-[1.15rem]"
+            className="inline-flex h-14.5 items-center justify-center gap-3 rounded-[18px] bg-[linear-gradient(100.26deg,rgba(10,52,82,0.63)_1.91%,#1675b8_68.48%)] px-7 text-[1rem] font-bold !text-white shadow-[0_4px_4px_rgba(0,0,0,0.15)] transition-transform hover:-translate-y-0.5 sm:h-17.25 sm:px-8 sm:text-[1.15rem]"
           >
-            Criar Apresentação
-            <FaArrowDown className="h-5 w-5 rotate-90 sm:h-5.5 sm:w-5.5" />
+            <span className="font-bold !text-white">Criar Apresentação</span>
+            <FaArrowDown className="h-5 w-5 rotate-270 text-amber-100 sm:h-5.5 sm:w-5.5" />
           </a>
         </div>
       </div>

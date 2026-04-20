@@ -1,7 +1,13 @@
 import { Link } from "react-router-dom";
 import { FaArrowDown, FaServer } from "react-icons/fa";
-import heroChartPie from "../assets/images/hero-chart-pie.png";
-import heroChartBars from "../assets/images/hero-chart-bars.png";
+
+const barChartData = [
+  { height: "78%" },
+  { height: "64%" },
+  { height: "88%" },
+  { height: "52%" },
+  { height: "72%" },
+];
 
 function HeroSection() {
   return (
@@ -13,24 +19,30 @@ function HeroSection() {
         <div className="max-w-245">
           <h1 className="max-w-250 text-[2.35rem] leading-[1.06] font-extrabold tracking-[-0.04em] text-[#222] sm:text-[3.3rem] lg:text-[4.75rem]">
             O fim das apresentações institucionais{" "}
-            <span className="bg-[linear-gradient(90deg,#0a3452_0%,#1675b8_78.846%)] bg-clip-text text-transparent">
+            <span className="typewriter-word bg-[linear-gradient(90deg,#0a3452_0%,#1675b8_78.846%)] bg-clip-text text-transparent">
               desatualizadas
             </span>
           </h1>
 
-          <p className="mt-5 max-w-240 text-[1rem] leading-8 text-black/45 sm:text-[1.1rem] lg:text-[1.75rem] lg:leading-[3.1rem]">
+          <p
+            className="reveal-on-scroll mt-5 max-w-240 text-[1rem] leading-8 text-black/45 sm:text-[1.1rem] lg:text-[1.75rem] lg:leading-[3.1rem]"
+            style={{ "--reveal-delay": "180ms" }}
+          >
             Crie apresentações dinâmicas, personalizadas e atualizadas em tempo
             real com dados oficiais. Automatize seu conteúdo institucional com
             inteligência artificial.
           </p>
 
-          <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+          <div
+            className="reveal-on-scroll mt-8 flex flex-col gap-4 sm:flex-row"
+            style={{ "--reveal-delay": "280ms" }}
+          >
             <Link
               to="/login"
-              className="inline-flex h-14.5 items-center justify-center gap-3 rounded-[18px] bg-[linear-gradient(100.26deg,rgba(10,52,82,0.63)_1.91%,#1675b8_68.48%)] px-7 text-[1rem] font-bold text-[#f8fafc] shadow-[0_4px_4px_rgba(0,0,0,0.15)] transition-transform hover:-translate-y-0.5 sm:h-17.25 sm:px-8 sm:text-[1.15rem]"
+              className="inline-flex h-14.5 items-center justify-center gap-3 rounded-[18px] bg-[linear-gradient(100.26deg,rgba(10,52,82,0.63)_1.91%,#1675b8_68.48%)] px-7 text-[1rem] font-bold !text-white shadow-[0_4px_4px_rgba(0,0,0,0.15)] transition-transform hover:-translate-y-0.5 sm:h-17.25 sm:px-8 sm:text-[1.15rem]"
             >
-              Criar Apresentação
-              <FaArrowDown className="h-5 w-5 rotate-90 sm:h-5.5 sm:w-5.5" />
+              <span className="font-bold !text-white">Criar Apresentação</span>
+              <FaArrowDown className="h-5 w-5 rotate-270 text-amber-100 sm:h-5.5 sm:w-5.5" />
             </Link>
 
             <Link
@@ -42,7 +54,10 @@ function HeroSection() {
           </div>
         </div>
 
-        <div className="mx-auto w-full max-w-220 rounded-[30px] bg-white px-4 pb-6 pt-5 shadow-[0_4px_29px_rgba(0,0,0,0.25)] sm:px-8 sm:pb-8">
+        <div
+          className="reveal-on-scroll mx-auto w-full max-w-220 rounded-[30px] bg-white px-4 pb-6 pt-5 shadow-[0_4px_29px_rgba(0,0,0,0.25)] sm:px-8 sm:pb-8"
+          style={{ "--reveal-delay": "360ms" }}
+        >
           <div className="mb-6 flex gap-3">
             <div className="h-7 w-7 rounded-full bg-[#1675b8]" />
             <div className="h-7 w-7 rounded-full bg-[#1675b8]/80" />
@@ -50,21 +65,77 @@ function HeroSection() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[383px_1fr]">
-            <div className="rounded-[26px] bg-[rgba(202,196,208,0.25)]">
-              <img
-                src={heroChartPie}
-                alt="Gráfico de pizza do dashboard"
-                className="mx-auto h-auto max-h-85.5 w-full max-w-90 object-contain"
-              />
+            <div className="animated-pie-chart flex items-center justify-center rounded-[26px] bg-[rgba(202,196,208,0.25)] px-5 py-8 sm:px-7">
+              <div
+                className="flex aspect-square w-full max-w-80 items-center justify-center rounded-full"
+                role="img"
+                aria-label="Gráfico de pizza animado"
+              >
+                <div className="pie-chart relative h-full w-full rounded-full">
+                  <svg
+                    className="h-full w-full -rotate-90"
+                    viewBox="0 0 120 120"
+                    aria-hidden="true"
+                  >
+                    <circle
+                      className="pie-track"
+                      cx="60"
+                      cy="60"
+                      r="42"
+                      pathLength="100"
+                    />
+                    {[
+                      ["30", "0", "#E62787"],
+                      ["25", "-30", "#F7A61E"],
+                      ["22", "-55", "#5FAD41"],
+                      ["23", "-77", "#1675B8"],
+                    ].map(([size, offset, color], index) => (
+                      <circle
+                        key={color}
+                        className="pie-segment"
+                        cx="60"
+                        cy="60"
+                        r="42"
+                        pathLength="100"
+                        style={{
+                          "--segment-size": size,
+                          "--segment-offset": offset,
+                          "--segment-color": color,
+                          "--segment-delay": `${index * 260}ms`,
+                        }}
+                      />
+                    ))}
+                  </svg>
+                  <div className="pie-core absolute left-1/2 top-1/2 h-[54%] w-[54%] -translate-x-1/2 -translate-y-1/2 rounded-full" />
+                  <div className="pie-pulse absolute left-1/2 top-1/2 h-[72%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-full" />
+                </div>
+              </div>
             </div>
 
             <div className="grid gap-4">
-              <div className="rounded-[26px] bg-[rgba(202,196,208,0.25)] px-4 py-4 sm:px-8">
-                <img
-                  src={heroChartBars}
-                  alt="Gráfico de barras do dashboard"
-                  className="mx-auto h-auto max-h-42.5 w-full max-w-70.5 object-contain"
-                />
+              <div className="animated-bar-chart rounded-[26px] bg-[rgba(202,196,208,0.25)] px-5 py-7 sm:px-8">
+                <div
+                  className="grid h-40 grid-cols-5 items-end gap-3 border-b border-[#aeb8c2]/35"
+                  role="img"
+                  aria-label="Gráfico animado de barras"
+                >
+                  {barChartData.map((bar, index) => (
+                    <div
+                      key={bar.height}
+                      className="flex h-full min-w-0 items-end justify-center"
+                    >
+                      <div className="flex h-full w-full max-w-10 items-end justify-center">
+                        <div
+                          className="chart-bar w-full rounded-t-[8px] bg-[linear-gradient(180deg,#8cb3ce_0%,#5f9fc8_45%,#1675b8_100%)] shadow-[0_8px_14px_rgba(22,117,184,0.12)]"
+                          style={{
+                            "--bar-height": bar.height,
+                            "--bar-delay": `${index * 120}ms`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="flex items-center gap-5 rounded-[26px] bg-[rgba(202,196,208,0.25)] px-6 py-7">

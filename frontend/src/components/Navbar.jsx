@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom";
-import { FaUser, FaQuestion } from "react-icons/fa";
+import { FiHelpCircle, FiUser } from "react-icons/fi";
 import navbarLogo from "../assets/images/create-logo.png";
+
+const iconButtonClass =
+  "inline-flex h-11 items-center justify-center gap-2.5 rounded-[8px] px-3 text-[1rem] font-bold !text-white transition-all hover:-translate-y-0.5 hover:bg-white/12 focus:outline-none focus:ring-4 focus:ring-white/25 sm:px-4 lg:text-[1.08rem]";
 
 function Navbar() {
   return (
@@ -38,26 +41,20 @@ function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link 
+          <Link
             to="/login"
-            aria-label="Abrir login">
-            <button
-              type="button"
-              aria-label="Conta"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm transition-transform hover:scale-105 sm:h-13 sm:w-13"
-            >
-              <FaUser className="h-5 w-5 text-[#1675b8]" />
-            </button>
+            aria-label="Abrir login"
+            className={iconButtonClass}
+          >
+            <FiUser className="h-5.5 w-5.5 text-white" />
+            <span className="hidden text-white sm:inline">Login</span>
           </Link>
-            
-            <button
-              type="button"
-              aria-label="Ajuda"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm transition-transform hover:scale-105 sm:h-13 sm:w-13"
-            >
-              <FaQuestion className="h-5 w-5 text-[#1675b8]" />
-            </button>
-          </div>
+
+          <button type="button" aria-label="Ajuda" className={iconButtonClass}>
+            <FiHelpCircle className="h-5.5 w-5.5 text-white" />
+            <span className="hidden text-white sm:inline">Ajuda</span>
+          </button>
+        </div>
       </div>
     </header>
   );
