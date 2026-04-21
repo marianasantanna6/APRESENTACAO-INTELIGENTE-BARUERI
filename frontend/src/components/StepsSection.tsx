@@ -1,7 +1,21 @@
+import type { CSSProperties } from "react";
+import type { IconType } from "react-icons";
+import {
+  FaArrowDown,
+  FaChartBar,
+  FaDatabase,
+  FaWrench,
+} from "react-icons/fa";
 import SectionHeader from "./SectionHeader";
-import { FaDatabase, FaWrench, FaChartBar, FaArrowDown } from "react-icons/fa";
 
-const steps = [
+type Step = {
+  step: string;
+  title: string;
+  description: string;
+  icon: IconType;
+};
+
+const steps: Step[] = [
   {
     step: "Passo 01",
     title: "Conecte APIs",
@@ -41,11 +55,14 @@ function StepsSection() {
         <div className="mt-12 flex flex-col items-stretch justify-center gap-4 lg:flex-row lg:items-center lg:gap-6">
           {steps.map((step, index) => {
             const Icon = step.icon;
+
             return (
               <div
                 key={step.step}
                 className="reveal-on-scroll flex flex-col items-center gap-4 lg:flex-row"
-                style={{ "--reveal-delay": `${index * 110}ms` }}
+                style={
+                  { "--reveal-delay": `${index * 110}ms` } as CSSProperties
+                }
               >
                 <article
                   className={`${cardBase} flex h-full w-full max-w-92 flex-col items-center px-6 pb-10 pt-11 text-center`}

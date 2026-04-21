@@ -1,21 +1,32 @@
+import type { CSSProperties, ChangeEvent } from "react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  FaSearch,
-  FaFilter,
-  FaChevronDown,
-} from "react-icons/fa";
+import { FaChevronDown, FaFilter, FaSearch } from "react-icons/fa";
 import { FiHelpCircle, FiUser } from "react-icons/fi";
 import createLogo from "../assets/images/create-logo.png";
 
-const createCategories = [
+type Category = {
+  label: string;
+  color: string;
+  width: string;
+};
+
+const createCategories: Category[] = [
   {
     label: "Meio Ambiente",
     color: "bg-[rgba(76,175,80,0.5)]",
     width: "w-[280px]",
   },
-  { label: "Educação", color: "bg-[rgba(22,117,184,0.5)]", width: "w-[280px]" },
-  { label: "Economia", color: "bg-[rgba(255,143,0,0.5)]", width: "w-[260px]" },
+  {
+    label: "Educação",
+    color: "bg-[rgba(22,117,184,0.5)]",
+    width: "w-[280px]",
+  },
+  {
+    label: "Economia",
+    color: "bg-[rgba(255,143,0,0.5)]",
+    width: "w-[260px]",
+  },
   { label: "Saúde", color: "bg-[#ef91c2]", width: "w-[260px]" },
 ];
 
@@ -66,10 +77,7 @@ function CreatePresentationPage() {
               Criar
             </Link>
 
-            <div
-              aria-hidden="true"
-              className="h-6 w-0.5 bg-white/30"
-            />
+            <div aria-hidden="true" className="h-6 w-0.5 bg-white/30" />
 
             <button
               type="button"
@@ -80,18 +88,10 @@ function CreatePresentationPage() {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              aria-label="Conta"
-              className={iconButtonClass}
-            >
+            <button type="button" aria-label="Conta" className={iconButtonClass}>
               <FiUser className="h-5.5 w-5.5 text-white" />
             </button>
-            <button
-              type="button"
-              aria-label="Ajuda"
-              className={iconButtonClass}
-            >
+            <button type="button" aria-label="Ajuda" className={iconButtonClass}>
               <FiHelpCircle className="h-5.5 w-5.5 text-white" />
               <span className="hidden text-white sm:inline">Ajuda</span>
             </button>
@@ -105,10 +105,12 @@ function CreatePresentationPage() {
             Crie uma Apresentação{" "}
             <span
               className="typewriter-word bg-[linear-gradient(90deg,#0a3452_0%,#1675b8_25.962%)] bg-clip-text text-transparent"
-              style={{
-                "--typewriter-width": "10.5ch",
-                "--typewriter-steps": 10,
-              }}
+              style={
+                {
+                  "--typewriter-width": "10.5ch",
+                  "--typewriter-steps": 10,
+                } as CSSProperties
+              }
             >
               Inteligente
             </span>
@@ -116,12 +118,14 @@ function CreatePresentationPage() {
 
           <div
             className="reveal-on-scroll relative mt-10 w-full"
-            style={{ "--reveal-delay": "120ms" }}
+            style={{ "--reveal-delay": "120ms" } as CSSProperties}
           >
             <input
               type="search"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                setSearch(event.target.value)
+              }
               placeholder="Pesquise tema, indicador ou categoria"
               className="h-23.75 w-full rounded-[50px] bg-white pl-21.5 pr-23 text-[1.15rem] font-medium text-[#1e1e1e] shadow-[0_6px_20px_rgba(0,0,0,0.15)] outline-none transition focus:-translate-y-0.5 focus:ring-4 focus:ring-[#1675b8]/15"
             />
@@ -139,7 +143,7 @@ function CreatePresentationPage() {
 
           <div
             className="reveal-on-scroll mt-10 flex w-full flex-col gap-6"
-            style={{ "--reveal-delay": "220ms" }}
+            style={{ "--reveal-delay": "220ms" } as CSSProperties}
           >
             <div className="flex flex-wrap justify-center gap-5 xl:justify-between">
               {createCategories.map((category) => {
@@ -166,7 +170,9 @@ function CreatePresentationPage() {
               <div className="relative">
                 <select
                   value={selectedYear}
-                  onChange={(event) => setSelectedYear(event.target.value)}
+                  onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                    setSelectedYear(event.target.value)
+                  }
                   className="h-13.25 w-54.5 appearance-none rounded-[50px] bg-[#d9d9d9] px-7 pr-14 text-[1.3rem] font-medium text-[#706e6e] shadow-[0_4px_11px_rgba(0,0,0,0.25)] outline-none"
                 >
                   {availableYears.map((year) => (

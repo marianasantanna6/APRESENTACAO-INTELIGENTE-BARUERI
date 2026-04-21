@@ -1,8 +1,8 @@
-import CategoriesSection from './CategoriesSection'
-import FeaturesSection from './FeaturesSection'
-import HeroSection from './HeroSection'
-import Navbar from './Navbar'
-import StepsSection from './StepsSection'
+import CategoriesSection from "./CategoriesSection";
+import FeaturesSection from "./FeaturesSection";
+import HeroSection from "./HeroSection";
+import Navbar from "./Navbar";
+import StepsSection from "./StepsSection";
 
 function LandingPage() {
   return (
@@ -15,7 +15,7 @@ function LandingPage() {
         <StepsSection />
       </main>
     </div>
-  )
+  );
 }
 
-export default LandingPage
+export default LandingPage;

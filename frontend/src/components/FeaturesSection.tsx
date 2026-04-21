@@ -1,7 +1,15 @@
+import type { CSSProperties } from "react";
+import type { IconType } from "react-icons";
+import { FaCogs, FaLanguage, FaPlug, FaSync } from "react-icons/fa";
 import SectionHeader from "./SectionHeader";
-import { FaCogs, FaPlug, FaLanguage, FaSync } from "react-icons/fa";
 
-const features = [
+type Feature = {
+  title: string;
+  description: string;
+  icon: IconType;
+};
+
+const features: Feature[] = [
   {
     title: "Sistema dinâmico",
     description:
@@ -46,11 +54,14 @@ function FeaturesSection() {
         <div className="mt-12 grid gap-6 lg:grid-cols-2">
           {features.map((feature, index) => {
             const Icon = feature.icon;
+
             return (
               <article
                 key={feature.title}
                 className={`reveal-on-scroll ${cardBase} min-h-57.5 px-6 py-6 sm:px-7`}
-                style={{ "--reveal-delay": `${index * 100}ms` }}
+                style={
+                  { "--reveal-delay": `${index * 100}ms` } as CSSProperties
+                }
               >
                 <div className="flex h-17.25 w-22.5 items-center justify-center rounded-[10px] bg-[linear-gradient(180deg,#8cb3ce_0%,#1675b8_100%)]">
                   <Icon className="h-11 w-11 text-white" />

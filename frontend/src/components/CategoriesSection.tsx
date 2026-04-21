@@ -1,7 +1,14 @@
+import type { CSSProperties } from "react";
+import type { IconType } from "react-icons";
+import { FaBook, FaDollarSign, FaHeartbeat } from "react-icons/fa";
 import SectionHeader from "./SectionHeader";
-import { FaBook, FaHeartbeat, FaDollarSign } from "react-icons/fa";
 
-const categories = [
+type Category = {
+  title: string;
+  icon: IconType;
+};
+
+const categories: Category[] = [
   { title: "Educação", icon: FaBook },
   { title: "Saúde", icon: FaHeartbeat },
   { title: "Economia", icon: FaDollarSign },
@@ -27,14 +34,17 @@ function CategoriesSection() {
         <div className="mx-auto mt-10 grid max-w-245 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((category, index) => {
             const Icon = category.icon;
+
             return (
               <article
                 key={category.title}
                 className={`reveal-on-scroll ${cardBase} flex min-h-23.25 items-center justify-center gap-3 px-6 py-5`}
-                style={{ "--reveal-delay": `${index * 100}ms` }}
+                style={
+                  { "--reveal-delay": `${index * 100}ms` } as CSSProperties
+                }
               >
                 <Icon className="h-8 w-8 shrink-0 text-[#1675b8]" />
-                <span className="text-[1.1rem] font-bold  tracking-[-0.02em] sm:text-[1.4rem]">
+                <span className="text-[1.1rem] font-bold tracking-[-0.02em] sm:text-[1.4rem]">
                   {category.title}
                 </span>
               </article>

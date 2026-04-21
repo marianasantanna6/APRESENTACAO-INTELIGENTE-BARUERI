@@ -1,35 +1,50 @@
+import type { CSSProperties, ChangeEvent, FormEvent } from "react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import loginLogo from "../assets/images/create-logo.png";
 
-const backgroundShapes = [
+type BackgroundShape = {
+  className: string;
+};
+
+type FormValues = {
+  identifier: string;
+  password: string;
+  remember: boolean;
+};
+
+type FormField = keyof FormValues;
+
+type FormErrors = Partial<Record<Exclude<FormField, "remember">, string>>;
+
+const backgroundShapes: BackgroundShape[] = [
   {
     className:
-      "absolute -left-[42rem] -top-[10rem] h-[77.5rem] w-[85.5rem] rounded-full bg-[#bdd4e6]",
+      "absolute -left-[42rem] -top-[10rem] h-[77.5rem] w-[85.5rem] rounded-full bg-[radial-gradient(circle_at_35%_35%,#d9e7f2_0%,#bdd4e6_48%,#9fbfd8_100%)] shadow-[0_30px_80px_rgba(112,154,189,0.24)]",
   },
   {
     className:
-      "absolute left-[15.5rem] top-[3rem] h-[12rem] w-[12rem] rounded-full bg-[#ffe052]/70 blur-[1px]",
+      "absolute left-[15.5rem] top-[3rem] h-[12rem] w-[12rem] rounded-full bg-[radial-gradient(circle_at_30%_30%,#fff2a6_0%,#ffe052_52%,#f7b500_100%)] shadow-[0_18px_40px_rgba(247,166,30,0.28)] blur-[1px]",
   },
   {
     className:
-      "absolute right-[3.5rem] top-[4.5rem] h-[17rem] w-[17rem] rounded-full bg-[#ec3fa0]/90",
+      "absolute right-[3.5rem] top-[4.5rem] h-[17rem] w-[17rem] rounded-full bg-[radial-gradient(circle_at_30%_30%,#ff8dc8_0%,#ec3fa0_52%,#c61d73_100%)] shadow-[0_24px_48px_rgba(198,29,115,0.28)]",
   },
   {
     className:
-      "absolute left-[1.5rem] top-[22rem] h-[19rem] w-[19rem] rounded-full bg-[#4dff00]/55",
+      "absolute left-[1.5rem] top-[22rem] h-[19rem] w-[19rem] rounded-full bg-[radial-gradient(circle_at_30%_30%,#baff98_0%,#6de94e_48%,#3fa22b_100%)] shadow-[0_24px_52px_rgba(63,162,43,0.22)]",
   },
   {
     className:
-      "absolute left-[23rem] top-[19.5rem] h-[8.5rem] w-[8.5rem] rounded-full bg-[#bdd4e6]/55",
+      "absolute left-[23rem] top-[19.5rem] h-[8.5rem] w-[8.5rem] rounded-full bg-[radial-gradient(circle_at_35%_35%,rgba(201,224,241,0.96)_0%,rgba(134,177,209,0.88)_52%,rgba(75,135,182,0.76)_100%)] shadow-[0_18px_38px_rgba(66,120,164,0.26)]",
   },
   {
     className:
-      "absolute right-[-7rem] bottom-[-6rem] h-[18rem] w-[18rem] rounded-full bg-[#ff9600]",
+      "absolute right-[-7rem] bottom-[-6rem] h-[18rem] w-[18rem] rounded-full bg-[radial-gradient(circle_at_30%_30%,#ffd08a_0%,#ff9600_55%,#d56d00_100%)] shadow-[0_24px_50px_rgba(213,109,0,0.26)]",
   },
 ];
 
-const defaultValues = {
+const defaultValues: FormValues = {
   identifier: "",
   password: "",
   remember: false,
@@ -37,19 +52,22 @@ const defaultValues = {
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [formValues, setFormValues] = useState(defaultValues);
-  const [errors, setErrors] = useState({});
+  const [formValues, setFormValues] = useState<FormValues>(defaultValues);
+  const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
 
-  function updateField(field, value) {
+  function updateField<Field extends FormField>(
+    field: Field,
+    value: FormValues[Field],
+  ) {
     setFormValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: "" }));
   }
 
-  function handleSubmit(event) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const nextErrors = {};
+    const nextErrors: FormErrors = {};
 
     if (!formValues.identifier.trim()) {
       nextErrors.identifier = "Informe seu usuário, CPF ou email.";
@@ -93,21 +111,21 @@ function LoginPage() {
 
         <h1
           className="reveal-on-scroll mt-4 text-center text-[2.1rem] font-extrabold tracking-[-0.04em] text-[#1e1e1e] sm:mt-5 sm:text-[3rem]"
-          style={{ "--reveal-delay": "100ms" }}
+          style={{ "--reveal-delay": "100ms" } as CSSProperties}
         >
           Faça seu Login
         </h1>
 
         <form
           className="reveal-on-scroll mt-7 flex w-full flex-col gap-6 sm:mt-8"
-          style={{ "--reveal-delay": "180ms" }}
+          style={{ "--reveal-delay": "180ms" } as CSSProperties}
           onSubmit={handleSubmit}
         >
           <div>
             <input
               type="text"
               value={formValues.identifier}
-              onChange={(event) =>
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
                 updateField("identifier", event.target.value)
               }
               placeholder="Usuário / CPF / Email"
@@ -127,7 +145,7 @@ function LoginPage() {
               <input
                 type={showPassword ? "text" : "password"}
                 value={formValues.password}
-                onChange={(event) =>
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
                   updateField("password", event.target.value)
                 }
                 placeholder="Senha"
@@ -162,7 +180,7 @@ function LoginPage() {
               <input
                 type="checkbox"
                 checked={formValues.remember}
-                onChange={(event) =>
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
                   updateField("remember", event.target.checked)
                 }
                 className="h-6.5 w-6.5 appearance-none rounded-full border-[2.5px] border-[#1675b8] bg-transparent checked:bg-[#1675b8] checked:shadow-[inset_0_0_0_5px_white]"

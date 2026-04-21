@@ -1,13 +1,25 @@
+import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { FaArrowDown, FaServer } from "react-icons/fa";
 
-const barChartData = [
+type BarChartDatum = {
+  height: string;
+};
+
+const barChartData: BarChartDatum[] = [
   { height: "78%" },
   { height: "64%" },
   { height: "88%" },
   { height: "52%" },
   { height: "72%" },
 ];
+
+const pieSegments = [
+  ["30", "0", "#E62787"],
+  ["25", "-30", "#F7A61E"],
+  ["22", "-55", "#5FAD41"],
+  ["23", "-77", "#1675B8"],
+] as const;
 
 function HeroSection() {
   return (
@@ -26,7 +38,7 @@ function HeroSection() {
 
           <p
             className="reveal-on-scroll mt-5 max-w-240 text-[1rem] leading-8 text-black/45 sm:text-[1.1rem] lg:text-[1.75rem] lg:leading-[3.1rem]"
-            style={{ "--reveal-delay": "180ms" }}
+            style={{ "--reveal-delay": "180ms" } as CSSProperties}
           >
             Crie apresentações dinâmicas, personalizadas e atualizadas em tempo
             real com dados oficiais. Automatize seu conteúdo institucional com
@@ -35,7 +47,7 @@ function HeroSection() {
 
           <div
             className="reveal-on-scroll mt-8 flex flex-col gap-4 sm:flex-row"
-            style={{ "--reveal-delay": "280ms" }}
+            style={{ "--reveal-delay": "280ms" } as CSSProperties}
           >
             <Link
               to="/login"
@@ -56,7 +68,7 @@ function HeroSection() {
 
         <div
           className="reveal-on-scroll mx-auto w-full max-w-220 rounded-[30px] bg-white px-4 pb-6 pt-5 shadow-[0_4px_29px_rgba(0,0,0,0.25)] sm:px-8 sm:pb-8"
-          style={{ "--reveal-delay": "360ms" }}
+          style={{ "--reveal-delay": "360ms" } as CSSProperties}
         >
           <div className="mb-6 flex gap-3">
             <div className="h-7 w-7 rounded-full bg-[#1675b8]" />
@@ -84,25 +96,22 @@ function HeroSection() {
                       r="42"
                       pathLength="100"
                     />
-                    {[
-                      ["30", "0", "#E62787"],
-                      ["25", "-30", "#F7A61E"],
-                      ["22", "-55", "#5FAD41"],
-                      ["23", "-77", "#1675B8"],
-                    ].map(([size, offset, color], index) => (
+                    {pieSegments.map(([size, offset, color], index) => (
                       <circle
-                        key={color}
+                        key={`${color}-${offset}`}
                         className="pie-segment"
                         cx="60"
                         cy="60"
                         r="42"
                         pathLength="100"
-                        style={{
-                          "--segment-size": size,
-                          "--segment-offset": offset,
-                          "--segment-color": color,
-                          "--segment-delay": `${index * 260}ms`,
-                        }}
+                        style={
+                          {
+                            "--segment-size": size,
+                            "--segment-offset": offset,
+                            "--segment-color": color,
+                            "--segment-delay": `${index * 260}ms`,
+                          } as CSSProperties
+                        }
                       />
                     ))}
                   </svg>
@@ -121,16 +130,18 @@ function HeroSection() {
                 >
                   {barChartData.map((bar, index) => (
                     <div
-                      key={bar.height}
+                      key={`${bar.height}-${index}`}
                       className="flex h-full min-w-0 items-end justify-center"
                     >
                       <div className="flex h-full w-full max-w-10 items-end justify-center">
                         <div
                           className="chart-bar w-full rounded-t-[8px] bg-[linear-gradient(180deg,#8cb3ce_0%,#5f9fc8_45%,#1675b8_100%)] shadow-[0_8px_14px_rgba(22,117,184,0.12)]"
-                          style={{
-                            "--bar-height": bar.height,
-                            "--bar-delay": `${index * 120}ms`,
-                          }}
+                          style={
+                            {
+                              "--bar-height": bar.height,
+                              "--bar-delay": `${index * 120}ms`,
+                            } as CSSProperties
+                          }
                         />
                       </div>
                     </div>

@@ -13,7 +13,7 @@ function ScrollReveal() {
 
     if (prefersReducedMotion) {
       document
-        .querySelectorAll(revealSelector)
+        .querySelectorAll<HTMLElement>(revealSelector)
         .forEach((element) => element.classList.add("is-visible"));
       return undefined;
     }
@@ -36,7 +36,7 @@ function ScrollReveal() {
     );
 
     const observeRevealElements = () => {
-      document.querySelectorAll(revealSelector).forEach((element) => {
+      document.querySelectorAll<HTMLElement>(revealSelector).forEach((element) => {
         if (!element.classList.contains("is-visible")) {
           observer.observe(element);
         }
