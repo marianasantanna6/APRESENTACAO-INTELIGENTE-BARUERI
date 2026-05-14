@@ -1,9 +1,14 @@
-import type { CSSProperties, ChangeEvent } from "react";
+import type { ChangeEvent, CSSProperties, FormEvent } from "react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FaChevronDown, FaFilter, FaSearch } from "react-icons/fa";
 import { FiHelpCircle, FiUser } from "react-icons/fi";
-import createLogo from "../assets/images/create-logo.png";
+import createLogo from "../../assets/images/create-logo.png";
+import { DEFAULT_PRESENTATION_FILTERS } from "../../api/presentation";
+import {
+  buildPresentationSearchParams,
+  ROUTE_PATHS,
+} from "../../router";
 
 type Category = {
   label: string;
@@ -32,8 +37,8 @@ const createCategories: Category[] = [
 
 const availableYears = [
   "Todos",
-  ...Array.from({ length: 2025 - 1950 + 1 }, (_, index) =>
-    String(2025 - index),
+  ...Array.from({ length: 2026 - 1950 + 1 }, (_, index) =>
+    String(2026 - index),
   ),
 ];
 
@@ -45,23 +50,40 @@ const activeNavPillClass =
   "border border-[#1675b8] bg-[rgba(22,117,184,0.5)] shadow-[0_4px_12px_rgba(0,0,0,0.12)]";
 
 function CreatePresentationPage() {
-  const [selectedCategory, setSelectedCategory] = useState("Educação");
-  const [selectedYear, setSelectedYear] = useState("Todos");
-  const [search, setSearch] = useState("");
+  const navigate = useNavigate();
+  const [selectedCategory, setSelectedCategory] = useState(
+    DEFAULT_PRESENTATION_FILTERS.category,
+  );
+  const [selectedYear, setSelectedYear] = useState(
+    DEFAULT_PRESENTATION_FILTERS.year,
+  );
+  const [search, setSearch] = useState(DEFAULT_PRESENTATION_FILTERS.query);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const params = buildPresentationSearchParams({
+      query: search.trim() || DEFAULT_PRESENTATION_FILTERS.query,
+      category: selectedCategory,
+      year: selectedYear,
+    });
+
+    navigate(`${ROUTE_PATHS.generatedPresentation}?${params.toString()}`);
+  }
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-[#1e1e1e]">
       <header className="sticky top-0 z-20 border-b border-white/20 bg-[linear-gradient(90deg,#ffffff_8.654%,#1675b8_100%)] backdrop-blur">
-        <div className="mx-auto flex max-w-310 items-center justify-between gap-6 px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-[1240px] items-center justify-between gap-6 px-4 py-4 sm:px-6 lg:px-8">
           <Link
-            to="/criar"
+            to={ROUTE_PATHS.createPresentation}
             aria-label="Ir para a área logada"
             className="shrink-0"
           >
             <img
               src={createLogo}
               alt="Logo Barueri"
-              className="h-auto w-29 sm:w-37.5"
+              className="h-auto w-[116px] sm:w-[150px]"
             />
           </Link>
 
@@ -70,9 +92,9 @@ function CreatePresentationPage() {
             className="hidden items-center gap-3 text-[15px] font-semibold text-white md:flex lg:text-[16px]"
           >
             <Link
-              to="/criar"
+              to={ROUTE_PATHS.createPresentation}
               aria-current="page"
-              className={`${navPillClass} ${activeNavPillClass} w-28 lg:w-32`}
+              className={`${navPillClass} ${activeNavPillClass} w-[112px] lg:w-[128px]`}
             >
               Criar
             </Link>
@@ -83,7 +105,7 @@ function CreatePresentationPage() {
               type="button"
               className={`${navPillClass} border border-transparent`}
             >
-              Minhas Apresentações
+              Minhas apresentações
             </button>
           </nav>
 
@@ -99,8 +121,8 @@ function CreatePresentationPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-310 px-5 pb-20 pt-24 sm:px-6 lg:px-8">
-        <section className="mx-auto flex max-w-302.5 flex-col items-center">
+      <main className="mx-auto max-w-[1240px] px-5 pb-20 pt-24 sm:px-6 lg:px-8">
+        <section className="mx-auto flex max-w-[1210px] flex-col items-center">
           <h1 className="reveal-on-scroll text-center text-[2.6rem] font-extrabold leading-[1.05] tracking-[-0.05em] text-[#1e1e1e] sm:text-[3.6rem] lg:text-[5rem]">
             Crie uma Apresentação{" "}
             <span
@@ -116,9 +138,10 @@ function CreatePresentationPage() {
             </span>
           </h1>
 
-          <div
+          <form
             className="reveal-on-scroll relative mt-10 w-full"
             style={{ "--reveal-delay": "120ms" } as CSSProperties}
+            onSubmit={handleSubmit}
           >
             <input
               type="search"
@@ -127,19 +150,19 @@ function CreatePresentationPage() {
                 setSearch(event.target.value)
               }
               placeholder="Pesquise tema, indicador ou categoria"
-              className="h-23.75 w-full rounded-[50px] bg-white pl-21.5 pr-23 text-[1.15rem] font-medium text-[#1e1e1e] shadow-[0_6px_20px_rgba(0,0,0,0.15)] outline-none transition focus:-translate-y-0.5 focus:ring-4 focus:ring-[#1675b8]/15"
+              className="h-[95px] w-full rounded-[50px] bg-white pl-[86px] pr-[92px] text-[1.15rem] font-medium text-[#1e1e1e] shadow-[0_6px_20px_rgba(0,0,0,0.15)] outline-none transition focus:-translate-y-0.5 focus:ring-4 focus:ring-[#1675b8]/15"
             />
-            <div className="pointer-events-none absolute left-8.5 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-[#706e6e]">
+            <div className="pointer-events-none absolute left-[34px] top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-[#706e6e]">
               <FaSearch className="h-5 w-5" />
             </div>
             <button
-              type="button"
-              aria-label="Abrir filtros"
-              className="absolute right-8.5 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm text-[#706e6e]"
+              type="submit"
+              aria-label="Gerar dashboard e apresentação"
+              className="absolute right-[34px] top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-sm text-[#706e6e] transition hover:text-[#1675b8]"
             >
               <FaFilter className="h-4 w-4" />
             </button>
-          </div>
+          </form>
 
           <div
             className="reveal-on-scroll mt-10 flex w-full flex-col gap-6"
@@ -154,7 +177,7 @@ function CreatePresentationPage() {
                     key={category.label}
                     type="button"
                     onClick={() => setSelectedCategory(category.label)}
-                    className={`${category.width} ${category.color} h-15 rounded-[50px] px-6 text-center text-[1.35rem] font-bold text-[#f8fafc] shadow-[0_4px_16px_rgba(0,0,0,0.25)] transition-all hover:-translate-y-0.5 ${isSelected ? "ring-4 ring-white/70" : ""}`}
+                    className={`${category.width} ${category.color} h-[60px] rounded-[50px] px-6 text-center text-[1.35rem] font-bold text-[#f8fafc] shadow-[0_4px_16px_rgba(0,0,0,0.25)] transition-all hover:-translate-y-0.5 ${isSelected ? "ring-4 ring-white/70" : ""}`}
                   >
                     {category.label}
                   </button>
@@ -173,7 +196,7 @@ function CreatePresentationPage() {
                   onChange={(event: ChangeEvent<HTMLSelectElement>) =>
                     setSelectedYear(event.target.value)
                   }
-                  className="h-13.25 w-54.5 appearance-none rounded-[50px] bg-[#d9d9d9] px-7 pr-14 text-[1.3rem] font-medium text-[#706e6e] shadow-[0_4px_11px_rgba(0,0,0,0.25)] outline-none"
+                  className="h-[53px] w-[218px] appearance-none rounded-[50px] bg-[#d9d9d9] px-7 pr-14 text-[1.3rem] font-medium text-[#706e6e] shadow-[0_4px_11px_rgba(0,0,0,0.25)] outline-none"
                 >
                   {availableYears.map((year) => (
                     <option key={year} value={year}>

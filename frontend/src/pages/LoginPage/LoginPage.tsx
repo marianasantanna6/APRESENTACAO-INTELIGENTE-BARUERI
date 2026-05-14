@@ -1,7 +1,9 @@
 import type { CSSProperties, ChangeEvent, FormEvent } from "react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import loginLogo from "../assets/images/create-logo.png";
+import loginLogo from "../../assets/images/create-logo.png";
+import loginGovLogo from "../../assets/images/login-gov.png";
+import { ROUTE_PATHS } from "../../router";
 
 type BackgroundShape = {
   className: string;
@@ -82,7 +84,7 @@ function LoginPage() {
     setErrors(nextErrors);
 
     if (Object.keys(nextErrors).length === 0) {
-      navigate("/criar");
+      navigate(ROUTE_PATHS.createPresentation);
     }
   }
 
@@ -98,7 +100,7 @@ function LoginPage() {
 
       <section className="relative z-10 mx-auto mt-28 flex w-full max-w-224.25 flex-col items-center rounded-[20px] bg-white/81 px-6 pb-14 pt-18 shadow-[0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-[2px] sm:mt-34 sm:px-12 sm:pb-16 sm:pt-22 lg:px-27">
         <Link
-          to="/"
+          to={ROUTE_PATHS.home}
           aria-label="Voltar para a página inicial"
           className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2"
         >
@@ -198,10 +200,10 @@ function LoginPage() {
 
           <button
             type="button"
-            className="mt-2 flex h-19.5 items-center justify-between rounded-[20px] border-[2.5px] border-[#1675b8] bg-white px-6 text-[#898989] shadow-[0_4px_10px_rgba(0,0,0,0.25)] transition-transform hover:-translate-y-0.5"
+            className="mt-2 flex h-19.5 items-center justify-between gap-4 rounded-[20px] border-[2.5px] border-[#1675b8] bg-white px-5 text-[#898989] shadow-[0_4px_10px_rgba(0,0,0,0.25)] transition-transform hover:-translate-y-0.5"
           >
             <img
-              src="/login-gov.png"
+              src={loginGovLogo}
               alt="Entrar com GOV"
               className="h-7 w-19.5 object-contain"
             />

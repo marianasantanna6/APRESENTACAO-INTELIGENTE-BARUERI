@@ -1,8 +1,8 @@
-import CategoriesSection from "./CategoriesSection";
-import FeaturesSection from "./FeaturesSection";
-import HeroSection from "./HeroSection";
-import Navbar from "./Navbar";
-import StepsSection from "./StepsSection";
+import CategoriesSection from "../../components/CategoriesSection";
+import FeaturesSection from "../../components/FeaturesSection";
+import HeroSection from "../../components/HeroSection";
+import Navbar from "../../components/Navbar";
+import StepsSection from "../../components/StepsSection";
 
 function LandingPage() {
   return (

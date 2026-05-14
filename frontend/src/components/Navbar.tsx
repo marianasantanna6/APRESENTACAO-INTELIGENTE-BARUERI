@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { FiHelpCircle, FiUser } from "react-icons/fi";
 import navbarLogo from "../assets/images/create-logo.png";
+import { ROUTE_PATHS } from "../router";
 
 const iconButtonClass =
   "inline-flex h-11 items-center justify-center gap-2.5 rounded-[8px] px-3 text-[1rem] font-bold !text-white transition-all hover:-translate-y-0.5 hover:bg-white/12 focus:outline-none focus:ring-4 focus:ring-white/25 sm:px-4 lg:text-[1.08rem]";
@@ -42,7 +43,7 @@ function Navbar() {
 
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
-            to="/login"
+            to={ROUTE_PATHS.login}
             aria-label="Abrir login"
             className={iconButtonClass}
           >

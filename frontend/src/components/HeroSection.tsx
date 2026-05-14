@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { FaArrowDown, FaServer } from "react-icons/fa";
+import { ROUTE_PATHS } from "../router";
 
 type BarChartDatum = {
   height: string;
@@ -50,7 +51,7 @@ function HeroSection() {
             style={{ "--reveal-delay": "280ms" } as CSSProperties}
           >
             <Link
-              to="/login"
+              to={ROUTE_PATHS.login}
               className="inline-flex h-14.5 items-center justify-center gap-3 rounded-[18px] bg-[linear-gradient(100.26deg,rgba(10,52,82,0.63)_1.91%,#1675b8_68.48%)] px-7 text-[1rem] font-bold !text-white shadow-[0_4px_4px_rgba(0,0,0,0.15)] transition-transform hover:-translate-y-0.5 sm:h-17.25 sm:px-8 sm:text-[1.15rem]"
             >
               <span className="font-bold !text-white">Criar Apresentação</span>
@@ -58,7 +59,7 @@ function HeroSection() {
             </Link>
 
             <Link
-              to="/login"
+              to={ROUTE_PATHS.login}
               className="inline-flex h-14.5 items-center justify-center rounded-[18px] border-[3px] border-[#1675b8] bg-white px-7 text-[1rem] font-bold text-[#1675b8] shadow-[0_4px_4px_rgba(0,0,0,0.15)] transition-transform hover:-translate-y-0.5 sm:h-17.25 sm:px-8 sm:text-[1.15rem]"
             >
               Criar Dashboard
