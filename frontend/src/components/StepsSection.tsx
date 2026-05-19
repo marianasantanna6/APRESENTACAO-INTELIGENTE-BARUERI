@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import type { CSSProperties } from "react";
 import type { IconType } from "react-icons";
 import {
@@ -7,6 +8,7 @@ import {
   FaWrench,
 } from "react-icons/fa";
 import SectionHeader from "./SectionHeader";
+import { ROUTE_PATHS } from "../router";
 
 type Step = {
   step: string;
@@ -97,13 +99,13 @@ function StepsSection() {
         </div>
 
         <div className="reveal-on-scroll mt-10 flex justify-center">
-          <a
-            href="#inicio"
+          <Link
+            to={ROUTE_PATHS.login}
             className="inline-flex h-14.5 items-center justify-center gap-3 rounded-[18px] bg-[linear-gradient(100.26deg,rgba(10,52,82,0.63)_1.91%,#1675b8_68.48%)] px-7 text-[1rem] font-bold !text-white shadow-[0_4px_4px_rgba(0,0,0,0.15)] transition-transform hover:-translate-y-0.5 sm:h-17.25 sm:px-8 sm:text-[1.15rem]"
           >
             <span className="font-bold !text-white">Criar Apresentação</span>
             <FaArrowDown className="h-5 w-5 rotate-270 text-amber-100 sm:h-5.5 sm:w-5.5" />
-          </a>
+          </Link>
         </div>
       </div>
     </section>

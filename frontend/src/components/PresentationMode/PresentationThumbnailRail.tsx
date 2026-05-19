@@ -2,21 +2,25 @@ import { FiMaximize2, FiTrash2 } from "react-icons/fi";
 import type { PresentationCard, PresentationData } from "../../types/presentation";
 import { PresentationSlide } from "../PresentationCards";
 
+type PresentationThumbnailRailProps = {
+  activeSlideId: PresentationCard["id"] | null;
+  canDelete?: boolean;
+  data: PresentationData;
+  slides: PresentationCard[];
+  onDeleteSlide?: (slideId: PresentationCard["id"]) => void;
+  onOpenSolo: (slideId: PresentationCard["id"]) => void;
+  onSelectSlide: (slideId: PresentationCard["id"]) => void;
+};
+
 export function PresentationThumbnailRail({
   activeSlideId,
+  canDelete = true,
   data,
   slides,
   onDeleteSlide,
   onOpenSolo,
   onSelectSlide,
-}: {
-  activeSlideId: PresentationCard["id"] | null;
-  data: PresentationData;
-  slides: PresentationCard[];
-  onDeleteSlide: (slideId: PresentationCard["id"]) => void;
-  onOpenSolo: (slideId: PresentationCard["id"]) => void;
-  onSelectSlide: (slideId: PresentationCard["id"]) => void;
-}) {
+}: PresentationThumbnailRailProps) {
   return (
     <section className="overflow-hidden rounded-[28px] border border-white/50 bg-[linear-gradient(98deg,#ffffff_0.9%,#ececec_100%)] px-4 py-5 shadow-[0_10px_24px_rgba(0,0,0,0.08)] sm:px-6">
       <div className="mb-4 flex items-center justify-between gap-3">
@@ -72,14 +76,17 @@ export function PresentationThumbnailRail({
                   >
                     <FiMaximize2 className="h-4 w-4" />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => onDeleteSlide(slide.id)}
-                    aria-label={`Excluir ${slide.title}`}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fff1f2] text-[#b91c1c] transition hover:-translate-y-0.5"
-                  >
-                    <FiTrash2 className="h-4 w-4" />
-                  </button>
+
+                  {canDelete && onDeleteSlide ? (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteSlide(slide.id)}
+                      aria-label={`Excluir ${slide.title}`}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fff1f2] text-[#b91c1c] transition hover:-translate-y-0.5"
+                    >
+                      <FiTrash2 className="h-4 w-4" />
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </div>

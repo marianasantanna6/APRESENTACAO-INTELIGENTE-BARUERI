@@ -12,6 +12,12 @@ export function BrazilIdhMap({
   const chartHeight =
     size === "presentation" ? 312 : size === "card" ? 212 : 260;
   const isPresentation = size === "presentation";
+  const layoutClassName =
+    size === "card"
+      ? "mx-auto w-full max-w-[292px] space-y-3.5"
+      : isPresentation
+        ? "grid w-full min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_190px]"
+        : "grid w-full min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_156px]";
   const legendClassName =
     size === "card"
       ? "grid grid-cols-2 gap-x-3 gap-y-1.5 text-[0.64rem] leading-3.5 text-[#706e6e]"
@@ -20,8 +26,8 @@ export function BrazilIdhMap({
       : "space-y-2 rounded-[14px] bg-white px-3 py-3 text-[0.72rem] text-[#706e6e] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]";
 
   return (
-    <div className={size === "card" ? "mx-auto w-full max-w-[292px] space-y-3.5" : isPresentation ? "grid gap-6 xl:grid-cols-[minmax(0,1fr)_190px]" : "grid gap-4 xl:grid-cols-[minmax(0,1fr)_156px]"}>
-      <div style={{ height: chartHeight, width: "100%" }}>
+    <div className={layoutClassName}>
+      <div className="min-w-0" style={{ height: chartHeight, width: "100%" }}>
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
             <XAxis type="number" dataKey="x" hide domain={[0, 100]} />

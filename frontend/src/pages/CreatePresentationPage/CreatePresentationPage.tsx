@@ -2,13 +2,14 @@ import type { ChangeEvent, CSSProperties, FormEvent } from "react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaChevronDown, FaFilter, FaSearch } from "react-icons/fa";
-import { FiHelpCircle, FiUser } from "react-icons/fi";
+import { FiHelpCircle, FiLogOut, FiUser } from "react-icons/fi";
 import createLogo from "../../assets/images/create-logo.png";
 import { DEFAULT_PRESENTATION_FILTERS } from "../../api/presentation";
-import {
-  buildPresentationSearchParams,
-  ROUTE_PATHS,
-} from "../../router";
+import { useAuth } from "../../context";
+import { canCreatePresentations } from "../../lib/accessControl";
+import { getPresentationsRouteForUser } from "../../lib/authRouting";
+import { buildPresentationSearchParams } from "../../router/presentationSearchParams";
+import { ROUTE_PATHS } from "../../router/paths";
 
 type Category = {
   label: string;
@@ -51,6 +52,8 @@ const activeNavPillClass =
 
 function CreatePresentationPage() {
   const navigate = useNavigate();
+  const { logout, user } = useAuth();
+  const canCreate = canCreatePresentations(user);
   const [selectedCategory, setSelectedCategory] = useState(
     DEFAULT_PRESENTATION_FILTERS.category,
   );
@@ -69,6 +72,11 @@ function CreatePresentationPage() {
     });
 
     navigate(`${ROUTE_PATHS.generatedPresentation}?${params.toString()}`);
+  }
+
+  function handleLogout() {
+    logout();
+    navigate(ROUTE_PATHS.login);
   }
 
   return (
@@ -91,22 +99,26 @@ function CreatePresentationPage() {
             aria-label="Área logada"
             className="hidden items-center gap-3 text-[15px] font-semibold text-white md:flex lg:text-[16px]"
           >
+            {canCreate ? (
+              <>
+                <Link
+                  to={ROUTE_PATHS.createPresentation}
+                  aria-current="page"
+                  className={`${navPillClass} ${activeNavPillClass} w-[112px] lg:w-[128px]`}
+                >
+                  Criar
+                </Link>
+
+                <div aria-hidden="true" className="h-6 w-0.5 bg-white/30" />
+              </>
+            ) : null}
+
             <Link
-              to={ROUTE_PATHS.createPresentation}
-              aria-current="page"
-              className={`${navPillClass} ${activeNavPillClass} w-[112px] lg:w-[128px]`}
-            >
-              Criar
-            </Link>
-
-            <div aria-hidden="true" className="h-6 w-0.5 bg-white/30" />
-
-            <button
-              type="button"
+              to={getPresentationsRouteForUser(user)}
               className={`${navPillClass} border border-transparent`}
             >
               Minhas apresentações
-            </button>
+            </Link>
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
@@ -116,6 +128,14 @@ function CreatePresentationPage() {
             <button type="button" aria-label="Ajuda" className={iconButtonClass}>
               <FiHelpCircle className="h-5.5 w-5.5 text-white" />
               <span className="hidden text-white sm:inline">Ajuda</span>
+            </button>
+            <button
+              type="button"
+              aria-label="Sair"
+              onClick={handleLogout}
+              className={iconButtonClass}
+            >
+              <FiLogOut className="h-5.5 w-5.5 text-white" />
             </button>
           </div>
         </div>

@@ -2,7 +2,6 @@ import {
   FiArrowLeft,
   FiChevronLeft,
   FiChevronRight,
-  FiGrid,
   FiMaximize2,
   FiMinimize2,
   FiRotateCcw,
@@ -12,6 +11,7 @@ import {
 import type { PresentationViewerMode } from "../../hooks";
 
 export function PresentationModeToolbar({
+  canDeleteSlides = true,
   canGoNext,
   canGoPrevious,
   currentSlideTitle,
@@ -25,9 +25,9 @@ export function PresentationModeToolbar({
   onGoNext,
   onGoPrevious,
   onRestoreSlides,
-  onReturnToDeck,
   onToggleFullscreen,
 }: {
+  canDeleteSlides?: boolean;
   canGoNext: boolean;
   canGoPrevious: boolean;
   currentSlideTitle: string;
@@ -41,32 +41,20 @@ export function PresentationModeToolbar({
   onGoNext: () => void;
   onGoPrevious: () => void;
   onRestoreSlides: () => void;
-  onReturnToDeck: () => void;
   onToggleFullscreen: () => void;
 }) {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          {viewerMode === "solo" ? (
-            <button
-              type="button"
-              onClick={onReturnToDeck}
-              className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-5 text-[0.94rem] font-semibold text-[#1e1e1e] shadow-[0_10px_24px_rgba(0,0,0,0.12)] transition hover:-translate-y-0.5"
-            >
-              <FiGrid className="h-4.5 w-4.5" />
-              Voltar aos slides
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-5 text-[0.94rem] font-semibold text-[#1e1e1e] shadow-[0_10px_24px_rgba(0,0,0,0.12)] transition hover:-translate-y-0.5"
-            >
-              <FiArrowLeft className="h-4.5 w-4.5" />
-              Voltar
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-5 text-[0.94rem] font-semibold text-[#1e1e1e] shadow-[0_10px_24px_rgba(0,0,0,0.12)] transition hover:-translate-y-0.5"
+          >
+            <FiArrowLeft className="h-4.5 w-4.5" />
+            Voltar
+          </button>
 
           {hasSlides ? (
             <div className="hidden items-center gap-2 md:flex">
@@ -119,7 +107,7 @@ export function PresentationModeToolbar({
             </button>
           ) : null}
 
-          {hasSlides ? (
+          {canDeleteSlides && hasSlides ? (
             <button
               type="button"
               onClick={onDeleteSlide}

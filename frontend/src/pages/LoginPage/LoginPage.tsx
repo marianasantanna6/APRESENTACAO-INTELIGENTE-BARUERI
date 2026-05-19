@@ -1,9 +1,14 @@
 import type { CSSProperties, ChangeEvent, FormEvent } from "react";
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import loginLogo from "../../assets/images/create-logo.png";
 import loginGovLogo from "../../assets/images/login-gov.png";
-import { ROUTE_PATHS } from "../../router";
+import { useAuth } from "../../context";
+import {
+  canAccessPathForUser,
+  getDefaultRouteForUser,
+} from "../../lib/authRouting";
+import { ROUTE_PATHS } from "../../router/paths";
 
 type BackgroundShape = {
   className: string;
@@ -17,7 +22,9 @@ type FormValues = {
 
 type FormField = keyof FormValues;
 
-type FormErrors = Partial<Record<Exclude<FormField, "remember">, string>>;
+type FormErrors = Partial<
+  Record<Exclude<FormField, "remember"> | "general", string>
+>;
 
 const backgroundShapes: BackgroundShape[] = [
   {
@@ -52,18 +59,55 @@ const defaultValues: FormValues = {
   remember: false,
 };
 
+const mockedAccesses = [
+  {
+    label: "Admin nível 2",
+    identifier: "admin.nivel2",
+    password: "barueri123",
+  },
+  {
+    label: "Admin nível 1",
+    identifier: "admin.nivel1",
+    password: "barueri123",
+  },
+  {
+    label: "Funcionário comum",
+    identifier: "funcionario.demo",
+    password: "barueri123",
+  },
+];
+
 function LoginPage() {
+  const location = useLocation();
   const navigate = useNavigate();
+  const { isAuthenticated, login, user } = useAuth();
   const [formValues, setFormValues] = useState<FormValues>(defaultValues);
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      return;
+    }
+
+    const stateFromLocation = location.state as { from?: string } | null;
+    const requestedPath = stateFromLocation?.from;
+    if (requestedPath) {
+      if (canAccessPathForUser(user, requestedPath)) {
+        navigate(requestedPath, { replace: true });
+        return;
+      }
+    }
+
+    navigate(getDefaultRouteForUser(user), { replace: true });
+  }, [isAuthenticated, location.state, navigate, user]);
 
   function updateField<Field extends FormField>(
     field: Field,
     value: FormValues[Field],
   ) {
     setFormValues((current) => ({ ...current, [field]: value }));
-    setErrors((current) => ({ ...current, [field]: "" }));
+    setErrors((current) => ({ ...current, [field]: "", general: "" }));
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -83,8 +127,22 @@ function LoginPage() {
 
     setErrors(nextErrors);
 
-    if (Object.keys(nextErrors).length === 0) {
-      navigate(ROUTE_PATHS.createPresentation);
+    if (Object.keys(nextErrors).length > 0) {
+      return;
+    }
+
+    const result = login({
+      identifier: formValues.identifier,
+      password: formValues.password,
+    });
+
+    if ("message" in result) {
+      const failureMessage = result.message;
+
+      setErrors((current) => ({
+        ...current,
+        general: failureMessage,
+      }));
     }
   }
 
@@ -101,7 +159,7 @@ function LoginPage() {
       <section className="relative z-10 mx-auto mt-28 flex w-full max-w-224.25 flex-col items-center rounded-[20px] bg-white/81 px-6 pb-14 pt-18 shadow-[0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-[2px] sm:mt-34 sm:px-12 sm:pb-16 sm:pt-22 lg:px-27">
         <Link
           to={ROUTE_PATHS.home}
-          aria-label="Voltar para a página inicial"
+          aria-label="Voltar para a pagina inicial"
           className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2"
         >
           <img
@@ -177,6 +235,12 @@ function LoginPage() {
             Entrar
           </button>
 
+          {errors.general ? (
+            <p className="rounded-[16px] bg-[#fff5f5] px-4 py-3 text-sm font-medium text-[#d64545]">
+              {errors.general}
+            </p>
+          ) : null}
+
           <div className="flex flex-col gap-4 text-[0.95rem] font-medium text-[#706e6e] sm:flex-row sm:items-center sm:justify-between">
             <label className="flex cursor-pointer items-center gap-3">
               <input
@@ -212,6 +276,18 @@ function LoginPage() {
             </span>
             <span className="w-19.5" aria-hidden="true" />
           </button>
+
+          <div className="rounded-[20px] border border-[#d7e7f3] bg-[#f7fbff] px-5 py-4 text-left text-[0.92rem] text-[#4f6980] shadow-[0_6px_14px_rgba(22,117,184,0.08)]">
+            <p className="font-semibold text-[#2d5d83]">Acessos mockados</p>
+            <div className="mt-3 space-y-2">
+              {mockedAccesses.map((access) => (
+                <p key={access.identifier} className="leading-6">
+                  <span className="font-semibold">{access.label}:</span>{" "}
+                  {access.identifier} / {access.password}
+                </p>
+              ))}
+            </div>
+          </div>
         </form>
       </section>
     </main>

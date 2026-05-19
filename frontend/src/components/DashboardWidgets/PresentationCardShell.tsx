@@ -14,7 +14,7 @@ export function PresentationCardShell({
   const shellClassName =
     variant === "stage"
       ? "rounded-[20px] border border-black/5 bg-white shadow-[0_4px_16px_rgba(0,0,0,0.18)] flex flex-col gap-6 px-6 py-6 sm:px-8 sm:py-8"
-      : "rounded-[14px] border border-black/5 bg-white shadow-[0_4px_14px_rgba(0,0,0,0.12)] flex flex-col gap-3.5 px-4 py-4 sm:px-5";
+      : "h-full overflow-hidden rounded-[14px] border border-black/5 bg-white shadow-[0_4px_14px_rgba(0,0,0,0.12)] flex flex-col gap-3.5 px-4 py-4 sm:px-5";
   const titleClassName =
     variant === "stage"
       ? "text-[1.75rem] font-bold leading-tight text-[#1e1e1e] text-center sm:text-[2.15rem]"

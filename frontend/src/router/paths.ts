@@ -7,6 +7,11 @@
 export const ROUTE_PATHS = {
   home: "/",
   login: "/login",
+  presentations: "/apresentacoes",
+  adminRoot: "/admin",
+  adminProjects: "/admin/apresentacoes",
+  adminData: "/admin/dados",
+  adminAdministration: "/admin/administracao",
   createPresentation: "/criar",
   generatedPresentation: "/criar/resultado",
 } as const;

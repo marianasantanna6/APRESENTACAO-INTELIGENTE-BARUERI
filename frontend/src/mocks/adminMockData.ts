@@ -1,0 +1,233 @@
+import type {
+  ActivityLogEntry,
+  AdminPresentationSummary,
+  ApiIntegration,
+  EmployeeDirectoryEntry,
+  OrganizationDirectoryEntry,
+} from "../types/admin";
+
+export const organizationDirectory: OrganizationDirectoryEntry[] = [
+  {
+    department: "Gabinete de Dados",
+    teams: ["Plataforma Analítica", "Inteligência Operacional"],
+  },
+  {
+    department: "Planejamento",
+    teams: ["Planejamento Territorial", "Indicadores Urbanos"],
+  },
+  {
+    department: "Financeiro",
+    teams: ["Orçamento Municipal"],
+  },
+  {
+    department: "Jurídico",
+    teams: ["Consultivo Interno"],
+  },
+  {
+    department: "Recursos Humanos",
+    teams: ["Gestão de Pessoas"],
+  },
+];
+
+export const mockPresentations: AdminPresentationSummary[] = [
+  {
+    id: "presentation-marina-idh",
+    ownerUserId: "admin-marina",
+    ownerName: "Marina Justus",
+    title: "IDH no Brasil - 2010",
+    category: "Economia",
+    status: "presented",
+    date: "2026-03-22T14:30:00",
+    department: "Gabinete de Dados",
+    team: "Plataforma Analítica",
+    filters: {
+      query: "IDH no Brasil 2010",
+      category: "Economia",
+      year: "2010",
+    },
+  },
+  {
+    id: "presentation-marina-piramide",
+    ownerUserId: "admin-marina",
+    ownerName: "Marina Justus",
+    title: "Pirâmide etária Brasil 1991 vs 2010",
+    category: "População",
+    status: "ready",
+    date: "2026-03-13T10:15:00",
+    department: "Gabinete de Dados",
+    team: "Plataforma Analítica",
+    filters: {
+      query: "Pirâmide etária Brasil",
+      category: "População",
+      year: "2010",
+    },
+  },
+  {
+    id: "presentation-joao-mobilidade",
+    ownerUserId: "admin-joao",
+    ownerName: "João Lemes",
+    title: "Mobilidade urbana por distrito",
+    category: "Planejamento",
+    status: "presented",
+    date: "2026-03-18T09:00:00",
+    department: "Planejamento",
+    team: "Planejamento Territorial",
+    filters: {
+      query: "Mobilidade urbana distritos",
+      category: "Planejamento",
+      year: "2026",
+    },
+  },
+  {
+    id: "presentation-bianca-contratos",
+    ownerUserId: "employee-bianca",
+    ownerName: "Bianca Souza",
+    title: "Resumo semanal da equipe territorial",
+    category: "Planejamento",
+    status: "ready",
+    date: "2026-03-17T11:20:00",
+    department: "Planejamento",
+    team: "Planejamento Territorial",
+    filters: {
+      query: "Resumo semanal territorial",
+      category: "Planejamento",
+      year: "2026",
+    },
+  },
+];
+
+export const mockApiIntegrations: ApiIntegration[] = [
+  {
+    id: "api-ibge-indicadores",
+    name: "IBGE - Indicadores",
+    status: "active",
+    lastUpdated: "2026-03-22T14:30:00",
+    tags: ["PIB", "População", "Área"],
+  },
+  {
+    id: "api-ibge-idh",
+    name: "IBGE - IDH",
+    status: "active",
+    lastUpdated: "2026-03-22T14:30:00",
+    tags: ["IDH Nacional", "IDH Regional", "Expectativa de Vida"],
+  },
+  {
+    id: "api-cep",
+    name: "CEP API",
+    status: "maintenance",
+    lastUpdated: "2026-03-21T09:15:00",
+    tags: ["Endereço", "Logradouro", "Região"],
+  },
+  {
+    id: "api-receita",
+    name: "Receita Municipal",
+    status: "inactive",
+    lastUpdated: "2026-03-20T17:00:00",
+    tags: ["Arrecadação", "ISS", "IPTU"],
+  },
+];
+
+export const mockEmployeeDirectory: EmployeeDirectoryEntry[] = [
+  {
+    id: "employee-amanda",
+    name: "Amanda Araújo",
+    email: "amanda.araujo@barueri.sp.gov.br",
+    department: "Planejamento",
+    team: "Planejamento Territorial",
+    accessLevel: "employee",
+    status: "active",
+  },
+  {
+    id: "employee-armando",
+    name: "Armando Gomes",
+    email: "armando.gomes@barueri.sp.gov.br",
+    department: "Planejamento",
+    team: "Planejamento Territorial",
+    accessLevel: "employee",
+    status: "inactive",
+  },
+  {
+    id: "employee-bernardo",
+    name: "Bernardo Carvalho",
+    email: "bernardo.carvalho@barueri.sp.gov.br",
+    department: "Financeiro",
+    team: "Orçamento Municipal",
+    accessLevel: "employee",
+    status: "inactive",
+  },
+  {
+    id: "employee-bianca",
+    name: "Bianca Souza",
+    email: "bianca.souza@barueri.sp.gov.br",
+    department: "Planejamento",
+    team: "Planejamento Territorial",
+    accessLevel: "employee",
+    status: "active",
+  },
+  {
+    id: "employee-carlos",
+    name: "Carlos Francisco",
+    email: "carlos.francisco@barueri.sp.gov.br",
+    department: "Recursos Humanos",
+    team: "Gestão de Pessoas",
+    accessLevel: "employee",
+    status: "active",
+  },
+  {
+    id: "employee-celine",
+    name: "Celine Ramos",
+    email: "celine.ramos@barueri.sp.gov.br",
+    department: "Jurídico",
+    team: "Consultivo Interno",
+    accessLevel: "employee",
+    status: "inactive",
+  },
+];
+
+export const mockActivityLog: ActivityLogEntry[] = [
+  {
+    id: "log-1",
+    timestamp: "2026-03-22T14:30:00",
+    source: "IBGE API",
+    type: "Atualização de dados",
+    userName: "Sistema",
+    department: "Gabinete de Dados",
+    team: "Plataforma Analítica",
+  },
+  {
+    id: "log-2",
+    timestamp: "2026-03-22T13:00:00",
+    source: "Editor",
+    type: "Apresentação feita",
+    userName: "João Lemes",
+    department: "Planejamento",
+    team: "Planejamento Territorial",
+  },
+  {
+    id: "log-3",
+    timestamp: "2026-03-21T16:45:00",
+    source: "CEP API",
+    type: "Dados sincronizados",
+    userName: "Sistema",
+    department: "Gabinete de Dados",
+    team: "Plataforma Analítica",
+  },
+  {
+    id: "log-4",
+    timestamp: "2026-03-20T11:00:00",
+    source: "Editor",
+    type: "Apresentação feita",
+    userName: "Marina Justus",
+    department: "Gabinete de Dados",
+    team: "Plataforma Analítica",
+  },
+  {
+    id: "log-5",
+    timestamp: "2026-03-19T15:10:00",
+    source: "Administração",
+    type: "Funcionário atualizado",
+    userName: "João Lemes",
+    department: "Planejamento",
+    team: "Planejamento Territorial",
+  },
+];
