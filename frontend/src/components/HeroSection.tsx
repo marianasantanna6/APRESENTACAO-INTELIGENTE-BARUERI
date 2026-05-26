@@ -29,11 +29,16 @@ function HeroSection() {
       className="bg-[linear-gradient(180deg,#f8fafc_24%,rgba(158,172,181,0.07)_100%)]"
     >
       <div className="mx-auto flex max-w-310 flex-col gap-10 px-5 pb-20 pt-12 sm:px-6 md:pb-24 md:pt-16 lg:px-8">
-        <div className="max-w-245">
-          <h1 className="max-w-250 text-[2.35rem] leading-[1.06] font-extrabold tracking-[-0.04em] text-[#222] sm:text-[3.3rem] lg:text-[4.75rem]">
+        <div className="max-w-none">
+          <h1 className="max-w-[20ch] text-[2.15rem] leading-[1.08] font-extrabold tracking-[-0.04em] text-[#222] [text-wrap:balance] sm:text-[2.95rem] lg:max-w-[22ch] lg:text-[3.65rem] xl:text-[4rem]">
             O fim das apresentações institucionais{" "}
-            <span className="typewriter-word bg-[linear-gradient(90deg,#0a3452_0%,#1675b8_78.846%)] bg-clip-text text-transparent">
-              desatualizadas
+            <span className="relative inline-block align-bottom">
+              <span aria-hidden="true" className="invisible">
+                desatualizadas
+              </span>
+              <span className="typewriter-word absolute left-0 top-0 bg-[linear-gradient(90deg,#0a3452_0%,#1675b8_78.846%)] bg-clip-text text-transparent">
+                desatualizadas
+              </span>
             </span>
           </h1>
 

@@ -77,6 +77,19 @@ const mockedAccesses = [
   },
 ];
 
+function getMockedAccessDisplayName(identifier: string) {
+  switch (identifier) {
+    case "admin.nivel2":
+      return "Marina Justus";
+    case "admin.nivel1":
+      return "João Lemes";
+    case "funcionario.demo":
+      return "Bianca Souza";
+    default:
+      return "Usuário";
+  }
+}
+
 function LoginPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -282,7 +295,9 @@ function LoginPage() {
             <div className="mt-3 space-y-2">
               {mockedAccesses.map((access) => (
                 <p key={access.identifier} className="leading-6">
-                  <span className="font-semibold">{access.label}:</span>{" "}
+                  <span className="font-semibold">
+                    {getMockedAccessDisplayName(access.identifier)}:
+                  </span>{" "}
                   {access.identifier} / {access.password}
                 </p>
               ))}

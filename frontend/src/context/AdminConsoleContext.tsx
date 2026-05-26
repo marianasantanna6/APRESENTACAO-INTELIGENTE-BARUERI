@@ -34,6 +34,10 @@ function createId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 }
 
+function isInstitutionalEmail(value: string) {
+  return value.trim().toLowerCase().endsWith("@barueri.sp.gov.br");
+}
+
 export function AdminConsoleProvider({ children }: PropsWithChildren) {
   const { user } = useAuth();
   const [presentationsState] = useState(mockPresentations);
@@ -82,14 +86,22 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
       };
     }
 
+    if (!isInstitutionalEmail(payload.email)) {
+      return {
+        ok: false,
+        message:
+          "Cadastre apenas emails institucionais com o domínio @barueri.sp.gov.br.",
+      };
+    }
+
     const nextEmployee = {
       id: createId("employee"),
       name: payload.name,
-      email: payload.email,
+      email: payload.email.trim().toLowerCase(),
       department: payload.department,
       team: payload.team,
       accessLevel: "employee" as const,
-      status: payload.status,
+      status: "active" as const,
     };
 
     setEmployeesState((current) => [nextEmployee, ...current]);

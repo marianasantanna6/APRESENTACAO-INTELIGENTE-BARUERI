@@ -8,6 +8,7 @@ export const ROUTE_PATHS = {
   home: "/",
   login: "/login",
   presentations: "/apresentacoes",
+  myAccount: "/minha-conta",
   adminRoot: "/admin",
   adminProjects: "/admin/apresentacoes",
   adminData: "/admin/dados",

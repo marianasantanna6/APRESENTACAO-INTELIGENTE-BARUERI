@@ -1,10 +1,9 @@
 import type { ChangeEvent, CSSProperties, FormEvent } from "react";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { FaChevronDown, FaFilter, FaSearch } from "react-icons/fa";
-import { FiHelpCircle, FiLogOut, FiUser } from "react-icons/fi";
-import createLogo from "../../assets/images/create-logo.png";
 import { DEFAULT_PRESENTATION_FILTERS } from "../../api/presentation";
+import AuthenticatedHeader from "../../components/AuthenticatedHeader";
 import { useAuth } from "../../context";
 import { canCreatePresentations } from "../../lib/accessControl";
 import { getPresentationsRouteForUser } from "../../lib/authRouting";
@@ -43,13 +42,6 @@ const availableYears = [
   ),
 ];
 
-const iconButtonClass =
-  "inline-flex h-11 items-center justify-center gap-2.5 rounded-[8px] px-3 text-[1rem] font-bold !text-white transition-all hover:-translate-y-0.5 hover:bg-white/12 focus:outline-none focus:ring-4 focus:ring-white/25 sm:px-4 lg:text-[1.08rem]";
-const navPillClass =
-  "flex h-10 items-center justify-center rounded-[50px] px-4 text-[1rem] font-semibold !text-white transition-all hover:-translate-y-0.5 hover:border-[#1675b8] hover:bg-[rgba(22,117,184,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] focus:outline-none focus:ring-4 focus:ring-white/25 lg:h-11 lg:px-5 lg:text-[1.05rem]";
-const activeNavPillClass =
-  "border border-[#1675b8] bg-[rgba(22,117,184,0.5)] shadow-[0_4px_12px_rgba(0,0,0,0.12)]";
-
 function CreatePresentationPage() {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
@@ -81,80 +73,35 @@ function CreatePresentationPage() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-[#1e1e1e]">
-      <header className="sticky top-0 z-20 border-b border-white/20 bg-[linear-gradient(90deg,#ffffff_8.654%,#1675b8_100%)] backdrop-blur">
-        <div className="mx-auto flex max-w-[1240px] items-center justify-between gap-6 px-4 py-4 sm:px-6 lg:px-8">
-          <Link
-            to={ROUTE_PATHS.createPresentation}
-            aria-label="Ir para a área logada"
-            className="shrink-0"
-          >
-            <img
-              src={createLogo}
-              alt="Logo Barueri"
-              className="h-auto w-[116px] sm:w-[150px]"
-            />
-          </Link>
-
-          <nav
-            aria-label="Área logada"
-            className="hidden items-center gap-3 text-[15px] font-semibold text-white md:flex lg:text-[16px]"
-          >
-            {canCreate ? (
-              <>
-                <Link
-                  to={ROUTE_PATHS.createPresentation}
-                  aria-current="page"
-                  className={`${navPillClass} ${activeNavPillClass} w-[112px] lg:w-[128px]`}
-                >
-                  Criar
-                </Link>
-
-                <div aria-hidden="true" className="h-6 w-0.5 bg-white/30" />
-              </>
-            ) : null}
-
-            <Link
-              to={getPresentationsRouteForUser(user)}
-              className={`${navPillClass} border border-transparent`}
-            >
-              Minhas apresentações
-            </Link>
-          </nav>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <button type="button" aria-label="Conta" className={iconButtonClass}>
-              <FiUser className="h-5.5 w-5.5 text-white" />
-            </button>
-            <button type="button" aria-label="Ajuda" className={iconButtonClass}>
-              <FiHelpCircle className="h-5.5 w-5.5 text-white" />
-              <span className="hidden text-white sm:inline">Ajuda</span>
-            </button>
-            <button
-              type="button"
-              aria-label="Sair"
-              onClick={handleLogout}
-              className={iconButtonClass}
-            >
-              <FiLogOut className="h-5.5 w-5.5 text-white" />
-            </button>
-          </div>
-        </div>
-      </header>
+      <AuthenticatedHeader
+        activeItem="create"
+        canCreate={canCreate}
+        logoTo={ROUTE_PATHS.createPresentation}
+        onLogout={handleLogout}
+        presentationsTo={getPresentationsRouteForUser(user)}
+        showMobilePresentationsShortcut
+        user={user}
+      />
 
       <main className="mx-auto max-w-[1240px] px-5 pb-20 pt-24 sm:px-6 lg:px-8">
         <section className="mx-auto flex max-w-[1210px] flex-col items-center">
-          <h1 className="reveal-on-scroll text-center text-[2.6rem] font-extrabold leading-[1.05] tracking-[-0.05em] text-[#1e1e1e] sm:text-[3.6rem] lg:text-[5rem]">
+          <h1 className="reveal-on-scroll max-w-[15ch] text-center text-[2.2rem] font-extrabold leading-[1.08] tracking-[-0.05em] text-[#1e1e1e] [text-wrap:balance] sm:text-[3.1rem] lg:text-[3.8rem] xl:text-[4.1rem]">
             Crie uma Apresentação{" "}
-            <span
-              className="typewriter-word bg-[linear-gradient(90deg,#0a3452_0%,#1675b8_25.962%)] bg-clip-text text-transparent"
-              style={
-                {
-                  "--typewriter-width": "10.5ch",
-                  "--typewriter-steps": 10,
-                } as CSSProperties
-              }
-            >
-              Inteligente
+            <span className="relative inline-block text-left align-bottom">
+              <span aria-hidden="true" className="invisible">
+                Inteligente
+              </span>
+              <span
+                className="typewriter-word absolute left-0 top-0 bg-[linear-gradient(90deg,#0a3452_0%,#1675b8_25.962%)] bg-clip-text text-transparent"
+                style={
+                  {
+                    "--typewriter-width": "11ch",
+                    "--typewriter-steps": 11,
+                  } as CSSProperties
+                }
+              >
+                Inteligente
+              </span>
             </span>
           </h1>
 
@@ -178,7 +125,7 @@ function CreatePresentationPage() {
             <button
               type="submit"
               aria-label="Gerar dashboard e apresentação"
-              className="absolute right-[34px] top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-sm text-[#706e6e] transition hover:text-[#1675b8]"
+              className="absolute right-[34px] top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[#706e6e] shadow-sm transition hover:text-[#1675b8]"
             >
               <FaFilter className="h-4 w-4" />
             </button>
