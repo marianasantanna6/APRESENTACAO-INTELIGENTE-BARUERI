@@ -17,14 +17,14 @@ export function RegionBars({
   const isPresentation = size === "presentation";
 
   return (
-    <div className={size === "card" ? "h-[180px] w-full" : isPresentation ? "h-[260px] w-full" : "h-[188px] w-full"}>
+    <div className={size === "card" ? "h-[208px] w-full" : isPresentation ? "h-[260px] w-full" : "h-[188px] w-full"}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
           margin={{
             top: 16,
             right: 8,
-            left: size === "card" ? -18 : -4,
+            left: size === "card" ? -12 : -4,
             bottom: 0,
           }}
         >
@@ -36,7 +36,7 @@ export function RegionBars({
             axisLine={false}
             tickLine={false}
             tick={{
-              fontSize: size === "card" ? 11 : isPresentation ? 13 : 12,
+              fontSize: size === "card" ? 12 : isPresentation ? 13 : 12,
               fontWeight: 600,
               fill: "#706e6e",
             }}
@@ -81,7 +81,7 @@ export function RegionBars({
           <Bar
             dataKey="value"
             radius={[10, 10, 0, 0]}
-            maxBarSize={size === "card" ? 28 : isPresentation ? 40 : 34}
+            maxBarSize={size === "card" ? 32 : isPresentation ? 40 : 34}
           >
             {data.map((item) => (
               <Cell key={item.region} fill={item.color} />

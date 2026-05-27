@@ -43,14 +43,14 @@ export function InsightList({
   }
 
   return (
-    <div className="grid content-start gap-2">
+    <div className="grid content-start gap-1.5">
       {items.map((item) => {
         const parsed = parseInsight(item);
 
         return (
           <div
             key={item}
-            className="rounded-[12px] bg-[#f8fafc] px-3.5 py-2.5 text-[0.78rem] leading-5 text-[#1e1e1e] shadow-[inset_0_0_0_1px_rgba(13,82,131,0.04)]"
+            className="rounded-[12px] bg-[#f8fafc] px-3 py-2 text-[0.84rem] leading-[1.35rem] text-[#1e1e1e] shadow-[inset_0_0_0_1px_rgba(13,82,131,0.04)]"
           >
             {parsed.label ? (
               <p>

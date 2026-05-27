@@ -13,7 +13,7 @@ export function HorizontalRanking({
   const minValue = Math.max(0, Math.min(...items.map((item) => item.value)) - 0.02);
   const maxValue = Math.max(...items.map((item) => item.value)) + 0.025;
   const isPresentation = size === "presentation";
-  const chartHeight = items.length * (size === "card" ? 30 : isPresentation ? 34 : 28) + 24;
+  const chartHeight = items.length * (size === "card" ? 34 : isPresentation ? 34 : 28) + 24;
 
   return (
     <div style={{ height: chartHeight, width: "100%" }}>
@@ -33,11 +33,11 @@ export function HorizontalRanking({
           <YAxis
             type="category"
             dataKey="label"
-            width={size === "card" ? 102 : isPresentation ? 182 : 164}
+            width={size === "card" ? 118 : isPresentation ? 182 : 164}
             axisLine={false}
             tickLine={false}
             tick={{
-              fontSize: size === "card" ? 11 : isPresentation ? 13 : 12,
+              fontSize: size === "card" ? 12 : isPresentation ? 13 : 12,
               fontWeight: 600,
               fill: "#1e1e1e",
             }}
@@ -68,13 +68,13 @@ export function HorizontalRanking({
               );
             }}
           />
-          <Bar dataKey="value" fill="#1675b8" radius={[0, 999, 999, 0]} maxBarSize={20}>
+          <Bar dataKey="value" fill="#1675b8" radius={[0, 999, 999, 0]} maxBarSize={24}>
             <LabelList
               dataKey="value"
               position="right"
               formatter={(chartValue: number | string) => formatIdh(Number(chartValue))}
               style={{
-                fontSize: size === "card" ? 10 : isPresentation ? 12 : 11,
+                fontSize: size === "card" ? 11 : isPresentation ? 12 : 11,
                 fontWeight: 700,
                 fill: "#0d5283",
               }}

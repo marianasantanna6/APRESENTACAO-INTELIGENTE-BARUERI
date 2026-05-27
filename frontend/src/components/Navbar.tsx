@@ -9,7 +9,7 @@ const iconButtonClass =
 function Navbar() {
   return (
     <header className="sticky top-0 z-20 border-b border-white/20 bg-[linear-gradient(90deg,#ffffff_8.654%,#1675b8_100%)] backdrop-blur">
-      <div className="mx-auto flex max-w-310 items-center justify-between gap-6 px-4 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-310 items-center justify-between gap-6 px-4 py-4 sm:px-6 lg:px-8 md:relative">
         <a href="#inicio" aria-label="Ir para o início" className="shrink-0">
           <img
             src={navbarLogo}
@@ -20,7 +20,7 @@ function Navbar() {
 
         <nav
           aria-label="Principal"
-          className="hidden items-center gap-3 text-[15px] font-semibold text-white md:flex lg:text-[16px]"
+          className="hidden items-center gap-3 text-[15px] font-semibold text-white md:absolute md:left-1/2 md:top-1/2 md:flex md:-translate-x-1/2 md:-translate-y-1/2 lg:text-[16px]"
         >
           <a className="transition-opacity hover:opacity-80" href="#sobre">
             Sobre

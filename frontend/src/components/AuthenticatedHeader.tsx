@@ -8,7 +8,7 @@ import { AdminAvatar } from "./AdminConsole";
 type HeaderActiveItem = "create" | "presentations";
 
 type AuthenticatedHeaderProps = {
-  activeItem: HeaderActiveItem;
+  activeItem?: HeaderActiveItem;
   canCreate: boolean;
   logoTo: string;
   onLogout?: () => void;
@@ -26,7 +26,7 @@ const activeNavPillClass =
 const iconButtonClass =
   "inline-flex h-11 items-center justify-center gap-2 rounded-[8px] px-3 text-[1rem] font-bold !text-white transition-all hover:-translate-y-0.5 hover:bg-white/12 focus:outline-none focus:ring-4 focus:ring-white/25 sm:px-3.5 lg:text-[1.08rem]";
 const accountPillClass =
-  "inline-flex items-center gap-2 rounded-full bg-white/12 px-2.5 py-2 text-white transition hover:-translate-y-0.5 hover:bg-white/18 focus:outline-none focus:ring-4 focus:ring-white/25 sm:px-3";
+  "inline-flex items-center gap-2 rounded-full bg-white/12 px-2.5 py-2 !text-white transition hover:-translate-y-0.5 hover:bg-white/18 focus:outline-none focus:ring-4 focus:ring-white/25 sm:px-3";
 
 function getLogoVisibilityClass(
   showDesktopLogo: boolean,
@@ -121,7 +121,7 @@ export default function AuthenticatedHeader({
                 className="ring-2 ring-white/60"
               />
               <div className="hidden max-w-[136px] leading-tight sm:block xl:max-w-[160px]">
-                <p className="truncate text-sm font-semibold">{user.name}</p>
+                <p className="truncate text-sm font-semibold !text-white">{user.name}</p>
               </div>
             </Link>
           ) : null}

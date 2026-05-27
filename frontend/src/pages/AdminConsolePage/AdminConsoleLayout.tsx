@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   FiDatabase,
   FiFolder,
@@ -51,10 +51,11 @@ function SidebarContent({ canSeeAdminModules }: { canSeeAdminModules: boolean })
               <NavLink
                 key={item.path}
                 to={item.path}
+                end
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-full px-4 py-3 text-[0.95rem] font-medium transition-all ${
                     isActive
-                      ? "bg-[linear-gradient(90deg,#7fb4db_0%,#6fa8d6_100%)] text-white shadow-[0_8px_20px_rgba(97,159,208,0.28)]"
+                      ? "bg-[linear-gradient(90deg,#7fb4db_0%,#6fa8d6_100%)] !text-white shadow-[0_8px_20px_rgba(97,159,208,0.28)] [&_*]:!text-white"
                       : "text-[#7a7a7a] hover:bg-white/70 hover:text-[#1e1e1e]"
                   }`
                 }
@@ -79,6 +80,7 @@ function SidebarContent({ canSeeAdminModules }: { canSeeAdminModules: boolean })
 }
 
 function AdminConsoleLayoutContent() {
+  const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   const canSeeAdminModules = canAccessAdminModules(user);
@@ -86,6 +88,9 @@ function AdminConsoleLayoutContent() {
   const visibleSidebarItems = sidebarItems.filter(
     (item) => !item.requiresAdmin || canSeeAdminModules,
   );
+
+  const activeHeaderItem =
+    location.pathname === ROUTE_PATHS.myAccount ? undefined : "presentations";
 
   function handleLogout() {
     logout();
@@ -95,7 +100,7 @@ function AdminConsoleLayoutContent() {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.92)_0%,rgba(239,240,250,0.96)_46%,rgba(226,227,247,0.96)_100%)] text-[#1e1e1e]">
       <AuthenticatedHeader
-        activeItem="presentations"
+        activeItem={activeHeaderItem}
         canCreate={canSeeCreateFlow}
         logoTo={ROUTE_PATHS.presentations}
         onLogout={handleLogout}
@@ -119,10 +124,11 @@ function AdminConsoleLayoutContent() {
                 <NavLink
                   key={item.path}
                   to={item.path}
+                  end
                   className={({ isActive }) =>
                     `inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap ${
                       isActive
-                        ? "bg-[#7fb4db] text-white shadow-[0_8px_20px_rgba(97,159,208,0.28)]"
+                        ? "bg-[#7fb4db] !text-white shadow-[0_8px_20px_rgba(97,159,208,0.28)] [&_*]:!text-white"
                         : "bg-white/70 text-[#696969]"
                     }`
                   }
