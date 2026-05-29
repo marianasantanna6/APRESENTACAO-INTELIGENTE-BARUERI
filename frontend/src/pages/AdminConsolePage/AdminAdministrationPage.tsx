@@ -1,10 +1,17 @@
-import type { FormEvent } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { useMemo, useState } from "react";
 import { FiPlus, FiTrash2, FiX } from "react-icons/fi";
-import { AdminPanel, AdminStatusChip } from "../../components/AdminConsole";
+import {
+  AdminAvatar,
+  AdminPanel,
+  AdminStatusChip,
+} from "../../components/AdminConsole";
 import { useAdminConsole, useAuth } from "../../context";
 import { formatDateTime } from "../../lib/formatters";
-import type { NewEmployeePayload } from "../../types/admin";
+import type {
+  EmployeeDirectoryEntry,
+  NewEmployeePayload,
+} from "../../types/admin";
 import type { AccountStatus } from "../../types/auth";
 
 type StatusFilter = "all" | AccountStatus;
@@ -14,8 +21,21 @@ type EmployeeFormState = {
   email: string;
   department: string;
   team: string;
-  status: AccountStatus;
 };
+
+type DeleteConfirmationFormState = {
+  email: string;
+  password: string;
+};
+
+const initialDeleteConfirmationForm: DeleteConfirmationFormState = {
+  email: "",
+  password: "",
+};
+
+function isInstitutionalEmail(value: string) {
+  return value.trim().toLowerCase().endsWith("@barueri.sp.gov.br");
+}
 
 function getDefaultFormValues(
   organization: { department: string; teams: string[] }[],
@@ -27,7 +47,6 @@ function getDefaultFormValues(
     email: "",
     department: firstDepartment?.department ?? "",
     team: firstDepartment?.teams[0] ?? "",
-    status: "active",
   };
 }
 
@@ -40,13 +59,19 @@ export default function AdminAdministrationPage() {
     organization,
     removeEmployee,
   } = useAdminConsole();
-  const { user } = useAuth();
+  const { user, verifyCurrentUser } = useAuth();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [employeePendingRemoval, setEmployeePendingRemoval] =
+    useState<EmployeeDirectoryEntry | null>(null);
   const [formValues, setFormValues] = useState<EmployeeFormState>(
     getDefaultFormValues(organization),
   );
   const [formError, setFormError] = useState("");
+  const [deleteConfirmationForm, setDeleteConfirmationForm] = useState(
+    initialDeleteConfirmationForm,
+  );
+  const [deleteConfirmationError, setDeleteConfirmationError] = useState("");
 
   const filteredEmployees = statusFilter === "all"
     ? employees
@@ -69,6 +94,16 @@ export default function AdminAdministrationPage() {
     setIsModalOpen(false);
   }
 
+  function resetDeleteConfirmation() {
+    setDeleteConfirmationForm(initialDeleteConfirmationForm);
+    setDeleteConfirmationError("");
+  }
+
+  function closeDeleteConfirmationModal() {
+    resetDeleteConfirmation();
+    setEmployeePendingRemoval(null);
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -84,12 +119,18 @@ export default function AdminAdministrationPage() {
       return;
     }
 
+    if (!isInstitutionalEmail(formValues.email)) {
+      setFormError(
+        "Cadastre apenas emails institucionais com o domínio @barueri.sp.gov.br.",
+      );
+      return;
+    }
+
     const payload: NewEmployeePayload = {
       name: formValues.name.trim(),
-      email: formValues.email.trim(),
+      email: formValues.email.trim().toLowerCase(),
       department: formValues.department,
       team: formValues.team,
-      status: formValues.status,
     };
     const result = addEmployee(payload);
 
@@ -113,8 +154,57 @@ export default function AdminAdministrationPage() {
     }));
   }
 
-  function handleRemoveEmployee(employeeId: string) {
-    removeEmployee(employeeId);
+  function handleDeleteConfirmationFieldChange(
+    field: keyof DeleteConfirmationFormState,
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    setDeleteConfirmationForm((current) => ({
+      ...current,
+      [field]: event.target.value,
+    }));
+    setDeleteConfirmationError("");
+  }
+
+  function handleOpenDeleteConfirmation(employee: EmployeeDirectoryEntry) {
+    resetDeleteConfirmation();
+    setEmployeePendingRemoval(employee);
+  }
+
+  function handleRemoveEmployee(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!employeePendingRemoval) {
+      return;
+    }
+
+    if (
+      !deleteConfirmationForm.email.trim()
+      || !deleteConfirmationForm.password.trim()
+    ) {
+      setDeleteConfirmationError(
+        "Confirme email institucional e senha antes de excluir o funcionário.",
+      );
+      return;
+    }
+
+    const verificationResult = verifyCurrentUser({
+      email: deleteConfirmationForm.email,
+      password: deleteConfirmationForm.password,
+    });
+
+    if ("message" in verificationResult) {
+      setDeleteConfirmationError(verificationResult.message);
+      return;
+    }
+
+    const result = removeEmployee(employeePendingRemoval.id);
+
+    if ("message" in result) {
+      setDeleteConfirmationError(result.message);
+      return;
+    }
+
+    closeDeleteConfirmationModal();
   }
 
   return (
@@ -123,9 +213,6 @@ export default function AdminAdministrationPage() {
         <h1 className="text-[2.2rem] font-extrabold tracking-[-0.05em] text-[#1e1e1e] sm:text-[2.8rem]">
           Administração
         </h1>
-        <p className="mt-1 text-[1rem] font-medium text-[#878787]">
-          Funcionários e logs visíveis conforme o nível do usuário logado.
-        </p>
       </div>
 
       <AdminPanel className="space-y-5 px-5 py-5 sm:px-7">
@@ -186,9 +273,12 @@ export default function AdminAdministrationPage() {
                 <tr key={employee.id} className="text-[0.95rem] font-medium text-[#7a7a7a]">
                   <td className="rounded-l-[18px] bg-white/72 px-0 py-1.5">
                     <div className="flex items-center gap-3 px-4">
-                      <span className="flex h-8.5 w-8.5 items-center justify-center rounded-full bg-[linear-gradient(180deg,#8cb7dc_0%,#5f9cd0_100%)] text-[0.82rem] font-bold text-white">
-                        {employee.name.charAt(0)}
-                      </span>
+                      <AdminAvatar
+                        name={employee.name}
+                        sizeClassName="h-8.5 w-8.5"
+                        textClassName="text-[0.78rem]"
+                        className="shadow-none"
+                      />
                       <div>
                         <p className="text-[0.96rem] text-[#747474]">{employee.name}</p>
                         <p className="text-[0.76rem] text-[#b1b1b1]">{employee.email}</p>
@@ -211,7 +301,7 @@ export default function AdminAdministrationPage() {
                     <td className="rounded-r-[18px] bg-white/72 px-4 py-1.5">
                       <button
                         type="button"
-                        onClick={() => handleRemoveEmployee(employee.id)}
+                        onClick={() => handleOpenDeleteConfirmation(employee)}
                         className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
                         aria-label={`Remover ${employee.name}`}
                       >
@@ -280,9 +370,6 @@ export default function AdminAdministrationPage() {
                 <h3 className="text-[1.65rem] font-extrabold tracking-[-0.04em] text-[#1f1f1f]">
                   Cadastrar funcionário
                 </h3>
-                <p className="mt-1 text-[0.92rem] font-medium text-[#8a8a8a]">
-                  O admin nível 2 pode escolher setor, equipe e estado inicial.
-                </p>
               </div>
 
               <button
@@ -322,8 +409,12 @@ export default function AdminAdministrationPage() {
                         email: event.target.value,
                       }))
                     }
+                    placeholder="nome.sobrenome@barueri.sp.gov.br"
                     className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
                   />
+                  <span className="text-[0.76rem] font-medium text-[#9aa7b2]">
+                    Apenas emails institucionais @barueri.sp.gov.br
+                  </span>
                 </label>
               </div>
 
@@ -364,23 +455,6 @@ export default function AdminAdministrationPage() {
                 </label>
               </div>
 
-              <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                Estado inicial
-                <select
-                  value={formValues.status}
-                  onChange={(event) =>
-                    setFormValues((current) => ({
-                      ...current,
-                      status: event.target.value as AccountStatus,
-                    }))
-                  }
-                  className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
-                >
-                  <option value="active">Ativo</option>
-                  <option value="inactive">Inativo</option>
-                </select>
-              </label>
-
               {formError ? (
                 <p className="rounded-[16px] bg-[#fff5f5] px-4 py-3 text-[0.9rem] font-medium text-[#be3232]">
                   {formError}
@@ -400,6 +474,100 @@ export default function AdminAdministrationPage() {
                   className="h-11 rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-5 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(103,156,203,0.24)] transition hover:-translate-y-0.5"
                 >
                   Salvar funcionário
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {employeePendingRemoval ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#142133]/40 px-4 py-6 backdrop-blur-[3px]">
+          <div className="w-full max-w-[540px] rounded-[26px] bg-white p-6 shadow-[0_24px_80px_rgba(20,33,51,0.24)]">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-[1.65rem] font-extrabold tracking-[-0.04em] text-[#1f1f1f]">
+                  Confirmar exclusão
+                </h3>
+                <p className="mt-1 text-[0.92rem] font-medium text-[#8a8a8a]">
+                  Confirme seu email e sua senha para evitar remoções por engano.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeDeleteConfirmationModal}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#f2f4f7] text-[#7a7a7a] transition hover:bg-[#e6ecf3]"
+                aria-label="Fechar confirmação de exclusão"
+              >
+                <FiX className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mb-5 rounded-[20px] border border-[#f0dcdc] bg-[#fff7f7] px-4 py-4">
+              <div className="flex items-center gap-3">
+                <AdminAvatar
+                  name={employeePendingRemoval.name}
+                  sizeClassName="h-11 w-11"
+                  textClassName="text-[0.9rem]"
+                  className="shadow-none"
+                />
+                <div>
+                  <p className="text-[1rem] font-semibold text-[#5d3a3a]">
+                    {employeePendingRemoval.name}
+                  </p>
+                  <p className="text-[0.82rem] font-medium text-[#b16c6c]">
+                    {employeePendingRemoval.email}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <form className="space-y-4" onSubmit={handleRemoveEmployee}>
+              <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
+                Email institucional do administrador
+                <input
+                  type="email"
+                  value={deleteConfirmationForm.email}
+                  onChange={(event) =>
+                    handleDeleteConfirmationFieldChange("email", event)
+                  }
+                  placeholder={user?.email ?? "admin@barueri.sp.gov.br"}
+                  className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
+                />
+              </label>
+
+              <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
+                Senha
+                <input
+                  type="password"
+                  value={deleteConfirmationForm.password}
+                  onChange={(event) =>
+                    handleDeleteConfirmationFieldChange("password", event)
+                  }
+                  className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
+                />
+              </label>
+
+              {deleteConfirmationError ? (
+                <p className="rounded-[16px] bg-[#fff5f5] px-4 py-3 text-[0.9rem] font-medium text-[#be3232]">
+                  {deleteConfirmationError}
+                </p>
+              ) : null}
+
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeDeleteConfirmationModal}
+                  className="h-11 rounded-full border border-[#d7dde4] px-5 text-[0.92rem] font-semibold text-[#6a6a6a] transition hover:bg-[#f5f7f9]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="h-11 rounded-full bg-[#d86b6b] px-5 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(216,107,107,0.24)] transition hover:-translate-y-0.5 hover:bg-[#ca5a5a]"
+                >
+                  Excluir funcionário
                 </button>
               </div>
             </form>

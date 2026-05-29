@@ -77,6 +77,19 @@ const mockedAccesses = [
   },
 ];
 
+function getMockedAccessDisplayName(identifier: string) {
+  switch (identifier) {
+    case "admin.nivel2":
+      return "Marina Justus";
+    case "admin.nivel1":
+      return "João Lemes";
+    case "funcionario.demo":
+      return "Bianca Souza";
+    default:
+      return "Usuário";
+  }
+}
+
 function LoginPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -156,7 +169,7 @@ function LoginPage() {
         />
       ))}
 
-      <section className="relative z-10 mx-auto mt-28 flex w-full max-w-224.25 flex-col items-center rounded-[20px] bg-white/81 px-6 pb-14 pt-18 shadow-[0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-[2px] sm:mt-34 sm:px-12 sm:pb-16 sm:pt-22 lg:px-27">
+      <section className="relative z-10 mx-auto mt-26 flex w-full max-w-[50rem] flex-col items-center rounded-[20px] bg-white/81 px-5 pb-11 pt-15 shadow-[0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-[2px] sm:mt-32 sm:px-10 sm:pb-13 sm:pt-19 lg:px-18">
         <Link
           to={ROUTE_PATHS.home}
           aria-label="Voltar para a pagina inicial"
@@ -165,19 +178,19 @@ function LoginPage() {
           <img
             src={loginLogo}
             alt="Logo Barueri"
-            className="reveal-on-scroll h-auto w-56 drop-shadow-[0_8px_16px_rgba(0,0,0,0.12)] sm:w-72"
+            className="reveal-on-scroll h-auto w-50 drop-shadow-[0_8px_16px_rgba(0,0,0,0.12)] sm:w-64"
           />
         </Link>
 
         <h1
-          className="reveal-on-scroll mt-4 text-center text-[2.1rem] font-extrabold tracking-[-0.04em] text-[#1e1e1e] sm:mt-5 sm:text-[3rem]"
+          className="reveal-on-scroll mt-4 text-center text-[1.95rem] font-extrabold tracking-[-0.04em] text-[#1e1e1e] sm:mt-5 sm:text-[2.7rem]"
           style={{ "--reveal-delay": "100ms" } as CSSProperties}
         >
           Faça seu Login
         </h1>
 
         <form
-          className="reveal-on-scroll mt-7 flex w-full flex-col gap-6 sm:mt-8"
+          className="reveal-on-scroll mt-6 flex w-full flex-col gap-4.5 sm:mt-7 sm:gap-5"
           style={{ "--reveal-delay": "180ms" } as CSSProperties}
           onSubmit={handleSubmit}
         >
@@ -189,7 +202,7 @@ function LoginPage() {
                 updateField("identifier", event.target.value)
               }
               placeholder="Usuário / CPF / Email"
-              className={`h-16.25 w-full rounded-[20px] border bg-[#f8fafc] px-5 text-[1rem] font-medium text-[#1e1e1e] shadow-[0_4px_10px_rgba(0,0,0,0.25)] outline-none transition focus:-translate-y-0.5 focus:border-[#1675b8] focus:ring-4 focus:ring-[#1675b8]/15 sm:text-[1.3rem] ${
+              className={`h-15.25 w-full rounded-[20px] border bg-[#f8fafc] px-5 text-[0.98rem] font-medium text-[#1e1e1e] shadow-[0_4px_10px_rgba(0,0,0,0.25)] outline-none transition focus:-translate-y-0.5 focus:border-[#1675b8] focus:ring-4 focus:ring-[#1675b8]/15 sm:text-[1.15rem] ${
                 errors.identifier ? "border-[#d64545]" : "border-[#d5d5d5]"
               }`}
             />
@@ -209,7 +222,7 @@ function LoginPage() {
                   updateField("password", event.target.value)
                 }
                 placeholder="Senha"
-                className={`h-16.25 w-full rounded-[20px] border bg-[#f8fafc] px-5 pr-24 text-[1rem] font-medium text-[#1e1e1e] shadow-[0_4px_10px_rgba(0,0,0,0.25)] outline-none transition focus:-translate-y-0.5 focus:border-[#1675b8] focus:ring-4 focus:ring-[#1675b8]/15 sm:text-[1.3rem] ${
+                className={`h-15.25 w-full rounded-[20px] border bg-[#f8fafc] px-5 pr-24 text-[0.98rem] font-medium text-[#1e1e1e] shadow-[0_4px_10px_rgba(0,0,0,0.25)] outline-none transition focus:-translate-y-0.5 focus:border-[#1675b8] focus:ring-4 focus:ring-[#1675b8]/15 sm:text-[1.15rem] ${
                   errors.password ? "border-[#d64545]" : "border-[#d5d5d5]"
                 }`}
               />
@@ -230,7 +243,7 @@ function LoginPage() {
 
           <button
             type="submit"
-            className="mt-1 h-19.5 rounded-[20px] bg-[#1675b8] text-[1.15rem] font-semibold tracking-[0.02em] text-white shadow-[0_4px_10px_rgba(0,0,0,0.25)] transition-transform hover:-translate-y-0.5 sm:text-[1.9rem]"
+            className="mt-1 h-16.5 rounded-[20px] bg-[#1675b8] text-[1.05rem] font-semibold tracking-[0.02em] text-white shadow-[0_4px_10px_rgba(0,0,0,0.25)] transition-transform hover:-translate-y-0.5 sm:text-[1.55rem]"
           >
             Entrar
           </button>
@@ -241,7 +254,7 @@ function LoginPage() {
             </p>
           ) : null}
 
-          <div className="flex flex-col gap-4 text-[0.95rem] font-medium text-[#706e6e] sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 text-[0.92rem] font-medium text-[#706e6e] sm:flex-row sm:items-center sm:justify-between">
             <label className="flex cursor-pointer items-center gap-3">
               <input
                 type="checkbox"
@@ -249,7 +262,7 @@ function LoginPage() {
                 onChange={(event: ChangeEvent<HTMLInputElement>) =>
                   updateField("remember", event.target.checked)
                 }
-                className="h-6.5 w-6.5 appearance-none rounded-full border-[2.5px] border-[#1675b8] bg-transparent checked:bg-[#1675b8] checked:shadow-[inset_0_0_0_5px_white]"
+                className="h-6 w-6 appearance-none rounded-full border-[2.5px] border-[#1675b8] bg-transparent checked:bg-[#1675b8] checked:shadow-[inset_0_0_0_4px_white]"
               />
               <span>Lembrar de mim</span>
             </label>
@@ -264,25 +277,27 @@ function LoginPage() {
 
           <button
             type="button"
-            className="mt-2 flex h-19.5 items-center justify-between gap-4 rounded-[20px] border-[2.5px] border-[#1675b8] bg-white px-5 text-[#898989] shadow-[0_4px_10px_rgba(0,0,0,0.25)] transition-transform hover:-translate-y-0.5"
+            className="mt-1 flex h-16.5 items-center justify-between gap-4 rounded-[20px] border-[2.5px] border-[#1675b8] bg-white px-5 text-[#898989] shadow-[0_4px_10px_rgba(0,0,0,0.25)] transition-transform hover:-translate-y-0.5"
           >
             <img
               src={loginGovLogo}
               alt="Entrar com GOV"
-              className="h-7 w-19.5 object-contain"
+              className="h-6.5 w-17.5 object-contain"
             />
-            <span className="flex-1 text-center text-[1.15rem] font-semibold sm:text-[1.9rem]">
+            <span className="flex-1 text-center text-[1.05rem] font-semibold sm:text-[1.55rem]">
               Entrar com o GOV
             </span>
-            <span className="w-19.5" aria-hidden="true" />
+            <span className="w-17.5" aria-hidden="true" />
           </button>
 
-          <div className="rounded-[20px] border border-[#d7e7f3] bg-[#f7fbff] px-5 py-4 text-left text-[0.92rem] text-[#4f6980] shadow-[0_6px_14px_rgba(22,117,184,0.08)]">
+          <div className="rounded-[20px] border border-[#d7e7f3] bg-[#f7fbff] px-5 py-3.5 text-left text-[0.92rem] text-[#4f6980] shadow-[0_6px_14px_rgba(22,117,184,0.08)]">
             <p className="font-semibold text-[#2d5d83]">Acessos mockados</p>
             <div className="mt-3 space-y-2">
               {mockedAccesses.map((access) => (
                 <p key={access.identifier} className="leading-6">
-                  <span className="font-semibold">{access.label}:</span>{" "}
+                  <span className="font-semibold">
+                    {getMockedAccessDisplayName(access.identifier)}:
+                  </span>{" "}
                   {access.identifier} / {access.password}
                 </p>
               ))}

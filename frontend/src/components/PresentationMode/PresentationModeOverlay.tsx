@@ -1,14 +1,10 @@
 import { useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
-import { FiChevronLeft, FiChevronRight, FiHelpCircle, FiMinimize2, FiUser } from "react-icons/fi";
-import createLogo from "../../assets/images/create-logo.png";
+import { FiChevronLeft, FiChevronRight, FiMinimize2 } from "react-icons/fi";
+import AuthenticatedHeader from "../AuthenticatedHeader";
 import { useAuth } from "../../context";
 import { useFullscreenElement } from "../../hooks";
 import type { PresentationViewerMode } from "../../hooks";
-import {
-  canCreatePresentations,
-  getAccessLevelLabel,
-} from "../../lib/accessControl";
+import { canCreatePresentations } from "../../lib/accessControl";
 import { getPresentationsRouteForUser } from "../../lib/authRouting";
 import { ROUTE_PATHS } from "../../router/paths";
 import type { PresentationCard, PresentationData } from "../../types/presentation";
@@ -215,80 +211,21 @@ export function PresentationModeOverlay({
         }`}
       >
         {!showFullscreenSlideOnly ? (
-          <header className="border-b border-white/20 bg-[linear-gradient(90deg,#ffffff_8.654%,#1675b8_100%)]">
-            <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-6 px-4 py-4 sm:px-6 lg:px-8">
-              <Link
-                to={canCreate ? ROUTE_PATHS.createPresentation : presentationsRoute}
-                aria-label={
-                  canCreate
-                    ? "Voltar para criar apresentação"
-                    : "Voltar para minhas apresentações"
-                }
-                className="shrink-0"
-              >
-                <img
-                  src={createLogo}
-                  alt="Logo Barueri"
-                  className="h-auto w-[118px] sm:w-[170px]"
-                />
-              </Link>
-
-              <nav className="hidden items-center gap-3 text-[15px] font-semibold text-white md:flex lg:text-[16px]">
-                {canCreate ? (
-                  <>
-                    <Link
-                      to={ROUTE_PATHS.createPresentation}
-                      className="flex h-10 items-center justify-center rounded-[50px] border border-[#1675b8] bg-[rgba(22,117,184,0.5)] px-4 text-[1rem] font-semibold !text-white shadow-[0_4px_12px_rgba(0,0,0,0.12)] transition-all hover:-translate-y-0.5 hover:border-[#1675b8] hover:bg-[rgba(22,117,184,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] focus:outline-none focus:ring-4 focus:ring-white/25 lg:h-11 lg:px-5 lg:text-[1.05rem]"
-                    >
-                      Criar
-                    </Link>
-                    <div aria-hidden="true" className="h-6 w-0.5 bg-white/30" />
-                  </>
-                ) : null}
-                <Link
-                  to={presentationsRoute}
-                  className="flex h-10 items-center justify-center rounded-[50px] border border-transparent px-4 text-[1rem] font-semibold !text-white transition-all hover:-translate-y-0.5 hover:border-[#1675b8] hover:bg-[rgba(22,117,184,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] focus:outline-none focus:ring-4 focus:ring-white/25 lg:h-11 lg:px-5 lg:text-[1.05rem]"
-                >
-                  Minhas apresentações
-                </Link>
-              </nav>
-
-              <div className="flex items-center gap-2 sm:gap-3">
-                <Link
-                  to={presentationsRoute}
-                  className="inline-flex h-11 items-center justify-center rounded-[8px] px-3 text-[0.94rem] font-semibold !text-white transition-all hover:-translate-y-0.5 hover:bg-white/12 focus:outline-none focus:ring-4 focus:ring-white/25 md:hidden"
-                >
-                  Minhas apresentações
-                </Link>
-                {user ? (
-                  <div className="flex items-center gap-3 rounded-full bg-white/12 px-4 py-2 text-white">
-                    <FiUser className="h-4.5 w-4.5 shrink-0" />
-                    <div className="max-w-[170px] leading-tight">
-                      <p className="truncate text-sm font-semibold">{user.name}</p>
-                      <p className="truncate text-[0.73rem] text-white/78">
-                        {getAccessLevelLabel(user.accessLevel)}
-                      </p>
-                    </div>
-                  </div>
-                ) : null}
-                <button
-                  type="button"
-                  aria-label="Ajuda"
-                  className="inline-flex h-11 items-center justify-center gap-2.5 rounded-[8px] px-3 text-[1rem] font-bold !text-white sm:px-4 lg:text-[1.08rem]"
-                >
-                  <FiHelpCircle className="h-5.5 w-5.5 text-white" />
-                  <span className="hidden text-white sm:inline">Ajuda</span>
-                </button>
-              </div>
-            </div>
-          </header>
+          <AuthenticatedHeader
+            activeItem="create"
+            canCreate={canCreate}
+            logoTo={canCreate ? ROUTE_PATHS.createPresentation : presentationsRoute}
+            presentationsTo={presentationsRoute}
+            showMobilePresentationsShortcut
+            user={user}
+          />
         ) : null}
 
         <main
           className={
             showFullscreenSlideOnly
               ? "flex min-h-screen items-center justify-center px-4 py-4 sm:px-8"
-              : "mx-auto max-w-[1440px] px-4 pb-8 pt-7 sm:px-6 lg:px-8"
+              : "mx-auto max-w-[1360px] px-4 pb-7 pt-5 sm:px-6 lg:px-8"
           }
         >
           {!showFullscreenSlideOnly ? (
@@ -337,9 +274,9 @@ export function PresentationModeOverlay({
                 onClick={() => {
                   void handleExitSoloFullscreen();
                 }}
-                className="pointer-events-auto inline-flex h-12 items-center gap-2 rounded-full bg-white/96 px-5 text-[0.94rem] font-semibold text-[#1e1e1e] shadow-[0_14px_32px_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5"
+                className="pointer-events-auto inline-flex h-10.5 items-center gap-2 rounded-full bg-white/96 px-4.5 text-[0.88rem] font-semibold text-[#1e1e1e] shadow-[0_14px_32px_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5"
               >
-                <FiMinimize2 className="h-4.5 w-4.5" />
+                <FiMinimize2 className="h-4 w-4" />
                 Sair da tela cheia
               </button>
             </div>
@@ -353,9 +290,9 @@ export function PresentationModeOverlay({
                   onClick={onGoPrevious}
                   disabled={!canGoPrevious}
                   aria-label="Slide anterior"
-                  className="pointer-events-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-white/96 text-[#1e1e1e] shadow-[0_14px_32px_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-35"
+                  className="pointer-events-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/96 text-[#1e1e1e] shadow-[0_14px_32px_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-35"
                 >
-                  <FiChevronLeft className="h-6 w-6" />
+                  <FiChevronLeft className="h-5.5 w-5.5" />
                 </button>
               </div>
 
@@ -365,24 +302,24 @@ export function PresentationModeOverlay({
                   onClick={onGoNext}
                   disabled={!canGoNext}
                   aria-label="Próximo slide"
-                  className="pointer-events-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-white/96 text-[#1e1e1e] shadow-[0_14px_32px_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-35"
+                  className="pointer-events-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/96 text-[#1e1e1e] shadow-[0_14px_32px_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-35"
                 >
-                  <FiChevronRight className="h-6 w-6" />
+                  <FiChevronRight className="h-5.5 w-5.5" />
                 </button>
               </div>
             </>
           ) : null}
 
-          <section className={showFullscreenSlideOnly ? "w-full" : "mt-8"}>
+          <section className={showFullscreenSlideOnly ? "w-full" : "mt-6"}>
             {activeSlide ? (
-              <div className={showFullscreenSlideOnly ? "" : "space-y-5"}>
+              <div className={showFullscreenSlideOnly ? "" : "space-y-4"}>
                 <div
                   className={`mx-auto w-full ${
                     showFullscreenSlideOnly
-                      ? "max-w-[1360px]"
+                      ? "max-w-[1320px]"
                       : viewerMode === "solo"
-                        ? "max-w-[1240px]"
-                        : "max-w-[1080px]"
+                        ? "max-w-[1180px]"
+                        : "max-w-[1020px]"
                   }`}
                 >
                   <div
@@ -416,21 +353,21 @@ export function PresentationModeOverlay({
                 </div>
 
                 {!showFullscreenSlideOnly && viewerMode === "deck" ? (
-                  <p className="text-center text-[0.92rem] text-[#5b6474]">
+                  <p className="text-center text-[0.86rem] text-[#5b6474]">
                     Clique no slide principal para abrir o modo solo em tela cheia.
                   </p>
                 ) : !showFullscreenSlideOnly ? (
-                  <p className="text-center text-[0.92rem] text-[#5b6474]">
+                  <p className="text-center text-[0.86rem] text-[#5b6474]">
                     Pressione Esc para sair da tela cheia ou voltar para a visão em grade.
                   </p>
                 ) : null}
               </div>
             ) : (
-              <div className="mx-auto max-w-[760px] rounded-[28px] border border-dashed border-[#cbd5e1] bg-white/80 px-8 py-16 text-center shadow-[0_18px_36px_-28px_rgba(15,23,42,0.35)]">
-                <h2 className="text-[1.5rem] font-bold text-[#1e1e1e]">
+              <div className="mx-auto max-w-[700px] rounded-[24px] border border-dashed border-[#cbd5e1] bg-white/80 px-7 py-12 text-center shadow-[0_18px_36px_-28px_rgba(15,23,42,0.35)]">
+                <h2 className="text-[1.35rem] font-bold text-[#1e1e1e]">
                   Todos os slides foram removidos
                 </h2>
-                <p className="mt-3 text-[1rem] leading-7 text-[#5b6474]">
+                <p className="mt-3 text-[0.94rem] leading-6 text-[#5b6474]">
                   Restaure os slides para voltar ao modo apresentação ou retorne para a tela anterior.
                 </p>
                 <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
@@ -438,7 +375,7 @@ export function PresentationModeOverlay({
                     <button
                       type="button"
                       onClick={onRestoreSlides}
-                      className="inline-flex h-12 items-center justify-center rounded-full bg-[#0d5283] px-6 text-[0.95rem] font-semibold text-white shadow-[0_14px_28px_rgba(13,82,131,0.28)] transition hover:-translate-y-0.5"
+                      className="inline-flex h-10.5 items-center justify-center rounded-full bg-[#0d5283] px-5 text-[0.9rem] font-semibold text-white shadow-[0_14px_28px_rgba(13,82,131,0.28)] transition hover:-translate-y-0.5"
                     >
                       Restaurar slides
                     </button>
@@ -448,7 +385,7 @@ export function PresentationModeOverlay({
                     onClick={() => {
                       void handleCloseViewer();
                     }}
-                    className="inline-flex h-12 items-center justify-center rounded-full bg-white px-6 text-[0.95rem] font-semibold text-[#1e1e1e] shadow-[0_10px_24px_rgba(0,0,0,0.12)] transition hover:-translate-y-0.5"
+                    className="inline-flex h-10.5 items-center justify-center rounded-full bg-white px-5 text-[0.9rem] font-semibold text-[#1e1e1e] shadow-[0_10px_24px_rgba(0,0,0,0.12)] transition hover:-translate-y-0.5"
                   >
                     Fechar viewer
                   </button>
@@ -458,7 +395,7 @@ export function PresentationModeOverlay({
           </section>
 
           {!showFullscreenSlideOnly && viewerMode === "deck" && slides.length ? (
-            <div className="mt-8">
+            <div className="mt-6">
               <PresentationThumbnailRail
                 activeSlideId={activeSlide?.id ?? null}
                 canDelete={allowEditing}

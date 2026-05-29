@@ -1,10 +1,9 @@
 import type { ChangeEvent, CSSProperties, FormEvent } from "react";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { FaChevronDown, FaFilter, FaSearch } from "react-icons/fa";
-import { FiHelpCircle, FiLogOut, FiUser } from "react-icons/fi";
-import createLogo from "../../assets/images/create-logo.png";
 import { DEFAULT_PRESENTATION_FILTERS } from "../../api/presentation";
+import AuthenticatedHeader from "../../components/AuthenticatedHeader";
 import { useAuth } from "../../context";
 import { canCreatePresentations } from "../../lib/accessControl";
 import { getPresentationsRouteForUser } from "../../lib/authRouting";
@@ -21,19 +20,19 @@ const createCategories: Category[] = [
   {
     label: "Meio Ambiente",
     color: "bg-[rgba(76,175,80,0.5)]",
-    width: "w-[280px]",
+    width: "w-[236px]",
   },
   {
     label: "Educação",
     color: "bg-[rgba(22,117,184,0.5)]",
-    width: "w-[280px]",
+    width: "w-[236px]",
   },
   {
     label: "Economia",
     color: "bg-[rgba(255,143,0,0.5)]",
-    width: "w-[260px]",
+    width: "w-[220px]",
   },
-  { label: "Saúde", color: "bg-[#ef91c2]", width: "w-[260px]" },
+  { label: "Saúde", color: "bg-[#ef91c2]", width: "w-[220px]" },
 ];
 
 const availableYears = [
@@ -42,13 +41,6 @@ const availableYears = [
     String(2026 - index),
   ),
 ];
-
-const iconButtonClass =
-  "inline-flex h-11 items-center justify-center gap-2.5 rounded-[8px] px-3 text-[1rem] font-bold !text-white transition-all hover:-translate-y-0.5 hover:bg-white/12 focus:outline-none focus:ring-4 focus:ring-white/25 sm:px-4 lg:text-[1.08rem]";
-const navPillClass =
-  "flex h-10 items-center justify-center rounded-[50px] px-4 text-[1rem] font-semibold !text-white transition-all hover:-translate-y-0.5 hover:border-[#1675b8] hover:bg-[rgba(22,117,184,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] focus:outline-none focus:ring-4 focus:ring-white/25 lg:h-11 lg:px-5 lg:text-[1.05rem]";
-const activeNavPillClass =
-  "border border-[#1675b8] bg-[rgba(22,117,184,0.5)] shadow-[0_4px_12px_rgba(0,0,0,0.12)]";
 
 function CreatePresentationPage() {
   const navigate = useNavigate();
@@ -81,85 +73,40 @@ function CreatePresentationPage() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-[#1e1e1e]">
-      <header className="sticky top-0 z-20 border-b border-white/20 bg-[linear-gradient(90deg,#ffffff_8.654%,#1675b8_100%)] backdrop-blur">
-        <div className="mx-auto flex max-w-[1240px] items-center justify-between gap-6 px-4 py-4 sm:px-6 lg:px-8">
-          <Link
-            to={ROUTE_PATHS.createPresentation}
-            aria-label="Ir para a área logada"
-            className="shrink-0"
-          >
-            <img
-              src={createLogo}
-              alt="Logo Barueri"
-              className="h-auto w-[116px] sm:w-[150px]"
-            />
-          </Link>
-
-          <nav
-            aria-label="Área logada"
-            className="hidden items-center gap-3 text-[15px] font-semibold text-white md:flex lg:text-[16px]"
-          >
-            {canCreate ? (
-              <>
-                <Link
-                  to={ROUTE_PATHS.createPresentation}
-                  aria-current="page"
-                  className={`${navPillClass} ${activeNavPillClass} w-[112px] lg:w-[128px]`}
-                >
-                  Criar
-                </Link>
-
-                <div aria-hidden="true" className="h-6 w-0.5 bg-white/30" />
-              </>
-            ) : null}
-
-            <Link
-              to={getPresentationsRouteForUser(user)}
-              className={`${navPillClass} border border-transparent`}
-            >
-              Minhas apresentações
-            </Link>
-          </nav>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <button type="button" aria-label="Conta" className={iconButtonClass}>
-              <FiUser className="h-5.5 w-5.5 text-white" />
-            </button>
-            <button type="button" aria-label="Ajuda" className={iconButtonClass}>
-              <FiHelpCircle className="h-5.5 w-5.5 text-white" />
-              <span className="hidden text-white sm:inline">Ajuda</span>
-            </button>
-            <button
-              type="button"
-              aria-label="Sair"
-              onClick={handleLogout}
-              className={iconButtonClass}
-            >
-              <FiLogOut className="h-5.5 w-5.5 text-white" />
-            </button>
-          </div>
-        </div>
-      </header>
+      <AuthenticatedHeader
+        activeItem="create"
+        canCreate={canCreate}
+        logoTo={ROUTE_PATHS.createPresentation}
+        onLogout={handleLogout}
+        presentationsTo={getPresentationsRouteForUser(user)}
+        showMobilePresentationsShortcut
+        user={user}
+      />
 
       <main className="mx-auto max-w-[1240px] px-5 pb-20 pt-24 sm:px-6 lg:px-8">
         <section className="mx-auto flex max-w-[1210px] flex-col items-center">
-          <h1 className="reveal-on-scroll text-center text-[2.6rem] font-extrabold leading-[1.05] tracking-[-0.05em] text-[#1e1e1e] sm:text-[3.6rem] lg:text-[5rem]">
+          <h1 className="reveal-on-scroll max-w-[21ch] text-center text-[2.1rem] font-extrabold leading-[1.08] tracking-[-0.05em] text-[#1e1e1e] [text-wrap:balance] sm:max-w-[22ch] sm:text-[2.9rem] lg:max-w-[24ch] lg:text-[3.45rem] xl:text-[3.75rem]">
             Crie uma Apresentação{" "}
-            <span
-              className="typewriter-word bg-[linear-gradient(90deg,#0a3452_0%,#1675b8_25.962%)] bg-clip-text text-transparent"
-              style={
-                {
-                  "--typewriter-width": "10.5ch",
-                  "--typewriter-steps": 10,
-                } as CSSProperties
-              }
-            >
-              Inteligente
+            <span className="relative inline-block text-left align-bottom">
+              <span aria-hidden="true" className="invisible">
+                Inteligente
+              </span>
+              <span
+                className="typewriter-word absolute left-0 top-0 bg-[linear-gradient(90deg,#0a3452_0%,#1675b8_25.962%)] bg-clip-text text-transparent"
+                style={
+                  {
+                    "--typewriter-width": "11ch",
+                    "--typewriter-steps": 11,
+                  } as CSSProperties
+                }
+              >
+                Inteligente
+              </span>
             </span>
           </h1>
 
           <form
-            className="reveal-on-scroll relative mt-10 w-full"
+            className="reveal-on-scroll relative mt-8 w-full"
             style={{ "--reveal-delay": "120ms" } as CSSProperties}
             onSubmit={handleSubmit}
           >
@@ -170,25 +117,25 @@ function CreatePresentationPage() {
                 setSearch(event.target.value)
               }
               placeholder="Pesquise tema, indicador ou categoria"
-              className="h-[95px] w-full rounded-[50px] bg-white pl-[86px] pr-[92px] text-[1.15rem] font-medium text-[#1e1e1e] shadow-[0_6px_20px_rgba(0,0,0,0.15)] outline-none transition focus:-translate-y-0.5 focus:ring-4 focus:ring-[#1675b8]/15"
+              className="h-[80px] w-full rounded-[40px] bg-white pl-[74px] pr-[82px] text-[1rem] font-medium text-[#1e1e1e] shadow-[0_6px_20px_rgba(0,0,0,0.15)] outline-none transition focus:-translate-y-0.5 focus:ring-4 focus:ring-[#1675b8]/15 sm:text-[1.08rem]"
             />
-            <div className="pointer-events-none absolute left-[34px] top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-[#706e6e]">
-              <FaSearch className="h-5 w-5" />
+            <div className="pointer-events-none absolute left-[28px] top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center text-[#706e6e]">
+              <FaSearch className="h-4.5 w-4.5" />
             </div>
             <button
               type="submit"
               aria-label="Gerar dashboard e apresentação"
-              className="absolute right-[34px] top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-sm text-[#706e6e] transition hover:text-[#1675b8]"
+              className="absolute right-[28px] top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[#706e6e] shadow-sm transition hover:text-[#1675b8]"
             >
               <FaFilter className="h-4 w-4" />
             </button>
           </form>
 
           <div
-            className="reveal-on-scroll mt-10 flex w-full flex-col gap-6"
+            className="reveal-on-scroll mt-8 flex w-full flex-col gap-5"
             style={{ "--reveal-delay": "220ms" } as CSSProperties}
           >
-            <div className="flex flex-wrap justify-center gap-5 xl:justify-between">
+            <div className="flex flex-wrap justify-center gap-4 xl:justify-between">
               {createCategories.map((category) => {
                 const isSelected = category.label === selectedCategory;
 
@@ -197,7 +144,7 @@ function CreatePresentationPage() {
                     key={category.label}
                     type="button"
                     onClick={() => setSelectedCategory(category.label)}
-                    className={`${category.width} ${category.color} h-[60px] rounded-[50px] px-6 text-center text-[1.35rem] font-bold text-[#f8fafc] shadow-[0_4px_16px_rgba(0,0,0,0.25)] transition-all hover:-translate-y-0.5 ${isSelected ? "ring-4 ring-white/70" : ""}`}
+                    className={`${category.width} ${category.color} h-[54px] rounded-[40px] px-5 text-center text-[1.08rem] font-bold text-[#f8fafc] shadow-[0_4px_16px_rgba(0,0,0,0.25)] transition-all hover:-translate-y-0.5 sm:text-[1.15rem] ${isSelected ? "ring-4 ring-white/70" : ""}`}
                   >
                     {category.label}
                   </button>
@@ -205,8 +152,8 @@ function CreatePresentationPage() {
               })}
             </div>
 
-            <div className="flex flex-col items-center justify-end gap-4 sm:flex-row sm:self-end">
-              <span className="text-[1.35rem] font-medium text-[#706e6e] sm:text-[1.6rem]">
+            <div className="flex flex-col items-center justify-end gap-3 sm:flex-row sm:self-end">
+              <span className="text-[1.12rem] font-medium text-[#706e6e] sm:text-[1.3rem]">
                 Ano Selecionado:
               </span>
 
@@ -216,7 +163,7 @@ function CreatePresentationPage() {
                   onChange={(event: ChangeEvent<HTMLSelectElement>) =>
                     setSelectedYear(event.target.value)
                   }
-                  className="h-[53px] w-[218px] appearance-none rounded-[50px] bg-[#d9d9d9] px-7 pr-14 text-[1.3rem] font-medium text-[#706e6e] shadow-[0_4px_11px_rgba(0,0,0,0.25)] outline-none"
+                  className="h-[48px] w-[190px] appearance-none rounded-[40px] bg-[#d9d9d9] px-6 pr-12 text-[1.08rem] font-medium text-[#706e6e] shadow-[0_4px_11px_rgba(0,0,0,0.25)] outline-none"
                 >
                   {availableYears.map((year) => (
                     <option key={year} value={year}>
@@ -224,7 +171,7 @@ function CreatePresentationPage() {
                     </option>
                   ))}
                 </select>
-                <FaChevronDown className="pointer-events-none absolute right-6 top-1/2 h-3 w-5 -translate-y-1/2 text-[#706e6e]" />
+                <FaChevronDown className="pointer-events-none absolute right-5 top-1/2 h-3 w-4 -translate-y-1/2 text-[#706e6e]" />
               </div>
             </div>
           </div>

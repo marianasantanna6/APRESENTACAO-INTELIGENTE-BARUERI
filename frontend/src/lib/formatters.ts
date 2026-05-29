@@ -36,3 +36,13 @@ export function formatDateTime(value: string) {
 
   return `${formatShortDate(value)}, ${hours}:${minutes}`;
 }
+
+export function formatCpf(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+
+  if (digits.length !== 11) {
+    return value;
+  }
+
+  return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+}

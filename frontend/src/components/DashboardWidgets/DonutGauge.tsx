@@ -19,15 +19,15 @@ export function DonutGauge({
       color: "rgba(190,198,208,0.22)",
     },
   ];
-  const dimension = size === "presentation" ? 220 : size === "card" ? 124 : 132;
-  const inset = size === "presentation" ? 32 : size === "card" ? 16 : 18;
-  const innerRadius = size === "presentation" ? 72 : size === "card" ? 38 : 42;
-  const outerRadius = size === "presentation" ? 102 : size === "card" ? 58 : 62;
+  const dimension = size === "presentation" ? 220 : size === "card" ? 156 : 132;
+  const inset = size === "presentation" ? 32 : size === "card" ? 20 : 18;
+  const innerRadius = size === "presentation" ? 72 : size === "card" ? 48 : 42;
+  const outerRadius = size === "presentation" ? 102 : size === "card" ? 72 : 62;
   const labelClassName =
     size === "presentation"
       ? "text-[3rem] font-extrabold"
       : size === "card"
-        ? "text-[1.55rem] font-extrabold"
+        ? "text-[1.9rem] font-extrabold"
         : "text-[1.75rem] font-extrabold";
 
   return (
