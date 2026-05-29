@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from "react";
 import { createContext, useContext, useEffect, useState } from "react";
+import { authApi } from "../api/auth";
 import { mockUsers } from "../mocks/authMockData";
 import type { AuthSessionUser, MockUser } from "../types/auth";
 
@@ -40,7 +41,7 @@ type VerifyCurrentUserResult = { ok: true } | { ok: false; message: string };
 type AuthContextValue = {
   isAuthenticated: boolean;
   user: AuthSessionUser | null;
-  login: (input: LoginInput) => LoginResult;
+  login: (input: LoginInput) => Promise<LoginResult>;
   logout: () => void;
   updateAccount: (input: UpdateAccountInput) => UpdateAccountResult;
   changePassword: (input: ChangePasswordInput) => ChangePasswordResult;
@@ -67,6 +68,27 @@ function cloneUsers(source: MockUser[]) {
   return source.map((user) => ({ ...user }));
 }
 
+function findUserByIdentifier(usersDirectory: MockUser[], identifier: string) {
+  const normalizedIdentifier = normalizeIdentifier(identifier);
+  const normalizedCpf = normalizeCpf(identifier);
+
+  return usersDirectory.find((candidate) => {
+    const loginKeys = [candidate.username, candidate.email].map((value) =>
+      value.toLowerCase(),
+    );
+
+    return (
+      (
+        loginKeys.includes(normalizedIdentifier)
+        || (
+          normalizedCpf.length > 0
+          && normalizeCpf(candidate.cpf) === normalizedCpf
+        )
+      )
+    );
+  });
+}
+
 function buildUsersDirectory(storedUsers?: MockUser[] | null) {
   const baseUsers = cloneUsers(mockUsers);
 
@@ -81,7 +103,7 @@ function buildUsersDirectory(storedUsers?: MockUser[] | null) {
   });
   const additionalUsers = storedUsers
     .filter((storedUser) =>
-      !baseUsers.some((baseUser) => baseUser.id === storedUser.id)
+      !baseUsers.some((baseUser) => baseUser.id === storedUser.id),
     )
     .map((user) => ({ ...user }));
 
@@ -183,7 +205,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     try {
       window.localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
     } catch {
-      // Local persistence is only a mock bridge until the backend exists.
+      // Profile editing remains local until dedicated account endpoints exist.
     }
   }, [users]);
 
@@ -213,42 +235,37 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
     } catch {
-      // Session persistence is optional while the account module is mocked.
+      // Session persistence is optional if storage is unavailable.
     }
   }, [user]);
 
-  function login({ identifier, password }: LoginInput): LoginResult {
-    const normalizedIdentifier = normalizeIdentifier(identifier);
-    const normalizedCpf = normalizeCpf(identifier);
-    const normalizedPassword = password.trim();
-    const matchingUser = users.find((candidate) => {
-      const loginKeys = [candidate.username, candidate.email].map((value) =>
-        value.toLowerCase(),
-      );
+  async function login({
+    identifier,
+    password,
+  }: LoginInput): Promise<LoginResult> {
+    const authResult = await authApi.login({ identifier, password });
 
-      return (
-        (
-          loginKeys.includes(normalizedIdentifier)
-          || (
-            normalizedCpf.length > 0
-            && normalizeCpf(candidate.cpf) === normalizedCpf
-          )
-        )
-        && candidate.password === normalizedPassword
-      );
-    });
+    if (!authResult.ok) {
+      return {
+        ok: false,
+        message: authResult.message,
+      };
+    }
+
+    const matchingUser = findUserByIdentifier(users, identifier);
 
     if (!matchingUser) {
       return {
         ok: false,
-        message: "Usuário ou senha mock inválidos.",
+        message:
+          "O backend respondeu, mas o frontend nao encontrou um perfil local compativel com essas credenciais.",
       };
     }
 
     if (matchingUser.status !== "active") {
       return {
         ok: false,
-        message: "Este usuário está marcado como inativo no mock.",
+        message: "Este usuario esta marcado como inativo.",
       };
     }
 
@@ -267,7 +284,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!user) {
       return {
         ok: false,
-        message: "Nenhum usuário autenticado para atualizar.",
+        message: "Nenhum usuario autenticado para atualizar.",
       };
     }
 
@@ -284,7 +301,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!updatedUser) {
       return {
         ok: false,
-        message: "Usuário não encontrado no diretório mock.",
+        message: "Usuario nao encontrado no diretorio local.",
       };
     }
 
@@ -306,7 +323,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!user) {
       return {
         ok: false,
-        message: "Nenhum usuário autenticado para alterar a senha.",
+        message: "Nenhum usuario autenticado para alterar a senha.",
       };
     }
 
@@ -315,14 +332,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!currentUser) {
       return {
         ok: false,
-        message: "Usuário não encontrado no diretório mock.",
+        message: "Usuario nao encontrado no diretorio local.",
       };
     }
 
     if (currentUser.password !== currentPassword.trim()) {
       return {
         ok: false,
-        message: "A senha atual informada não confere.",
+        message: "A senha atual informada nao confere.",
       };
     }
 
@@ -351,7 +368,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!user) {
       return {
         ok: false,
-        message: "Nenhum usuário autenticado para confirmar a ação.",
+        message: "Nenhum usuario autenticado para confirmar a acao.",
       };
     }
 
@@ -360,21 +377,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!currentUser) {
       return {
         ok: false,
-        message: "Usuário não encontrado no diretório mock.",
+        message: "Usuario nao encontrado no diretorio local.",
       };
     }
 
     if (currentUser.email.toLowerCase() !== email.trim().toLowerCase()) {
       return {
         ok: false,
-        message: "Informe o email institucional do usuário logado.",
+        message: "Informe o email institucional do usuario logado.",
       };
     }
 
     if (currentUser.password !== password.trim()) {
       return {
         ok: false,
-        message: "A senha informada não confere.",
+        message: "A senha informada nao confere.",
       };
     }
 

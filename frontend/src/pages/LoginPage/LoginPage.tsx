@@ -59,43 +59,13 @@ const defaultValues: FormValues = {
   remember: false,
 };
 
-const mockedAccesses = [
-  {
-    label: "Admin nível 2",
-    identifier: "admin.nivel2",
-    password: "barueri123",
-  },
-  {
-    label: "Admin nível 1",
-    identifier: "admin.nivel1",
-    password: "barueri123",
-  },
-  {
-    label: "Funcionário comum",
-    identifier: "funcionario.demo",
-    password: "barueri123",
-  },
-];
-
-function getMockedAccessDisplayName(identifier: string) {
-  switch (identifier) {
-    case "admin.nivel2":
-      return "Marina Justus";
-    case "admin.nivel1":
-      return "João Lemes";
-    case "funcionario.demo":
-      return "Bianca Souza";
-    default:
-      return "Usuário";
-  }
-}
-
 function LoginPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, login, user } = useAuth();
   const [formValues, setFormValues] = useState<FormValues>(defaultValues);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
@@ -105,11 +75,10 @@ function LoginPage() {
 
     const stateFromLocation = location.state as { from?: string } | null;
     const requestedPath = stateFromLocation?.from;
-    if (requestedPath) {
-      if (canAccessPathForUser(user, requestedPath)) {
-        navigate(requestedPath, { replace: true });
-        return;
-      }
+
+    if (requestedPath && canAccessPathForUser(user, requestedPath)) {
+      navigate(requestedPath, { replace: true });
+      return;
     }
 
     navigate(getDefaultRouteForUser(user), { replace: true });
@@ -123,13 +92,13 @@ function LoginPage() {
     setErrors((current) => ({ ...current, [field]: "", general: "" }));
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const nextErrors: FormErrors = {};
 
     if (!formValues.identifier.trim()) {
-      nextErrors.identifier = "Informe seu usuário, CPF ou email.";
+      nextErrors.identifier = "Informe seu usuario, CPF ou email.";
     }
 
     if (!formValues.password.trim()) {
@@ -144,18 +113,24 @@ function LoginPage() {
       return;
     }
 
-    const result = login({
-      identifier: formValues.identifier,
-      password: formValues.password,
-    });
+    setIsSubmitting(true);
 
-    if ("message" in result) {
-      const failureMessage = result.message;
+    try {
+      const result = await login({
+        identifier: formValues.identifier,
+        password: formValues.password,
+      });
+
+      if (result.ok) {
+        return;
+      }
 
       setErrors((current) => ({
         ...current,
-        general: failureMessage,
+        general: result.message,
       }));
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -186,7 +161,7 @@ function LoginPage() {
           className="reveal-on-scroll mt-4 text-center text-[1.95rem] font-extrabold tracking-[-0.04em] text-[#1e1e1e] sm:mt-5 sm:text-[2.7rem]"
           style={{ "--reveal-delay": "100ms" } as CSSProperties}
         >
-          Faça seu Login
+          Faca seu Login
         </h1>
 
         <form
@@ -198,11 +173,12 @@ function LoginPage() {
             <input
               type="text"
               value={formValues.identifier}
+              disabled={isSubmitting}
               onChange={(event: ChangeEvent<HTMLInputElement>) =>
                 updateField("identifier", event.target.value)
               }
-              placeholder="Usuário / CPF / Email"
-              className={`h-15.25 w-full rounded-[20px] border bg-[#f8fafc] px-5 text-[0.98rem] font-medium text-[#1e1e1e] shadow-[0_4px_10px_rgba(0,0,0,0.25)] outline-none transition focus:-translate-y-0.5 focus:border-[#1675b8] focus:ring-4 focus:ring-[#1675b8]/15 sm:text-[1.15rem] ${
+              placeholder="Usuario / CPF / Email"
+              className={`h-15.25 w-full rounded-[20px] border bg-[#f8fafc] px-5 text-[0.98rem] font-medium text-[#1e1e1e] shadow-[0_4px_10px_rgba(0,0,0,0.25)] outline-none transition focus:-translate-y-0.5 focus:border-[#1675b8] focus:ring-4 focus:ring-[#1675b8]/15 disabled:cursor-not-allowed disabled:opacity-70 sm:text-[1.15rem] ${
                 errors.identifier ? "border-[#d64545]" : "border-[#d5d5d5]"
               }`}
             />
@@ -218,18 +194,20 @@ function LoginPage() {
               <input
                 type={showPassword ? "text" : "password"}
                 value={formValues.password}
+                disabled={isSubmitting}
                 onChange={(event: ChangeEvent<HTMLInputElement>) =>
                   updateField("password", event.target.value)
                 }
                 placeholder="Senha"
-                className={`h-15.25 w-full rounded-[20px] border bg-[#f8fafc] px-5 pr-24 text-[0.98rem] font-medium text-[#1e1e1e] shadow-[0_4px_10px_rgba(0,0,0,0.25)] outline-none transition focus:-translate-y-0.5 focus:border-[#1675b8] focus:ring-4 focus:ring-[#1675b8]/15 sm:text-[1.15rem] ${
+                className={`h-15.25 w-full rounded-[20px] border bg-[#f8fafc] px-5 pr-24 text-[0.98rem] font-medium text-[#1e1e1e] shadow-[0_4px_10px_rgba(0,0,0,0.25)] outline-none transition focus:-translate-y-0.5 focus:border-[#1675b8] focus:ring-4 focus:ring-[#1675b8]/15 disabled:cursor-not-allowed disabled:opacity-70 sm:text-[1.15rem] ${
                   errors.password ? "border-[#d64545]" : "border-[#d5d5d5]"
                 }`}
               />
               <button
                 type="button"
+                disabled={isSubmitting}
                 onClick={() => setShowPassword((current) => !current)}
-                className="absolute right-5 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#1675b8] transition-opacity hover:opacity-80"
+                className="absolute right-5 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#1675b8] transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {showPassword ? "Ocultar" : "Mostrar"}
               </button>
@@ -243,9 +221,10 @@ function LoginPage() {
 
           <button
             type="submit"
-            className="mt-1 h-16.5 rounded-[20px] bg-[#1675b8] text-[1.05rem] font-semibold tracking-[0.02em] text-white shadow-[0_4px_10px_rgba(0,0,0,0.25)] transition-transform hover:-translate-y-0.5 sm:text-[1.55rem]"
+            disabled={isSubmitting}
+            className="mt-1 h-16.5 rounded-[20px] bg-[#1675b8] text-[1.05rem] font-semibold tracking-[0.02em] text-white shadow-[0_4px_10px_rgba(0,0,0,0.25)] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0 sm:text-[1.55rem]"
           >
-            Entrar
+            {isSubmitting ? "Entrando..." : "Entrar"}
           </button>
 
           {errors.general ? (
@@ -259,10 +238,11 @@ function LoginPage() {
               <input
                 type="checkbox"
                 checked={formValues.remember}
+                disabled={isSubmitting}
                 onChange={(event: ChangeEvent<HTMLInputElement>) =>
                   updateField("remember", event.target.checked)
                 }
-                className="h-6 w-6 appearance-none rounded-full border-[2.5px] border-[#1675b8] bg-transparent checked:bg-[#1675b8] checked:shadow-[inset_0_0_0_4px_white]"
+                className="h-6 w-6 appearance-none rounded-full border-[2.5px] border-[#1675b8] bg-transparent checked:bg-[#1675b8] checked:shadow-[inset_0_0_0_4px_white] disabled:cursor-not-allowed disabled:opacity-70"
               />
               <span>Lembrar de mim</span>
             </label>
@@ -277,7 +257,8 @@ function LoginPage() {
 
           <button
             type="button"
-            className="mt-1 flex h-16.5 items-center justify-between gap-4 rounded-[20px] border-[2.5px] border-[#1675b8] bg-white px-5 text-[#898989] shadow-[0_4px_10px_rgba(0,0,0,0.25)] transition-transform hover:-translate-y-0.5"
+            disabled={isSubmitting}
+            className="mt-1 flex h-16.5 items-center justify-between gap-4 rounded-[20px] border-[2.5px] border-[#1675b8] bg-white px-5 text-[#898989] shadow-[0_4px_10px_rgba(0,0,0,0.25)] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
           >
             <img
               src={loginGovLogo}
@@ -290,19 +271,6 @@ function LoginPage() {
             <span className="w-17.5" aria-hidden="true" />
           </button>
 
-          <div className="rounded-[20px] border border-[#d7e7f3] bg-[#f7fbff] px-5 py-3.5 text-left text-[0.92rem] text-[#4f6980] shadow-[0_6px_14px_rgba(22,117,184,0.08)]">
-            <p className="font-semibold text-[#2d5d83]">Acessos mockados</p>
-            <div className="mt-3 space-y-2">
-              {mockedAccesses.map((access) => (
-                <p key={access.identifier} className="leading-6">
-                  <span className="font-semibold">
-                    {getMockedAccessDisplayName(access.identifier)}:
-                  </span>{" "}
-                  {access.identifier} / {access.password}
-                </p>
-              ))}
-            </div>
-          </div>
         </form>
       </section>
     </main>

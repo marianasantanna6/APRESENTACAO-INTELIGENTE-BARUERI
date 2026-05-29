@@ -23,10 +23,17 @@ grupo saiba exatamente onde mexer em rotas, dados, mocks e componentes.
 - `src/types/presentation.ts`: contrato canonico do fluxo de dashboard/apresentacao.
 - `src/types/README.md`: orientacoes da camada de tipos.
 
+## Context
+
+- `src/context/AuthContext.tsx`: sessao autenticada, login, logout e perfil local.
+- `src/context/AdminConsoleContext.tsx`: estado compartilhado do console admin.
+- `src/context/index.ts`: barrel da camada de contexto.
+
 ## Router
 
 - `src/router/paths.ts`: constantes de caminhos do frontend.
 - `src/router/AppRouter.tsx`: arvore central de navegacao.
+- `src/router/ProtectedRoute.tsx`: guardas de autenticacao e permissao.
 - `src/router/presentationSearchParams.ts`: leitura e escrita dos query params da tela de resultado.
 - `src/router/index.ts`: barrel da camada de navegacao.
 - `src/router/README.md`: convencoes da camada `router`.
@@ -41,6 +48,9 @@ grupo saiba exatamente onde mexer em rotas, dados, mocks e componentes.
 
 ## API
 
+- `src/api/auth/authApiContract.ts`: contrato da autenticacao HTTP.
+- `src/api/auth/httpAuthApi.ts`: implementacao real do `POST /login`.
+- `src/api/auth/index.ts`: export da implementacao ativa de auth.
 - `src/api/presentation/defaultPresentationFilters.ts`: filtros padrao do fluxo de criacao/resultado.
 - `src/api/presentation/presentationApiContract.ts`: contrato da camada de API.
 - `src/api/presentation/mockPresentationApi.ts`: implementacao temporaria baseada em mock.
@@ -56,7 +66,7 @@ grupo saiba exatamente onde mexer em rotas, dados, mocks e componentes.
 ## Pages
 
 - `src/pages/LandingPage/LandingPage.tsx`: tela inicial da aplicacao.
-- `src/pages/LoginPage/LoginPage.tsx`: tela de login.
+- `src/pages/LoginPage/LoginPage.tsx`: tela de login, validacao e redirecionamento pos-auth.
 - `src/pages/CreatePresentationPage/CreatePresentationPage.tsx`: tela de criacao e selecao de filtros.
 - `src/pages/GeneratedPresentationPage/GeneratedPresentationPage.tsx`: tela de dashboard, cards gerados e orquestracao do viewer da apresentacao.
 - `src/pages/README.md`: convencoes das paginas.
@@ -127,6 +137,7 @@ grupo saiba exatamente onde mexer em rotas, dados, mocks e componentes.
 ## Onde mexer em cada caso
 
 - Nova rota/tela: `src/router/paths.ts` e `src/router/AppRouter.tsx`
+- Fluxo de login e sessao: `src/pages/LoginPage/LoginPage.tsx`, `src/context/AuthContext.tsx` e `src/api/auth/`
 - Mudanca na query string do resultado: `src/router/presentationSearchParams.ts`
 - Integracao com API real: `src/api/presentation/`
 - Tipos de negocio: `src/types/presentation.ts`

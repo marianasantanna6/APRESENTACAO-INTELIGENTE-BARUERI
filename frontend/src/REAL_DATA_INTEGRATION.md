@@ -11,6 +11,23 @@ os componentes.
 4. A implementacao ativa hoje e `mockPresentationApi`.
 5. O mock devolve `presentationMockData`.
 
+## Status atual do login
+
+O login ja saiu do mock visual e hoje usa backend real para autenticar:
+
+1. `src/pages/LoginPage/LoginPage.tsx` chama `useAuth().login(...)`.
+2. `src/context/AuthContext.tsx` delega a chamada para `src/api/auth/`.
+3. `src/api/auth/httpAuthApi.ts` faz `fetch("/api/login")`.
+4. `frontend/vite.config.js` redireciona `/api/login` para `http://localhost:3000/login`.
+5. Se o backend aprovar a credencial, o frontend ainda completa o perfil com
+   dados locais de `src/mocks/authMockData.ts`.
+
+### O que ainda falta para o login ficar 100% backend-driven
+
+- endpoint de sessao/perfil no backend;
+- payload do usuario autenticado retornado pelo backend;
+- troca do perfil local em `AuthContext.tsx` por dados vindos da API.
+
 ## O que mudar para integrar backend real
 
 ### 1. Criar uma implementacao real da API
@@ -74,13 +91,13 @@ Se a API real trouxer cenarios extras, amplie:
 - `src/hooks/usePresentationData.ts`
 - `src/pages/GeneratedPresentationPage/GeneratedPresentationPage.tsx`
 
-### 6. Integracao real de login
+### 6. Evolucao futura do login
 
-Quando o login sair do mock/navegacao local, o caminho natural e:
+Para concluir a migracao do login:
 
-1. criar `src/api/auth/`
-2. mover a logica de submit da tela de login para essa camada
-3. navegar para `ROUTE_PATHS.createPresentation` apenas apos autenticacao bem-sucedida
+1. o backend deve retornar o usuario autenticado;
+2. `AuthContext.tsx` deve parar de depender de `authMockData.ts`;
+3. a camada `src/api/auth/` deve normalizar o payload final de sessao.
 
 ### 7. Checklist de payload esperado
 
