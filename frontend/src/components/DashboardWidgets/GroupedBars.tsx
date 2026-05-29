@@ -16,14 +16,14 @@ export function GroupedBars({
   const isPresentation = size === "presentation";
 
   return (
-    <div className={size === "card" ? "h-[230px] w-full" : isPresentation ? "h-[304px] w-full" : "h-[248px] w-full"}>
+    <div className={size === "card" ? "h-[262px] w-full" : isPresentation ? "h-[304px] w-full" : "h-[248px] w-full"}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
           margin={{
-            top: isPresentation ? 16 : 10,
+            top: isPresentation ? 16 : size === "card" ? 14 : 10,
             right: 8,
-            left: size === "card" ? -16 : 0,
+            left: size === "card" ? -8 : 0,
             bottom: 0,
           }}
         >
@@ -33,8 +33,8 @@ export function GroupedBars({
           align={size === "card" ? "center" : "left"}
           iconType="circle"
           wrapperStyle={{
-            paddingBottom: isPresentation ? 18 : size === "card" ? 10 : 12,
-            fontSize: isPresentation ? "13px" : size === "card" ? "11px" : "12px",
+            paddingBottom: isPresentation ? 18 : size === "card" ? 12 : 12,
+            fontSize: isPresentation ? "13px" : size === "card" ? "12px" : "12px",
             color: "#706e6e",
           }}
             formatter={(value) => {
@@ -54,7 +54,7 @@ export function GroupedBars({
             axisLine={false}
             tickLine={false}
             tick={{
-              fontSize: size === "card" ? 11 : isPresentation ? 13 : 12,
+              fontSize: size === "card" ? 12 : isPresentation ? 13 : 12,
               fontWeight: 600,
               fill: "#706e6e",
             }}

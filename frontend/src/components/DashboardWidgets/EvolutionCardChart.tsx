@@ -15,10 +15,10 @@ export function EvolutionCardChart({
     ? "h-[264px] w-full"
     : size === "dashboard"
       ? "h-[164px] w-full"
-      : "h-[176px] w-full";
+      : "h-[212px] w-full";
   const wrapperClassName = isPresentation
     ? "mx-auto w-full max-w-[440px]"
-    : "mx-auto w-full max-w-[294px]";
+    : "mx-auto w-full max-w-[340px]";
 
   return (
     <div className={wrapperClassName}>
@@ -27,7 +27,7 @@ export function EvolutionCardChart({
           <AreaChart
             data={points}
             margin={{
-              top: isPresentation ? 24 : size === "dashboard" ? 16 : 18,
+              top: isPresentation ? 24 : size === "dashboard" ? 16 : 20,
               right: 12,
               left: 2,
               bottom: 0,
@@ -50,7 +50,7 @@ export function EvolutionCardChart({
               axisLine={false}
               tickLine={false}
               tick={{
-                fontSize: isPresentation ? 12 : 9,
+                fontSize: isPresentation ? 12 : size === "card" ? 10 : 9,
                 fontWeight: 700,
                 fill: "#706e6e",
               }}
@@ -61,8 +61,8 @@ export function EvolutionCardChart({
               tickFormatter={(chartValue) => Number(chartValue).toFixed(2)}
               axisLine={false}
               tickLine={false}
-              width={isPresentation ? 44 : 38}
-              tick={{ fontSize: isPresentation ? 11 : 9, fill: "#706e6e" }}
+              width={isPresentation ? 44 : size === "card" ? 40 : 38}
+              tick={{ fontSize: isPresentation ? 11 : size === "card" ? 10 : 9, fill: "#706e6e" }}
             />
             <Tooltip
               cursor={{ stroke: "rgba(22,117,184,0.18)", strokeWidth: 1 }}
@@ -95,16 +95,16 @@ export function EvolutionCardChart({
               type="monotone"
               dataKey="value"
               stroke="#1675b8"
-              strokeWidth={isPresentation ? 5 : 4}
+              strokeWidth={isPresentation ? 5 : size === "card" ? 4.4 : 4}
               fill={`url(#${gradientId})`}
               dot={{
-                r: isPresentation ? 5.4 : 4.6,
+                r: isPresentation ? 5.4 : size === "card" ? 5 : 4.6,
                 fill: "#1675b8",
                 stroke: "#ffffff",
                 strokeWidth: 2,
               }}
               activeDot={{
-                r: isPresentation ? 6.8 : 6,
+                r: isPresentation ? 6.8 : size === "card" ? 6.4 : 6,
                 fill: "#1675b8",
                 stroke: "#ffffff",
                 strokeWidth: 2,
@@ -117,7 +117,7 @@ export function EvolutionCardChart({
                   formatIdh(Number(chartValue))
                 }
                 style={{
-                  fontSize: isPresentation ? 12 : 9,
+                  fontSize: isPresentation ? 12 : size === "card" ? 10 : 9,
                   fontWeight: 700,
                   fill: "#0d5283",
                 }}

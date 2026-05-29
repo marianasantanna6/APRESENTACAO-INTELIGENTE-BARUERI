@@ -27,10 +27,10 @@ export default function AdminProjectsPage() {
         {canCreate ? (
           <Link
             to={ROUTE_PATHS.createPresentation}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-5 text-[0.98rem] font-semibold text-white shadow-[0_10px_24px_rgba(103,156,203,0.26)] transition hover:-translate-y-0.5"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-5 text-[0.98rem] font-semibold !text-white shadow-[0_10px_24px_rgba(103,156,203,0.26)] transition hover:-translate-y-0.5"
           >
-            <FiMonitor className="h-4.5 w-4.5" />
-            Nova Apresentação
+            <FiMonitor className="h-4.5 w-4.5 !text-white" />
+            <span className="!text-white">Nova Apresentação</span>
           </Link>
         ) : null}
       </div>

@@ -4,6 +4,7 @@ export const mockUsers: MockUser[] = [
   {
     id: "admin-marina",
     name: "Marina Justus",
+    cpf: "12345678909",
     email: "marina.justus@barueri.sp.gov.br",
     username: "admin.nivel2",
     password: "barueri123",
@@ -11,10 +12,12 @@ export const mockUsers: MockUser[] = [
     department: "Gabinete de Dados",
     team: "Plataforma Analítica",
     status: "active",
+    avatarDataUrl: null,
   },
   {
     id: "admin-joao",
     name: "João Lemes",
+    cpf: "98765432100",
     email: "joao.lemes@barueri.sp.gov.br",
     username: "admin.nivel1",
     password: "barueri123",
@@ -22,10 +25,12 @@ export const mockUsers: MockUser[] = [
     department: "Planejamento",
     team: "Planejamento Territorial",
     status: "active",
+    avatarDataUrl: null,
   },
   {
     id: "employee-bianca",
     name: "Bianca Souza",
+    cpf: "45678912387",
     email: "bianca.souza@barueri.sp.gov.br",
     username: "funcionario.demo",
     password: "barueri123",
@@ -33,5 +38,6 @@ export const mockUsers: MockUser[] = [
     department: "Planejamento",
     team: "Planejamento Territorial",
     status: "active",
+    avatarDataUrl: null,
   },
 ];

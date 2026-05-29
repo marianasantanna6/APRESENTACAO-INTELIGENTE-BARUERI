@@ -5,6 +5,7 @@ export type AccountStatus = "active" | "inactive";
 export type MockUser = {
   id: string;
   name: string;
+  cpf: string;
   email: string;
   username: string;
   password: string;
@@ -12,6 +13,7 @@ export type MockUser = {
   department: string;
   team: string;
   status: AccountStatus;
+  avatarDataUrl?: string | null;
 };
 
 export type AuthSessionUser = Omit<MockUser, "password">;

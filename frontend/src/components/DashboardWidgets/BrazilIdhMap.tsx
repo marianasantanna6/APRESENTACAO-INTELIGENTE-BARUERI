@@ -10,20 +10,20 @@ export function BrazilIdhMap({
   size?: "dashboard" | "card" | "presentation";
 }) {
   const chartHeight =
-    size === "presentation" ? 312 : size === "card" ? 212 : 260;
+    size === "presentation" ? 312 : size === "card" ? 246 : 260;
   const isPresentation = size === "presentation";
   const layoutClassName =
     size === "card"
-      ? "mx-auto w-full max-w-[292px] space-y-3.5"
+      ? "mx-auto w-full max-w-[336px] space-y-4"
       : isPresentation
         ? "grid w-full min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_190px]"
         : "grid w-full min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_156px]";
   const legendClassName =
     size === "card"
-      ? "grid grid-cols-2 gap-x-3 gap-y-1.5 text-[0.64rem] leading-3.5 text-[#706e6e]"
+      ? "grid grid-cols-2 gap-x-3 gap-y-1.5 text-[0.72rem] leading-4 text-[#706e6e]"
       : isPresentation
         ? "space-y-3 rounded-[18px] bg-white px-4 py-4 text-[0.88rem] text-[#706e6e] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]"
-      : "space-y-2 rounded-[14px] bg-white px-3 py-3 text-[0.72rem] text-[#706e6e] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]";
+        : "space-y-2 rounded-[14px] bg-white px-3 py-3 text-[0.72rem] text-[#706e6e] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]";
 
   return (
     <div className={layoutClassName}>
@@ -71,7 +71,7 @@ export function BrazilIdhMap({
                   return null;
                 }
 
-                const radius = isPresentation ? 13 : size === "card" ? 10 : 11;
+                const radius = isPresentation ? 13 : size === "card" ? 11.5 : 11;
 
                 return (
                   <g>
@@ -87,7 +87,7 @@ export function BrazilIdhMap({
                       x={point.cx}
                       y={(point.cy ?? 0) + 3.4}
                       textAnchor="middle"
-                      fontSize={isPresentation ? 8.2 : size === "card" ? 7 : 7.4}
+                      fontSize={isPresentation ? 8.2 : size === "card" ? 7.8 : 7.4}
                       fontWeight={700}
                       fill="#1e1e1e"
                     >

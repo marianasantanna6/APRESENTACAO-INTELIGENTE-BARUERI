@@ -29,16 +29,21 @@ function HeroSection() {
       className="bg-[linear-gradient(180deg,#f8fafc_24%,rgba(158,172,181,0.07)_100%)]"
     >
       <div className="mx-auto flex max-w-310 flex-col gap-10 px-5 pb-20 pt-12 sm:px-6 md:pb-24 md:pt-16 lg:px-8">
-        <div className="max-w-245">
-          <h1 className="max-w-250 text-[2.35rem] leading-[1.06] font-extrabold tracking-[-0.04em] text-[#222] sm:text-[3.3rem] lg:text-[4.75rem]">
+        <div className="max-w-none">
+          <h1 className="max-w-[21ch] text-[2.25rem] leading-[1.02] font-extrabold tracking-[-0.05em] text-[#222] [text-wrap:balance] sm:text-[3rem] lg:max-w-[24ch] lg:text-[3.95rem] xl:text-[4.45rem]">
             O fim das apresentações institucionais{" "}
-            <span className="typewriter-word bg-[linear-gradient(90deg,#0a3452_0%,#1675b8_78.846%)] bg-clip-text text-transparent">
-              desatualizadas
+            <span className="relative inline-block align-bottom">
+              <span aria-hidden="true" className="invisible">
+                desatualizadas
+              </span>
+              <span className="typewriter-word absolute left-0 top-0 bg-[linear-gradient(90deg,#0a3452_0%,#1675b8_78.846%)] bg-clip-text text-transparent">
+                desatualizadas
+              </span>
             </span>
           </h1>
 
           <p
-            className="reveal-on-scroll mt-5 max-w-240 text-[1rem] leading-8 text-black/45 sm:text-[1.1rem] lg:text-[1.75rem] lg:leading-[3.1rem]"
+            className="reveal-on-scroll mt-5 max-w-240 text-[0.98rem] leading-7 text-black/45 sm:text-[1.05rem] lg:text-[1.3rem] lg:leading-[2.2rem]"
             style={{ "--reveal-delay": "180ms" } as CSSProperties}
           >
             Crie apresentações dinâmicas, personalizadas e atualizadas em tempo
@@ -52,7 +57,7 @@ function HeroSection() {
           >
             <Link
               to={ROUTE_PATHS.login}
-              className="inline-flex h-14.5 items-center justify-center gap-3 rounded-[18px] bg-[linear-gradient(100.26deg,rgba(10,52,82,0.63)_1.91%,#1675b8_68.48%)] px-7 text-[1rem] font-bold !text-white shadow-[0_4px_4px_rgba(0,0,0,0.15)] transition-transform hover:-translate-y-0.5 sm:h-17.25 sm:px-8 sm:text-[1.15rem]"
+              className="inline-flex h-13.5 items-center justify-center gap-3 rounded-[18px] bg-[linear-gradient(100.26deg,rgba(10,52,82,0.63)_1.91%,#1675b8_68.48%)] px-6 text-[0.98rem] font-bold !text-white shadow-[0_4px_4px_rgba(0,0,0,0.15)] transition-transform hover:-translate-y-0.5 sm:h-15.5 sm:px-7 sm:text-[1.05rem]"
             >
               <span className="font-bold !text-white">Criar Apresentação</span>
               <FaArrowDown className="h-5 w-5 rotate-270 text-amber-100 sm:h-5.5 sm:w-5.5" />
@@ -60,7 +65,7 @@ function HeroSection() {
 
             <Link
               to={ROUTE_PATHS.login}
-              className="inline-flex h-14.5 items-center justify-center rounded-[18px] border-[3px] border-[#1675b8] bg-white px-7 text-[1rem] font-bold text-[#1675b8] shadow-[0_4px_4px_rgba(0,0,0,0.15)] transition-transform hover:-translate-y-0.5 sm:h-17.25 sm:px-8 sm:text-[1.15rem]"
+              className="inline-flex h-13.5 items-center justify-center rounded-[18px] border-[3px] border-[#1675b8] bg-white px-6 text-[0.98rem] font-bold text-[#1675b8] shadow-[0_4px_4px_rgba(0,0,0,0.15)] transition-transform hover:-translate-y-0.5 sm:h-15.5 sm:px-7 sm:text-[1.05rem]"
             >
               Criar Dashboard
             </Link>

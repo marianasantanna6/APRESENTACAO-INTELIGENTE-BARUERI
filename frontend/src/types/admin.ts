@@ -56,5 +56,4 @@ export type NewEmployeePayload = {
   email: string;
   department: string;
   team: string;
-  status: AccountStatus;
 };
