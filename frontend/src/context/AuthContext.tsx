@@ -1,6 +1,5 @@
 import type { PropsWithChildren } from "react";
 import { createContext, useContext, useEffect, useState } from "react";
-import { authApi } from "../api/auth";
 import { mockUsers } from "../mocks/authMockData";
 import type { AuthSessionUser, MockUser } from "../types/auth";
 
@@ -27,7 +26,7 @@ type VerifyCurrentUserInput = {
 };
 
 type LoginResult =
-  | { ok: true; user: AuthSessionUser }
+  | { ok: true; user: AuthSessionUser; message?: never }
   | { ok: false; message: string };
 
 type UpdateAccountResult =
@@ -78,12 +77,10 @@ function findUserByIdentifier(usersDirectory: MockUser[], identifier: string) {
     );
 
     return (
-      (
-        loginKeys.includes(normalizedIdentifier)
-        || (
-          normalizedCpf.length > 0
-          && normalizeCpf(candidate.cpf) === normalizedCpf
-        )
+      loginKeys.includes(normalizedIdentifier)
+      || (
+        normalizedCpf.length > 0
+        && normalizeCpf(candidate.cpf) === normalizedCpf
       )
     );
   });
@@ -164,7 +161,6 @@ function syncSessionUser(
 
   return buildSessionUser(matchingUser);
 }
-
 function areSessionUsersEqual(
   left: AuthSessionUser | null,
   right: AuthSessionUser | null,
@@ -243,22 +239,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     identifier,
     password,
   }: LoginInput): Promise<LoginResult> {
-    const authResult = await authApi.login({ identifier, password });
-
-    if (!authResult.ok) {
-      return {
-        ok: false,
-        message: authResult.message,
-      };
-    }
-
     const matchingUser = findUserByIdentifier(users, identifier);
 
     if (!matchingUser) {
       return {
         ok: false,
-        message:
-          "O backend respondeu, mas o frontend nao encontrou um perfil local compativel com essas credenciais.",
+        message: "Usuario nao encontrado.",
       };
     }
 
@@ -266,6 +252,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
       return {
         ok: false,
         message: "Este usuario esta marcado como inativo.",
+      };
+    }
+
+    if (matchingUser.password !== password.trim()) {
+      return {
+        ok: false,
+        message: "Senha incorreta.",
       };
     }
 

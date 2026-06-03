@@ -27,7 +27,10 @@ export function NationalSummaryCard({
     <PresentationCardShell card={card} variant={variant}>
       <PresentationPreview variant={variant} className="items-stretch">
         <div className={`grid w-full ${variant === "stage" ? "gap-4" : "gap-2.5"}`}>
-          <div className={metricBlockClassName}>
+          <div
+            data-presentation-surface="summary-metric"
+            className={metricBlockClassName}
+          >
             <p className={labelClassName}>
               Expectativa de vida
             </p>
@@ -36,7 +39,10 @@ export function NationalSummaryCard({
             </p>
           </div>
 
-          <div className={metricBlockClassName}>
+          <div
+            data-presentation-surface="summary-metric"
+            className={metricBlockClassName}
+          >
             <p className={labelClassName}>
               Renda per capita
             </p>

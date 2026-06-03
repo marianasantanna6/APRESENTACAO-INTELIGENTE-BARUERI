@@ -22,7 +22,10 @@ export function PresentationThumbnailRail({
   onSelectSlide,
 }: PresentationThumbnailRailProps) {
   return (
-    <section className="overflow-hidden rounded-[24px] border border-white/50 bg-[linear-gradient(98deg,#ffffff_0.9%,#ececec_100%)] px-4 py-4 shadow-[0_10px_24px_rgba(0,0,0,0.08)] sm:px-5">
+    <section
+      data-presentation-surface="thumbnail-rail"
+      className="overflow-hidden rounded-[24px] border border-white/50 bg-[linear-gradient(98deg,#ffffff_0.9%,#ececec_100%)] px-4 py-4 shadow-[0_10px_24px_rgba(0,0,0,0.08)] sm:px-5"
+    >
       <div className="mb-3.5 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-[0.94rem] font-bold text-[#1e1e1e]">Slides da apresentação</h2>
@@ -30,7 +33,10 @@ export function PresentationThumbnailRail({
             Clique para selecionar. Use o botão de ampliar para abrir solo.
           </p>
         </div>
-        <span className="rounded-full bg-white px-3 py-1 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-[#0d5283] shadow-[0_8px_20px_rgba(13,82,131,0.12)]">
+        <span
+          data-presentation-surface="slide-badge"
+          className="rounded-full bg-white px-3 py-1 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-[#0d5283] shadow-[0_8px_20px_rgba(13,82,131,0.12)]"
+        >
           {slides.length} slides
         </span>
       </div>
@@ -42,6 +48,8 @@ export function PresentationThumbnailRail({
           return (
             <div
               key={slide.id}
+              data-presentation-surface="thumbnail-card"
+              data-active={isActive ? "true" : "false"}
               className={`shrink-0 rounded-[20px] p-1.5 transition ${
                 isActive
                   ? "bg-white shadow-[0_14px_28px_rgba(13,82,131,0.16)]"
@@ -72,6 +80,8 @@ export function PresentationThumbnailRail({
                     type="button"
                     onClick={() => onOpenSolo(slide.id)}
                     aria-label={`Abrir ${slide.title} em modo solo`}
+                    data-presentation-surface="card-action"
+                    data-presentation-control="accent"
                     className="inline-flex h-8.5 w-8.5 items-center justify-center rounded-full bg-[#eff6ff] text-[#0d5283] transition hover:-translate-y-0.5"
                   >
                     <FiMaximize2 className="h-3.5 w-3.5" />
@@ -82,6 +92,8 @@ export function PresentationThumbnailRail({
                       type="button"
                       onClick={() => onDeleteSlide(slide.id)}
                       aria-label={`Excluir ${slide.title}`}
+                      data-presentation-surface="card-action"
+                      data-presentation-control="danger"
                       className="inline-flex h-8.5 w-8.5 items-center justify-center rounded-full bg-[#fff1f2] text-[#b91c1c] transition hover:-translate-y-0.5"
                     >
                       <FiTrash2 className="h-3.5 w-3.5" />

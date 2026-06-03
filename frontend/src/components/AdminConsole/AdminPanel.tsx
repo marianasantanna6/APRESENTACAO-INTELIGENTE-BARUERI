@@ -10,6 +10,7 @@ export default function AdminPanel({
 }: AdminPanelProps) {
   return (
     <section
+      data-surface="panel"
       className={`rounded-[22px] border border-white/70 bg-white/88 p-6 shadow-[0_18px_40px_rgba(120,130,170,0.16)] backdrop-blur-[4px] ${className}`}
     >
       {children}

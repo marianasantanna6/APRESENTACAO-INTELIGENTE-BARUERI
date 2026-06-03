@@ -17,7 +17,10 @@ export default function DashboardSection({
   data: PresentationMockData;
 }) {
   return (
-    <div className="reveal-on-scroll rounded-[14px] border border-black/5 bg-white shadow-[0_4px_14px_rgba(0,0,0,0.12)] p-4 sm:p-5">
+    <div
+      data-dashboard-surface="shell"
+      className="reveal-on-scroll rounded-[14px] border border-black/5 bg-white p-4 shadow-[0_4px_14px_rgba(0,0,0,0.12)] sm:p-5"
+    >
       <div className="grid gap-3 xl:grid-cols-[290px_minmax(0,1fr)]">
         <div className="grid gap-3">
           <NationalIdhCard data={data} />

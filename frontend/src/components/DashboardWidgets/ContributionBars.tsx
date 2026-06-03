@@ -93,6 +93,7 @@ export function ContributionBars({
         {data.map((item) => (
           <div
             key={item.label}
+            data-dashboard-surface="contribution-card"
             className={`rounded-[14px] bg-[linear-gradient(180deg,#ffffff_0%,#f7fbff_100%)] shadow-[0_4px_12px_rgba(18,94,148,0.08)] ${
               isPresentation ? "px-4 py-4" : size === "card" ? "px-3.5 py-3.5" : "px-3.5 py-3"
             }`}

@@ -16,10 +16,10 @@ export default function AdminProjectsPage() {
     <section>
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-[2.2rem] font-extrabold tracking-[-0.05em] text-[#1e1e1e] sm:text-[2.8rem]">
+          <h1 className="page-title text-[2.2rem] font-extrabold tracking-[-0.05em] text-[#1e1e1e] sm:text-[2.8rem]">
             Minhas Apresentações
           </h1>
-          <p className="mt-1 text-[1rem] font-medium text-[#878787]">
+          <p className="page-subtitle mt-1 text-[1rem] font-medium text-[#878787]">
             {presentations.length} projetos
           </p>
         </div>

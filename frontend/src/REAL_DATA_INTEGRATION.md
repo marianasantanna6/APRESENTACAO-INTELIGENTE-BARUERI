@@ -13,14 +13,25 @@ os componentes.
 
 ## Status atual do login
 
-O login ja saiu do mock visual e hoje usa backend real para autenticar:
+O login esta temporariamente 100% frontend-driven:
 
 1. `src/pages/LoginPage/LoginPage.tsx` chama `useAuth().login(...)`.
-2. `src/context/AuthContext.tsx` delega a chamada para `src/api/auth/`.
-3. `src/api/auth/httpAuthApi.ts` faz `fetch("/api/login")`.
-4. `frontend/vite.config.js` redireciona `/api/login` para `http://localhost:3000/login`.
-5. Se o backend aprovar a credencial, o frontend ainda completa o perfil com
-   dados locais de `src/mocks/authMockData.ts`.
+2. `src/context/AuthContext.tsx` valida a credencial diretamente no frontend.
+3. A base inicial usada no login vem de `src/mocks/authMockData.ts`.
+4. O estado salvo no `localStorage` continua alimentando perfil, senha e sessao.
+
+## Status atual de configuracoes do sistema
+
+A tela `src/pages/AdminConsolePage/AdminSettingsPage.tsx` tambem esta local por
+enquanto:
+
+1. tema, alto contraste e navegacao por teclado ja sao aplicados em tempo real
+   pelo frontend;
+2. a fonte dessas preferencias hoje e `src/context/SystemPreferencesContext.tsx`;
+3. o salvamento atual vai para `localStorage`;
+4. termos, privacidade e traducao com Google estao preparados apenas na UI;
+5. a futura integracao com backend pode reaproveitar a mesma tela trocando
+   apenas a origem dos dados e a acao de salvar.
 
 ### O que ainda falta para o login ficar 100% backend-driven
 
@@ -48,9 +59,8 @@ Arquivo do contrato:
 
 Nao passe o DTO do backend direto para a interface.
 
-Normalize em:
-
-- `src/api/presentation/presentationMapper.ts`
+Adapte isso dentro da implementacao HTTP ou em um mapper dedicado, caso o
+backend use nomes/estruturas diferentes do contrato da UI.
 
 O retorno final deve respeitar:
 
@@ -97,7 +107,8 @@ Para concluir a migracao do login:
 
 1. o backend deve retornar o usuario autenticado;
 2. `AuthContext.tsx` deve parar de depender de `authMockData.ts`;
-3. a camada `src/api/auth/` deve normalizar o payload final de sessao.
+3. a integracao de login pode voltar para `src/api/` quando houver necessidade
+   real de trafegar sessao via HTTP.
 
 ### 7. Checklist de payload esperado
 
@@ -122,7 +133,7 @@ Hoje a exclusao de slides e local da sessao e fica em:
 Se o produto passar a salvar slides removidos no backend, o ideal e:
 
 1. expor esse estado na resposta da API
-2. normalizar no `presentationMapper.ts`
+2. adaptar o payload na camada `src/api/`
 3. trocar a persistencia local do hook por chamadas da camada `src/api/`
 4. manter os componentes de `src/components/PresentationMode/` sem mudanca estrutural
 
@@ -133,7 +144,7 @@ Nao renomeie props em toda a UI.
 Faça assim:
 
 1. leia os campos brutos na implementacao da API
-2. transforme no `presentationMapper.ts`
+2. transforme na camada `src/api/presentation/`
 3. devolva o contrato `PresentationData`
 
 ### 9. Validacao final

@@ -121,30 +121,37 @@ function LoginPage() {
         password: formValues.password,
       });
 
-      if (result.ok) {
-        return;
+      if (!result.ok) {
+        setErrors((current) => ({
+          ...current,
+          general: result.message,
+        }));
       }
-
-      setErrors((current) => ({
-        ...current,
-        general: result.message,
-      }));
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-white px-4 py-8 sm:px-6 lg:px-8">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      data-page-theme="login"
+      className="relative min-h-screen overflow-hidden bg-white px-4 py-8 sm:px-6 lg:px-8"
+    >
       {backgroundShapes.map((shape) => (
         <div
           key={shape.className}
           aria-hidden="true"
+          data-login-decor
           className={shape.className}
         />
       ))}
 
-      <section className="relative z-10 mx-auto mt-26 flex w-full max-w-[50rem] flex-col items-center rounded-[20px] bg-white/81 px-5 pb-11 pt-15 shadow-[0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-[2px] sm:mt-32 sm:px-10 sm:pb-13 sm:pt-19 lg:px-18">
+      <section
+        data-login-surface="card"
+        className="relative z-10 mx-auto mt-26 flex w-full max-w-[50rem] flex-col items-center rounded-[20px] bg-white/81 px-5 pb-11 pt-15 shadow-[0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-[2px] sm:mt-32 sm:px-10 sm:pb-13 sm:pt-19 lg:px-18"
+      >
         <Link
           to={ROUTE_PATHS.home}
           aria-label="Voltar para a pagina inicial"
@@ -158,7 +165,7 @@ function LoginPage() {
         </Link>
 
         <h1
-          className="reveal-on-scroll mt-4 text-center text-[1.95rem] font-extrabold tracking-[-0.04em] text-[#1e1e1e] sm:mt-5 sm:text-[2.7rem]"
+          className="page-title reveal-on-scroll mt-4 text-center text-[1.95rem] font-extrabold tracking-[-0.04em] text-[#1e1e1e] sm:mt-5 sm:text-[2.7rem]"
           style={{ "--reveal-delay": "100ms" } as CSSProperties}
         >
           Faca seu Login
@@ -177,6 +184,7 @@ function LoginPage() {
               onChange={(event: ChangeEvent<HTMLInputElement>) =>
                 updateField("identifier", event.target.value)
               }
+              data-login-field="text"
               placeholder="Usuario / CPF / Email"
               className={`h-15.25 w-full rounded-[20px] border bg-[#f8fafc] px-5 text-[0.98rem] font-medium text-[#1e1e1e] shadow-[0_4px_10px_rgba(0,0,0,0.25)] outline-none transition focus:-translate-y-0.5 focus:border-[#1675b8] focus:ring-4 focus:ring-[#1675b8]/15 disabled:cursor-not-allowed disabled:opacity-70 sm:text-[1.15rem] ${
                 errors.identifier ? "border-[#d64545]" : "border-[#d5d5d5]"
@@ -198,6 +206,7 @@ function LoginPage() {
                 onChange={(event: ChangeEvent<HTMLInputElement>) =>
                   updateField("password", event.target.value)
                 }
+                data-login-field="text"
                 placeholder="Senha"
                 className={`h-15.25 w-full rounded-[20px] border bg-[#f8fafc] px-5 pr-24 text-[0.98rem] font-medium text-[#1e1e1e] shadow-[0_4px_10px_rgba(0,0,0,0.25)] outline-none transition focus:-translate-y-0.5 focus:border-[#1675b8] focus:ring-4 focus:ring-[#1675b8]/15 disabled:cursor-not-allowed disabled:opacity-70 sm:text-[1.15rem] ${
                   errors.password ? "border-[#d64545]" : "border-[#d5d5d5]"
@@ -207,6 +216,7 @@ function LoginPage() {
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => setShowPassword((current) => !current)}
+                data-login-action="ghost"
                 className="absolute right-5 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#1675b8] transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {showPassword ? "Ocultar" : "Mostrar"}
@@ -222,6 +232,7 @@ function LoginPage() {
           <button
             type="submit"
             disabled={isSubmitting}
+            data-login-action="primary"
             className="mt-1 h-16.5 rounded-[20px] bg-[#1675b8] text-[1.05rem] font-semibold tracking-[0.02em] text-white shadow-[0_4px_10px_rgba(0,0,0,0.25)] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0 sm:text-[1.55rem]"
           >
             {isSubmitting ? "Entrando..." : "Entrar"}
@@ -258,6 +269,7 @@ function LoginPage() {
           <button
             type="button"
             disabled={isSubmitting}
+            data-login-action="secondary"
             className="mt-1 flex h-16.5 items-center justify-between gap-4 rounded-[20px] border-[2.5px] border-[#1675b8] bg-white px-5 text-[#898989] shadow-[0_4px_10px_rgba(0,0,0,0.25)] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
           >
             <img

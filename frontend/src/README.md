@@ -27,16 +27,34 @@ dados reais sem reescrever a interface.
 
 ## Fluxo de login
 
-O login real do frontend hoje percorre estas camadas:
+O login do frontend hoje percorre estas camadas:
 
 1. A rota publica `/login` renderiza `src/pages/LoginPage/LoginPage.tsx`.
 2. A pagina valida o formulario e chama `useAuth().login(...)`.
-3. `src/context/AuthContext.tsx` delega a autenticacao HTTP para `src/api/auth/`.
-4. `src/api/auth/httpAuthApi.ts` faz `fetch("/api/login")`.
-5. O proxy do Vite reescreve `/api/login` para `http://localhost:3000/login`.
-6. Depois que o backend aceita a credencial, o frontend monta a sessao local com
-   base no perfil de `src/mocks/authMockData.ts` enquanto o backend ainda nao
-   expoe um endpoint de perfil/sessao.
+3. `src/context/AuthContext.tsx` valida a credencial direto na base simulada.
+4. A base inicial vem de `src/mocks/authMockData.ts`.
+5. O `localStorage` continua sustentando sessao, perfil e troca de senha.
+
+## Area autenticada
+
+Depois do login, a navegacao principal fica concentrada no layout
+`src/pages/AdminConsolePage/AdminConsoleLayout.tsx`, que hoje cobre:
+
+- `Projetos`: fluxo principal das apresentacoes.
+- `Minha conta`: dados locais da pessoa autenticada.
+- `Configuracoes`: preferencias locais do sistema, acessibilidade, termos e contato.
+- `Dados (API)` e `Administracao`: modulos extras restritos a perfis administrativos.
+
+## Preferencias do sistema
+
+As preferencias de tema e acessibilidade agora passam por
+`src/context/SystemPreferencesContext.tsx`:
+
+- o tema claro/escuro e aplicado em tempo real no frontend;
+- alto contraste reforca bordas, leitura e foco visivel;
+- navegacao por teclado habilita foco mais forte, link de salto e atalhos
+  `Alt+1`, `Alt+2` e `Alt+3` na area logada;
+- a persistencia continua local em `localStorage` ate a futura integracao com backend.
 
 ## Redirecionamento apos login
 
@@ -49,7 +67,8 @@ O login real do frontend hoje percorre estas camadas:
 ## Troca de mock por API real
 
 1. Crie uma implementacao real em `src/api/presentation/`.
-2. Normalize o payload externo em `presentationMapper.ts`.
+2. Adapte o payload externo dentro da implementacao HTTP ou em um mapper
+   dedicado se o backend usar um DTO diferente do contrato da UI.
 3. Troque o export ativo em `src/api/presentation/index.ts`.
 4. Preserve o contrato `PresentationData` para evitar retrabalho na UI.
 

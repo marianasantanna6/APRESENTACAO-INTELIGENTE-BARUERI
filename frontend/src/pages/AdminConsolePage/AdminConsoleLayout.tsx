@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import type { IconType } from "react-icons";
 import {
   FiDatabase,
   FiFolder,
@@ -6,15 +6,27 @@ import {
   FiSettings,
   FiShield,
 } from "react-icons/fi";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import AuthenticatedHeader from "../../components/AuthenticatedHeader";
-import { AdminConsoleProvider, useAuth } from "../../context";
+import {
+  AdminConsoleProvider,
+  useAuth,
+  useSystemPreferences,
+} from "../../context";
 import {
   canAccessAdminModules,
   canCreatePresentations,
 } from "../../lib/accessControl";
 import { ROUTE_PATHS } from "../../router/paths";
 
-const sidebarItems = [
+type SidebarItem = {
+  label: string;
+  path: string;
+  icon: IconType;
+  requiresAdmin: boolean;
+};
+
+const primarySidebarItems: SidebarItem[] = [
   {
     label: "Projetos",
     path: ROUTE_PATHS.presentations,
@@ -35,8 +47,42 @@ const sidebarItems = [
   },
 ];
 
+const settingsSidebarItem: SidebarItem = {
+  label: "Configurações",
+  path: ROUTE_PATHS.settings,
+  icon: FiSettings,
+  requiresAdmin: false,
+};
+
+function getSidebarLinkClass(isActive: boolean) {
+  return `flex items-center gap-3 rounded-full px-4 py-3 text-[0.95rem] font-medium transition-all ${
+    isActive
+      ? "bg-[linear-gradient(90deg,#7fb4db_0%,#6fa8d6_100%)] !text-white shadow-[0_8px_20px_rgba(97,159,208,0.28)] [&_*]:!text-white"
+      : "text-[#7a7a7a] hover:bg-white/70 hover:text-[#1e1e1e]"
+  }`;
+}
+
+function getMobileChipClass(isActive: boolean) {
+  return `inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap ${
+    isActive
+      ? "bg-[#7fb4db] !text-white shadow-[0_8px_20px_rgba(97,159,208,0.28)] [&_*]:!text-white"
+      : "bg-white/70 text-[#696969]"
+  }`;
+}
+
+function SidebarLink({ item }: { item: SidebarItem }) {
+  const Icon = item.icon;
+
+  return (
+    <NavLink to={item.path} end className={({ isActive }) => getSidebarLinkClass(isActive)}>
+      <Icon className="h-4.5 w-4.5" />
+      {item.label}
+    </NavLink>
+  );
+}
+
 function SidebarContent({ canSeeAdminModules }: { canSeeAdminModules: boolean }) {
-  const visibleSidebarItems = sidebarItems.filter(
+  const visiblePrimaryItems = primarySidebarItems.filter(
     (item) => !item.requiresAdmin || canSeeAdminModules,
   );
 
@@ -44,37 +90,15 @@ function SidebarContent({ canSeeAdminModules }: { canSeeAdminModules: boolean })
     <>
       <nav className="flex-1 px-4 py-6" aria-label="Módulos da área logada">
         <div className="space-y-3">
-          {visibleSidebarItems.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                end
-                className={({ isActive }) =>
-                  `flex items-center gap-3 rounded-full px-4 py-3 text-[0.95rem] font-medium transition-all ${
-                    isActive
-                      ? "bg-[linear-gradient(90deg,#7fb4db_0%,#6fa8d6_100%)] !text-white shadow-[0_8px_20px_rgba(97,159,208,0.28)] [&_*]:!text-white"
-                      : "text-[#7a7a7a] hover:bg-white/70 hover:text-[#1e1e1e]"
-                  }`
-                }
-              >
-                <Icon className="h-4.5 w-4.5" />
-                {item.label}
-              </NavLink>
-            );
-          })}
+          {visiblePrimaryItems.map((item) => (
+            <SidebarLink key={item.path} item={item} />
+          ))}
         </div>
       </nav>
 
-      <button
-        type="button"
-        className="flex items-center gap-3 border-t border-[#d7d7d7] px-5 py-5 text-[0.95rem] font-medium text-[#7a7a7a]"
-      >
-        <FiSettings className="h-4.5 w-4.5" />
-        Configurações
-      </button>
+      <div className="border-t border-[#d7d7d7] px-4 py-5">
+        <SidebarLink item={settingsSidebarItem} />
+      </div>
     </>
   );
 }
@@ -83,14 +107,19 @@ function AdminConsoleLayoutContent() {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+  const { preferences } = useSystemPreferences();
   const canSeeAdminModules = canAccessAdminModules(user);
   const canSeeCreateFlow = canCreatePresentations(user);
-  const visibleSidebarItems = sidebarItems.filter(
+  const visiblePrimaryItems = primarySidebarItems.filter(
     (item) => !item.requiresAdmin || canSeeAdminModules,
   );
+  const mobileItems = [...visiblePrimaryItems, settingsSidebarItem];
 
   const activeHeaderItem =
-    location.pathname === ROUTE_PATHS.myAccount ? undefined : "presentations";
+    location.pathname === ROUTE_PATHS.myAccount
+    || location.pathname === ROUTE_PATHS.settings
+      ? undefined
+      : "presentations";
 
   function handleLogout() {
     logout();
@@ -98,7 +127,10 @@ function AdminConsoleLayoutContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.92)_0%,rgba(239,240,250,0.96)_46%,rgba(226,227,247,0.96)_100%)] text-[#1e1e1e]">
+    <div
+      data-surface="console-shell"
+      className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.92)_0%,rgba(239,240,250,0.96)_46%,rgba(226,227,247,0.96)_100%)] text-[#1e1e1e]"
+    >
       <AuthenticatedHeader
         activeItem={activeHeaderItem}
         canCreate={canSeeCreateFlow}
@@ -111,13 +143,20 @@ function AdminConsoleLayoutContent() {
       />
 
       <div className="md:flex">
-        <aside className="hidden h-[calc(100vh-89px)] w-[228px] shrink-0 self-start overflow-y-auto border-r border-[#d7d7d7] bg-[#f4f5f7] md:sticky md:top-[89px] md:flex md:flex-col">
+        <aside
+          data-surface="sidebar"
+          className="hidden h-[calc(100vh-89px)] w-[228px] shrink-0 self-start overflow-y-auto border-r border-[#d7d7d7] bg-[#f4f5f7] md:sticky md:top-[89px] md:flex md:flex-col"
+        >
           <SidebarContent canSeeAdminModules={canSeeAdminModules} />
         </aside>
 
-        <main className="min-h-[calc(100vh-89px)] flex-1 px-4 pb-10 pt-6 sm:px-6 lg:px-8 lg:pt-8">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="min-h-[calc(100vh-89px)] flex-1 px-4 pb-10 pt-6 sm:px-6 lg:px-8 lg:pt-8"
+        >
           <div className="mb-5 flex gap-2 overflow-x-auto md:hidden">
-            {visibleSidebarItems.map((item) => {
+            {mobileItems.map((item) => {
               const Icon = item.icon;
 
               return (
@@ -125,13 +164,7 @@ function AdminConsoleLayoutContent() {
                   key={item.path}
                   to={item.path}
                   end
-                  className={({ isActive }) =>
-                    `inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap ${
-                      isActive
-                        ? "bg-[#7fb4db] !text-white shadow-[0_8px_20px_rgba(97,159,208,0.28)] [&_*]:!text-white"
-                        : "bg-white/70 text-[#696969]"
-                    }`
-                  }
+                  className={({ isActive }) => getMobileChipClass(isActive)}
                 >
                   <Icon className="h-4 w-4" />
                   {item.label}
@@ -142,8 +175,18 @@ function AdminConsoleLayoutContent() {
 
           <Outlet />
 
-          <div className="mt-8 flex justify-end text-[0.92rem] font-medium text-[#8a8a8a]">
-            <span className="inline-flex items-center gap-2">
+          <div className="mt-8 flex flex-col gap-2 text-[0.92rem] font-medium text-[#8a8a8a] sm:flex-row sm:items-center sm:justify-between">
+            {preferences.keyboardNavigation ? (
+              <span className="inline-flex items-center gap-2 text-[0.84rem]">
+                Atalhos: Alt+1 Projetos, Alt+2 Minha conta, Alt+3 Configurações
+                {canSeeCreateFlow ? ", Alt+4 Criar" : ""}
+                {canSeeAdminModules ? ", Alt+5 Dados" : ""}
+              </span>
+            ) : (
+              <span />
+            )}
+
+            <span className="inline-flex items-center gap-2 self-end sm:self-auto">
               <FiHelpCircle className="h-4 w-4" />
               Ajuda
             </span>

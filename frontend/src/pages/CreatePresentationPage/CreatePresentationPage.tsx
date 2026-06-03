@@ -72,7 +72,7 @@ function CreatePresentationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-[#1e1e1e]">
+    <div data-page-theme="create" className="min-h-screen bg-[#f8fafc] text-[#1e1e1e]">
       <AuthenticatedHeader
         activeItem="create"
         canCreate={canCreate}
@@ -83,9 +83,13 @@ function CreatePresentationPage() {
         user={user}
       />
 
-      <main className="mx-auto max-w-[1240px] px-5 pb-20 pt-24 sm:px-6 lg:px-8">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto max-w-[1240px] px-5 pb-20 pt-24 sm:px-6 lg:px-8"
+      >
         <section className="mx-auto flex max-w-[1210px] flex-col items-center">
-          <h1 className="reveal-on-scroll max-w-[21ch] text-center text-[2.1rem] font-extrabold leading-[1.08] tracking-[-0.05em] text-[#1e1e1e] [text-wrap:balance] sm:max-w-[22ch] sm:text-[2.9rem] lg:max-w-[24ch] lg:text-[3.45rem] xl:text-[3.75rem]">
+          <h1 className="page-title reveal-on-scroll max-w-[21ch] text-center text-[2.1rem] font-extrabold leading-[1.08] tracking-[-0.05em] text-[#1e1e1e] [text-wrap:balance] sm:max-w-[22ch] sm:text-[2.9rem] lg:max-w-[24ch] lg:text-[3.45rem] xl:text-[3.75rem]">
             Crie uma Apresentação{" "}
             <span className="relative inline-block text-left align-bottom">
               <span aria-hidden="true" className="invisible">
@@ -116,6 +120,7 @@ function CreatePresentationPage() {
               onChange={(event: ChangeEvent<HTMLInputElement>) =>
                 setSearch(event.target.value)
               }
+              data-create-surface="search-input"
               placeholder="Pesquise tema, indicador ou categoria"
               className="h-[80px] w-full rounded-[40px] bg-white pl-[74px] pr-[82px] text-[1rem] font-medium text-[#1e1e1e] shadow-[0_6px_20px_rgba(0,0,0,0.15)] outline-none transition focus:-translate-y-0.5 focus:ring-4 focus:ring-[#1675b8]/15 sm:text-[1.08rem]"
             />
@@ -124,6 +129,7 @@ function CreatePresentationPage() {
             </div>
             <button
               type="submit"
+              data-create-surface="search-action"
               aria-label="Gerar dashboard e apresentação"
               className="absolute right-[28px] top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[#706e6e] shadow-sm transition hover:text-[#1675b8]"
             >
@@ -144,6 +150,7 @@ function CreatePresentationPage() {
                     key={category.label}
                     type="button"
                     onClick={() => setSelectedCategory(category.label)}
+                    data-create-surface="category-chip"
                     className={`${category.width} ${category.color} h-[54px] rounded-[40px] px-5 text-center text-[1.08rem] font-bold text-[#f8fafc] shadow-[0_4px_16px_rgba(0,0,0,0.25)] transition-all hover:-translate-y-0.5 sm:text-[1.15rem] ${isSelected ? "ring-4 ring-white/70" : ""}`}
                   >
                     {category.label}
@@ -163,6 +170,7 @@ function CreatePresentationPage() {
                   onChange={(event: ChangeEvent<HTMLSelectElement>) =>
                     setSelectedYear(event.target.value)
                   }
+                  data-create-surface="year-select"
                   className="h-[48px] w-[190px] appearance-none rounded-[40px] bg-[#d9d9d9] px-6 pr-12 text-[1.08rem] font-medium text-[#706e6e] shadow-[0_4px_11px_rgba(0,0,0,0.25)] outline-none"
                 >
                   {availableYears.map((year) => (

@@ -71,8 +71,16 @@ export default function GeneratedPresentationPage() {
 
   if (error) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-[1240px] items-center justify-center px-5 py-16 text-center">
-        <div className="max-w-[480px] rounded-[20px] border border-[#fecaca] bg-[#fff7f7] px-6 py-8 shadow-[0_12px_40px_-24px_rgba(127,29,29,0.28)]">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        data-page-theme="generated"
+        className="mx-auto flex min-h-screen max-w-[1240px] items-center justify-center px-5 py-16 text-center"
+      >
+        <div
+          data-generated-surface="feedback-card"
+          className="max-w-[480px] rounded-[20px] border border-[#fecaca] bg-[#fff7f7] px-6 py-8 shadow-[0_12px_40px_-24px_rgba(127,29,29,0.28)]"
+        >
           <h1 className="text-[1.5rem] font-extrabold text-[#991b1b]">
             Falha ao carregar os dados
           </h1>
@@ -87,8 +95,16 @@ export default function GeneratedPresentationPage() {
 
   if (isLoading || !presentationData || !presentationViewData) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-[1240px] items-center justify-center px-5 py-16">
-        <div className="rounded-[20px] border border-slate-200 bg-white px-6 py-8 text-center shadow-[0_12px_40px_-24px_rgba(15,23,42,0.24)]">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        data-page-theme="generated"
+        className="mx-auto flex min-h-screen max-w-[1240px] items-center justify-center px-5 py-16"
+      >
+        <div
+          data-generated-surface="feedback-card"
+          className="rounded-[20px] border border-slate-200 bg-white px-6 py-8 text-center shadow-[0_12px_40px_-24px_rgba(15,23,42,0.24)]"
+        >
           <p className="text-[1rem] font-semibold text-slate-700">
             Carregando dashboard e apresentação...
           </p>
@@ -98,7 +114,10 @@ export default function GeneratedPresentationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#efefef_100%)] text-[#1e1e1e]">
+    <div
+      data-page-theme="generated"
+      className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#efefef_100%)] text-[#1e1e1e]"
+    >
       <AuthenticatedHeader
         activeItem="create"
         canCreate={canCreate}
@@ -109,13 +128,18 @@ export default function GeneratedPresentationPage() {
         user={user}
       />
 
-      <main className="mx-auto max-w-[1240px] px-5 pb-24 pt-16 sm:px-6 lg:px-8">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto max-w-[1240px] px-5 pb-24 pt-16 sm:px-6 lg:px-8"
+      >
         <section className="reveal-on-scroll mb-16 space-y-6">
           <div className="relative">
             <input
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
+              data-generated-surface="search-input"
               className="h-[62px] w-full rounded-[50px] bg-white pl-24 pr-24 text-[1.05rem] font-light text-[#1e1e1e] shadow-[0_6px_20px_rgba(0,0,0,0.15)] outline-none transition focus:-translate-y-0.5 focus:ring-4 focus:ring-[#1675b8]/15 sm:text-[1.2rem]"
             />
             <div className="pointer-events-none absolute left-11 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-[#898989]">
@@ -126,6 +150,7 @@ export default function GeneratedPresentationPage() {
               aria-label="Abrir filtros"
               aria-expanded={showFilters}
               onClick={() => setShowFilters((value) => !value)}
+              data-generated-surface="filter-toggle"
               className={`absolute right-8 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border transition ${
                 showFilters
                   ? "border-[#3b82f6] bg-[#eff6ff] text-[#2563eb] shadow-[0_12px_30px_-18px_rgba(59,130,246,0.6)]"
@@ -137,7 +162,10 @@ export default function GeneratedPresentationPage() {
           </div>
 
           {showFilters ? (
-            <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_60px_-32px_rgba(15,23,42,0.32)]">
+            <div
+              data-generated-surface="filter-panel"
+              className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_60px_-32px_rgba(15,23,42,0.32)]"
+            >
               <div className="bg-gradient-to-r from-[#eff6ff] via-white to-[#f8fafc] px-5 py-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
@@ -146,16 +174,25 @@ export default function GeneratedPresentationPage() {
                       Parâmetros mostrados na visualização atual.
                     </p>
                   </div>
-                  <span className="inline-flex items-center rounded-full bg-[#dbeafe] px-3 py-1 text-xs font-semibold text-[#1d4ed8]">
+                  <span
+                    data-generated-surface="filter-chip"
+                    className="inline-flex items-center rounded-full bg-[#dbeafe] px-3 py-1 text-xs font-semibold text-[#1d4ed8]"
+                  >
                     Ativo
                   </span>
                 </div>
               </div>
               <div className="flex flex-wrap gap-3 px-5 pb-5 pt-4">
-                <span className="inline-flex items-center whitespace-nowrap rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-4 py-2 text-sm font-medium text-[#1e40af]">
+                <span
+                  data-generated-surface="filter-chip"
+                  className="inline-flex items-center whitespace-nowrap rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-4 py-2 text-sm font-medium text-[#1e40af]"
+                >
                   Módulo: {activeCategory}
                 </span>
-                <span className="inline-flex items-center whitespace-nowrap rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-4 py-2 text-sm font-medium text-[#1e40af]">
+                <span
+                  data-generated-surface="filter-chip"
+                  className="inline-flex items-center whitespace-nowrap rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-4 py-2 text-sm font-medium text-[#1e40af]"
+                >
                   Ano: {activeYear}
                 </span>
               </div>
@@ -164,7 +201,7 @@ export default function GeneratedPresentationPage() {
         </section>
 
         <section className="mt-16 space-y-8">
-          <h2 className="text-[2.45rem] font-extrabold tracking-[-0.04em] text-[#1e1e1e] sm:text-[3.5rem]">
+          <h2 className="page-title text-[2.45rem] font-extrabold tracking-[-0.04em] text-[#1e1e1e] sm:text-[3.5rem]">
             DASHBOARD
           </h2>
           <DashboardSection data={presentationData} />

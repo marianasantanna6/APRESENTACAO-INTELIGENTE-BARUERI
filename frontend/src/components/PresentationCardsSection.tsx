@@ -24,10 +24,11 @@ export default function PresentationCardsSection({
 
   return (
     <section
+      data-presentation-surface="section"
       className="reveal-on-scroll mt-20 space-y-8"
       style={{ "--reveal-delay": "220ms" } as React.CSSProperties}
     >
-      <h2 className="text-[2.45rem] font-extrabold tracking-[-0.04em] text-[#1e1e1e] sm:text-[3.5rem]">
+      <h2 className="page-title text-[2.45rem] font-extrabold tracking-[-0.04em] text-[#1e1e1e] sm:text-[3.5rem]">
         APRESENTAÇÃO
       </h2>
 
@@ -36,6 +37,7 @@ export default function PresentationCardsSection({
           <button
             type="button"
             onClick={onRestoreSlides}
+            data-presentation-surface="action-button"
             className="inline-flex h-11 items-center justify-center rounded-full border border-[#1675b8]/15 bg-white px-5 text-[0.92rem] font-semibold text-[#0d5283] shadow-[0_12px_26px_-18px_rgba(13,82,131,0.5)] transition hover:-translate-y-0.5"
           >
             Restaurar slides removidos
@@ -58,7 +60,10 @@ export default function PresentationCardsSection({
           ))}
         </div>
       ) : (
-        <div className="rounded-[28px] border border-dashed border-[#cbd5e1] bg-white/80 px-8 py-14 text-center shadow-[0_18px_36px_-28px_rgba(15,23,42,0.35)]">
+        <div
+          data-presentation-surface="empty-state"
+          className="rounded-[28px] border border-dashed border-[#cbd5e1] bg-white/80 px-8 py-14 text-center shadow-[0_18px_36px_-28px_rgba(15,23,42,0.35)]"
+        >
           <h3 className="text-[1.35rem] font-bold text-[#1e1e1e]">
             Nenhum slide disponível
           </h3>
@@ -71,6 +76,7 @@ export default function PresentationCardsSection({
             <button
               type="button"
               onClick={onRestoreSlides}
+              data-presentation-surface="action-button"
               className="mt-6 inline-flex h-12 items-center justify-center rounded-full bg-[#0d5283] px-6 text-[0.95rem] font-semibold text-white shadow-[0_14px_28px_rgba(13,82,131,0.28)] transition hover:-translate-y-0.5"
             >
               Restaurar slides
@@ -84,6 +90,7 @@ export default function PresentationCardsSection({
           type="button"
           onClick={onOpenDeck}
           disabled={!hasSlides}
+          data-presentation-surface="action-button"
           className="inline-flex h-[74px] items-center justify-center rounded-[50px] bg-[rgba(22,117,184,0.5)] px-12 text-[1.2rem] font-bold uppercase tracking-[0.08em] text-[#f8fafc] shadow-[0_4px_16px_rgba(0,0,0,0.25)] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Modo apresentação

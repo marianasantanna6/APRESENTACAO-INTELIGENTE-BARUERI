@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { FiChevronLeft, FiChevronRight, FiMinimize2 } from "react-icons/fi";
 import AuthenticatedHeader from "../AuthenticatedHeader";
 import { useAuth } from "../../context";
-import { useFullscreenElement } from "../../hooks";
+import { useFullscreenElement, useModalAccessibility } from "../../hooks";
 import type { PresentationViewerMode } from "../../hooks";
 import { canCreatePresentations } from "../../lib/accessControl";
 import { getPresentationsRouteForUser } from "../../lib/authRouting";
@@ -70,6 +70,35 @@ export function PresentationModeOverlay({
   const isInteractiveDeckStage = viewerMode === "deck" && !showFullscreenSlideOnly;
   const canCreate = canCreatePresentations(user);
   const presentationsRoute = getPresentationsRouteForUser(user);
+
+  async function handleExitSoloFullscreen() {
+    if (isFullscreen) {
+      await exitFullscreen();
+    }
+
+    if (activeSlide) {
+      onOpenDeck(activeSlide.id);
+      return;
+    }
+
+    onClose();
+  }
+
+  async function handleCloseViewer() {
+    if (isFullscreen) {
+      await exitFullscreen();
+    }
+
+    onClose();
+  }
+
+  const overlayRef = useModalAccessibility({
+    closeOnEscape: false,
+    isOpen,
+    onClose: () => {
+      void handleCloseViewer();
+    },
+  });
 
   useEffect(() => {
     if (!isOpen) {
@@ -173,42 +202,25 @@ export function PresentationModeOverlay({
     return null;
   }
 
-  async function handleExitSoloFullscreen() {
-    if (isFullscreen) {
-      await exitFullscreen();
-    }
-
-    if (activeSlide) {
-      onOpenDeck(activeSlide.id);
-      return;
-    }
-
-    onClose();
-  }
-
-  async function handleCloseViewer() {
-    if (isFullscreen) {
-      await exitFullscreen();
-    }
-
-    onClose();
-  }
-
   return (
     <div
+      ref={overlayRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Visualizador de apresentacao"
+      tabIndex={-1}
+      data-page-theme="viewer"
+      data-presentation-mode={showFullscreenSlideOnly ? "fullscreen" : viewerMode}
       className={`fixed inset-0 z-50 text-[#1e1e1e] ${
         showFullscreenSlideOnly
-          ? "overflow-hidden bg-[#111827]"
-          : "overflow-y-auto bg-[linear-gradient(180deg,#f8fafc_0%,#efefef_100%)]"
+          ? "overflow-hidden"
+          : "overflow-y-auto"
       }`}
     >
       <div
         ref={fullscreenRef}
-        className={`min-h-screen ${
-          showFullscreenSlideOnly
-            ? "bg-[#111827]"
-            : "bg-[linear-gradient(180deg,#f8fafc_0%,#efefef_100%)]"
-        }`}
+        data-presentation-surface={showFullscreenSlideOnly ? "fullscreen-shell" : undefined}
+        className="min-h-screen"
       >
         {!showFullscreenSlideOnly ? (
           <AuthenticatedHeader
@@ -274,6 +286,7 @@ export function PresentationModeOverlay({
                 onClick={() => {
                   void handleExitSoloFullscreen();
                 }}
+                data-presentation-control="default"
                 className="pointer-events-auto inline-flex h-10.5 items-center gap-2 rounded-full bg-white/96 px-4.5 text-[0.88rem] font-semibold text-[#1e1e1e] shadow-[0_14px_32px_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5"
               >
                 <FiMinimize2 className="h-4 w-4" />
@@ -289,6 +302,7 @@ export function PresentationModeOverlay({
                   type="button"
                   onClick={onGoPrevious}
                   disabled={!canGoPrevious}
+                  data-presentation-control="icon"
                   aria-label="Slide anterior"
                   className="pointer-events-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/96 text-[#1e1e1e] shadow-[0_14px_32px_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-35"
                 >
@@ -300,6 +314,7 @@ export function PresentationModeOverlay({
                 <button
                   type="button"
                   onClick={onGoNext}
+                  data-presentation-control="icon"
                   disabled={!canGoNext}
                   aria-label="Próximo slide"
                   className="pointer-events-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/96 text-[#1e1e1e] shadow-[0_14px_32px_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-35"
@@ -342,7 +357,7 @@ export function PresentationModeOverlay({
                       event.preventDefault();
                       onOpenSolo(activeSlide.id);
                     }}
-                    className={`rounded-[28px] bg-white/0 ${
+                    className={`rounded-[28px] bg-transparent ${
                       isInteractiveDeckStage
                         ? "cursor-pointer transition hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-[#1675b8]/15"
                         : ""
@@ -375,6 +390,7 @@ export function PresentationModeOverlay({
                     <button
                       type="button"
                       onClick={onRestoreSlides}
+                      data-presentation-control="primary"
                       className="inline-flex h-10.5 items-center justify-center rounded-full bg-[#0d5283] px-5 text-[0.9rem] font-semibold text-white shadow-[0_14px_28px_rgba(13,82,131,0.28)] transition hover:-translate-y-0.5"
                     >
                       Restaurar slides
@@ -385,6 +401,7 @@ export function PresentationModeOverlay({
                     onClick={() => {
                       void handleCloseViewer();
                     }}
+                    data-presentation-control="default"
                     className="inline-flex h-10.5 items-center justify-center rounded-full bg-white px-5 text-[0.9rem] font-semibold text-[#1e1e1e] shadow-[0_10px_24px_rgba(0,0,0,0.12)] transition hover:-translate-y-0.5"
                   >
                     Fechar viewer

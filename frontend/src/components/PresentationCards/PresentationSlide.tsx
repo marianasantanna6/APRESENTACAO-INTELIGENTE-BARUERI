@@ -13,7 +13,10 @@ export function PresentationSlide({
 
   if (variant === "thumbnail") {
     return (
-      <div className="h-[150px] w-[224px] overflow-hidden rounded-[18px] bg-white shadow-[0_4px_16px_rgba(0,0,0,0.18)]">
+      <div
+        data-presentation-surface="thumbnail-frame"
+        className="h-[150px] w-[224px] overflow-hidden rounded-[18px] bg-white shadow-[0_4px_16px_rgba(0,0,0,0.18)]"
+      >
         <div
           className="origin-top-left"
           style={{

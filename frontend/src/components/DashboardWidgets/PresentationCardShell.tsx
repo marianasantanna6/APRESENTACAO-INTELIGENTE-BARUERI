@@ -29,7 +29,7 @@ export function PresentationCardShell({
       : "border-t border-[#e7edf3] pt-2 text-right text-[0.74rem] text-[#898989]";
 
   return (
-    <article className={shellClassName}>
+    <article data-presentation-surface="shell" className={shellClassName}>
       <div className={variant === "stage" ? "min-h-[72px]" : "min-h-[40px]"}>
         <h3 className={titleClassName}>
           {card.title}

@@ -15,7 +15,10 @@ export function DashboardMetric({
   contentClassName?: string;
 }) {
   return (
-    <div className={`${dashboardPanelClass} h-full px-2.5 py-2.5`}>
+    <div
+      data-dashboard-surface="metric"
+      className={`${dashboardPanelClass} h-full px-2.5 py-2.5`}
+    >
       <h3
         className={`text-[0.92rem] font-bold uppercase tracking-[0.08em] text-[#1e1e1e] ${titleClassName}`}
       >

@@ -60,6 +60,7 @@ export function DonutGauge({
         </PieChart>
 
         <div
+          data-dashboard-surface="gauge-core"
           className="pointer-events-none absolute flex items-center justify-center rounded-full bg-white text-[#0d5283] shadow-[inset_0_0_0_1px_rgba(13,82,131,0.08)]"
           style={{ inset }}
         >
@@ -70,7 +71,7 @@ export function DonutGauge({
       </div>
 
       {showCaption ? (
-        <div className="space-y-0">
+        <div data-dashboard-surface="gauge-caption" className="space-y-0">
           <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[#0d5283]">
             Consolidado
           </p>

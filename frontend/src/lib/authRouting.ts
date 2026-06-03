@@ -17,6 +17,7 @@ export function canAccessPathForUser(
   if (
     requestedPath.startsWith(ROUTE_PATHS.presentations)
     || requestedPath.startsWith(ROUTE_PATHS.myAccount)
+    || requestedPath.startsWith(ROUTE_PATHS.settings)
     || requestedPath.startsWith(ROUTE_PATHS.generatedPresentation)
     || requestedPath.startsWith(ROUTE_PATHS.adminProjects)
   ) {

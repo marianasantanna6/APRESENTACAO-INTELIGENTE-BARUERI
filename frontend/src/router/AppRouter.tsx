@@ -5,6 +5,7 @@ import {
   AdminDataPage,
   AdminMyAccountPage,
   AdminProjectsPage,
+  AdminSettingsPage,
 } from "../pages/AdminConsolePage";
 import CreatePresentationPage from "../pages/CreatePresentationPage";
 import GeneratedPresentationPage from "../pages/GeneratedPresentationPage";
@@ -37,6 +38,10 @@ export function AppRouter() {
           <Route
             path={ROUTE_PATHS.myAccount}
             element={<AdminMyAccountPage />}
+          />
+          <Route
+            path={ROUTE_PATHS.settings}
+            element={<AdminSettingsPage />}
           />
           <Route
             path={ROUTE_PATHS.adminProjects}

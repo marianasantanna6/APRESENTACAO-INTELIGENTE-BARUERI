@@ -27,8 +27,16 @@ Tudo relacionado a navegacao do frontend fica aqui.
 ## Rotas protegidas
 
 - `ProtectedRoute`: exige sessao autenticada para apresentacoes, conta,
-  criacao e resultado.
+  configuracoes, criacao e resultado.
 - `AdminRoute`: libera `/admin`, `/admin/dados` e
   `/admin/administracao` apenas para perfis administrativos.
 - `CreatePresentationRoute`: protege `/criar`, embora no estado atual qualquer
   usuario autenticado possa acessar essa tela.
+
+## Rotas da area logada
+
+- `ROUTE_PATHS.presentations`: dashboard principal autenticado.
+- `ROUTE_PATHS.myAccount`: perfil da pessoa autenticada.
+- `ROUTE_PATHS.settings`: preferencias locais do sistema em `/configuracoes`.
+- `ROUTE_PATHS.adminData` e `ROUTE_PATHS.adminAdministration`: modulos
+  restritos a perfis administrativos.

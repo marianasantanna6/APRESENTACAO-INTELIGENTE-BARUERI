@@ -4,7 +4,6 @@ Esta pasta concentra a comunicacao do frontend com fontes externas de dados.
 
 ## Estrutura atual
 
-- `auth/`: autenticacao HTTP do login.
 - `presentation/`: camada de dados da tela de criacao + dashboard + cards.
 
 ## Regras
@@ -16,20 +15,12 @@ Esta pasta concentra a comunicacao do frontend com fontes externas de dados.
 
 ## Fluxo atual de autenticacao
 
-- `src/api/auth/authApiContract.ts` define o contrato `login(input)`.
-- `src/api/auth/httpAuthApi.ts` implementa esse contrato via `fetch`.
-- O endpoint padrao do frontend e `/api/login`.
-- Em desenvolvimento, o proxy do Vite reescreve `/api/*` para o backend em
-  `http://localhost:3000/*`.
+- `src/context/AuthContext.tsx` valida o login diretamente no frontend.
+- A base inicial usada vem de `src/mocks/authMockData.ts`.
+- Ajustes locais continuam persistidos no `localStorage`.
 
-## Responsabilidades da camada auth
+## Observacao
 
-- centralizar URL base, `fetch`, parse e mensagens de erro;
-- impedir que `LoginPage` ou `AuthContext` conhecam detalhes de HTTP;
-- permitir trocar a implementacao no futuro sem reescrever a tela de login.
-
-## Limite atual da integracao
-
-Hoje o backend autentica a credencial, mas ainda nao entrega um payload completo
-de sessao/perfil. Por isso, apos o sucesso do `POST /login`, o `AuthContext`
-ainda monta o perfil localmente com base em `src/mocks/authMockData.ts`.
+- Hoje a pasta `api/` concentra apenas o fluxo de apresentacao.
+- Se o login voltar a trafegar por HTTP no futuro, a camada de auth pode ser
+  recriada aqui sem precisar alterar as paginas.

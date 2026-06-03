@@ -16,6 +16,11 @@
 - `LoginPage`
 - `CreatePresentationPage`
 - `GeneratedPresentationPage`
+- `AdminConsolePage/AdminProjectsPage`
+- `AdminConsolePage/AdminDataPage`
+- `AdminConsolePage/AdminAdministrationPage`
+- `AdminConsolePage/AdminMyAccountPage`
+- `AdminConsolePage/AdminSettingsPage`
 
 ## Fluxo da LoginPage
 
@@ -32,6 +37,18 @@ Observacoes do comportamento atual:
 
 - o botao "Entrar com o GOV" ainda e somente visual;
 - o checkbox "Lembrar de mim" ainda nao muda a persistencia da sessao.
+
+## Area logada
+
+As telas da area autenticada ficam agrupadas em `AdminConsolePage/` e compartilham
+o mesmo layout lateral:
+
+- `AdminProjectsPage`: lista principal de apresentacoes/projetos.
+- `AdminDataPage`: modulo administrativo de dados e API.
+- `AdminAdministrationPage`: gestao administrativa de usuarios/equipe.
+- `AdminMyAccountPage`: edicao local da conta autenticada.
+- `AdminSettingsPage`: preferencias locais do sistema, acessibilidade,
+  termos/privacidade e contato.
 
 ## Observacao importante
 

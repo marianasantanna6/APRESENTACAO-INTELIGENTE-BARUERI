@@ -10,7 +10,6 @@ import type {
  * outra estrategia, desde que respeite esse contrato.
  */
 export interface PresentationApiContract {
-  getDefaultFilters(): Promise<PresentationFilters> | PresentationFilters;
   getPresentationData(
     filters: PresentationFilters,
   ): Promise<PresentationData> | PresentationData;

@@ -24,7 +24,7 @@ const navPillClass =
 const activeNavPillClass =
   "border-[#1675b8] bg-[rgba(22,117,184,0.5)] shadow-[0_4px_12px_rgba(0,0,0,0.12)]";
 const iconButtonClass =
-  "inline-flex h-11 items-center justify-center gap-2 rounded-[8px] px-3 text-[1rem] font-bold !text-white transition-all hover:-translate-y-0.5 hover:bg-white/12 focus:outline-none focus:ring-4 focus:ring-white/25 sm:px-3.5 lg:text-[1.08rem]";
+  "inline-flex h-11 items-center justify-center gap-2 rounded-full px-3 text-[1rem] font-bold !text-white transition-all hover:-translate-y-0.5 hover:bg-white/12 focus:outline-none focus:ring-4 focus:ring-white/25 sm:px-3.5 lg:text-[1.08rem]";
 const accountPillClass =
   "inline-flex items-center gap-2 rounded-full bg-white/12 px-2.5 py-2 !text-white transition hover:-translate-y-0.5 hover:bg-white/18 focus:outline-none focus:ring-4 focus:ring-white/25 sm:px-3";
 
@@ -55,7 +55,10 @@ export default function AuthenticatedHeader({
   user,
 }: AuthenticatedHeaderProps) {
   return (
-    <header className="sticky top-0 z-20 border-b border-white/20 bg-[linear-gradient(90deg,#ffffff_8.654%,#1675b8_100%)] backdrop-blur">
+    <header
+      data-surface="header"
+      className="sticky top-0 z-20 border-b backdrop-blur"
+    >
       <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 px-4 py-4 sm:px-6 lg:px-8 xl:px-10">
         <div className="flex min-w-0 items-center">
           <Link
@@ -80,17 +83,23 @@ export default function AuthenticatedHeader({
               <Link
                 to={ROUTE_PATHS.createPresentation}
                 aria-current={activeItem === "create" ? "page" : undefined}
+                data-header-link="pill"
                 className={`${navPillClass} w-[112px] lg:w-[118px] ${activeItem === "create" ? activeNavPillClass : ""}`}
               >
                 Criar
               </Link>
-              <div aria-hidden="true" className="h-6 w-0.5 bg-white/30" />
+              <div
+                aria-hidden="true"
+                data-header-divider
+                className="h-6 w-0.5 bg-white/30"
+              />
             </>
           ) : null}
 
           <Link
             to={presentationsTo}
             aria-current={activeItem === "presentations" ? "page" : undefined}
+            data-header-link="pill"
             className={`${navPillClass} ${activeItem === "presentations" ? activeNavPillClass : ""}`}
           >
             Minhas apresentações
@@ -101,6 +110,7 @@ export default function AuthenticatedHeader({
           {showMobilePresentationsShortcut ? (
             <Link
               to={presentationsTo}
+              data-header-action="button"
               className="inline-flex h-11 items-center justify-center rounded-[8px] px-3 text-[0.94rem] font-semibold !text-white transition-all hover:-translate-y-0.5 hover:bg-white/12 focus:outline-none focus:ring-4 focus:ring-white/25 md:hidden"
             >
               Minhas apresentações
@@ -111,6 +121,7 @@ export default function AuthenticatedHeader({
             <Link
               to={ROUTE_PATHS.myAccount}
               aria-label="Abrir Minha Conta"
+              data-header-account="button"
               className={accountPillClass}
             >
               <AdminAvatar
@@ -126,7 +137,12 @@ export default function AuthenticatedHeader({
             </Link>
           ) : null}
 
-          <button type="button" aria-label="Ajuda" className={iconButtonClass}>
+          <button
+            type="button"
+            aria-label="Ajuda"
+            data-header-action="button"
+            className={iconButtonClass}
+          >
             <FiHelpCircle className="h-5.5 w-5.5 text-white" />
             <span className="hidden text-white sm:inline">Ajuda</span>
           </button>
@@ -136,6 +152,7 @@ export default function AuthenticatedHeader({
               type="button"
               aria-label="Encerrar sessão"
               onClick={onLogout}
+              data-header-action="button"
               className={iconButtonClass}
             >
               <FiLogOut className="h-5.5 w-5.5 text-white" />

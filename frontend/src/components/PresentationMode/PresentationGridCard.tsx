@@ -42,7 +42,10 @@ export function PresentationGridCard({
         <PresentationSlide card={card} data={data} />
       </div>
 
-      <div className="absolute left-4 top-4 rounded-full bg-[#0d5283] px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-white shadow-[0_8px_18px_rgba(13,82,131,0.28)]">
+      <div
+        data-presentation-surface="slide-badge"
+        className="absolute left-4 top-4 rounded-full bg-[#0d5283] px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-white shadow-[0_8px_18px_rgba(13,82,131,0.28)]"
+      >
         Slide {slideNumber}
       </div>
 
@@ -54,6 +57,7 @@ export function PresentationGridCard({
             onOpenSolo(card.id);
           }}
           aria-label={`Abrir ${card.title} em modo solo`}
+          data-presentation-surface="card-action"
           className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/92 text-[#0d5283] shadow-[0_10px_24px_rgba(0,0,0,0.16)] transition hover:-translate-y-0.5 hover:bg-white"
         >
           <FiMaximize2 className="h-4.5 w-4.5" />
@@ -67,6 +71,7 @@ export function PresentationGridCard({
               onDeleteSlide(card.id);
             }}
             aria-label={`Excluir ${card.title}`}
+            data-presentation-surface="card-action"
             className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/92 text-[#b91c1c] shadow-[0_10px_24px_rgba(0,0,0,0.16)] transition hover:-translate-y-0.5 hover:bg-white"
           >
             <FiTrash2 className="h-4.5 w-4.5" />

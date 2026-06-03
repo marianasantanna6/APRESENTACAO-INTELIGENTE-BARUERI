@@ -3,8 +3,6 @@ import type {
   PresentationData,
   PresentationFilters,
 } from "../../types/presentation";
-import { DEFAULT_PRESENTATION_FILTERS } from "./defaultPresentationFilters";
-import { normalizePresentationData } from "./presentationMapper";
 import type { PresentationApiContract } from "./presentationApiContract";
 
 /**
@@ -15,13 +13,9 @@ import type { PresentationApiContract } from "./presentationApiContract";
  * em `index.ts`.
  */
 export const mockPresentationApi: PresentationApiContract = {
-  getDefaultFilters(): PresentationFilters {
-    return DEFAULT_PRESENTATION_FILTERS;
-  },
-
   async getPresentationData(
     _filters: PresentationFilters,
   ): Promise<PresentationData> {
-    return normalizePresentationData(presentationMockData);
+    return presentationMockData;
   },
 };

@@ -21,6 +21,7 @@ grupo saiba exatamente onde mexer em rotas, dados, mocks e componentes.
 ## Tipos
 
 - `src/types/presentation.ts`: contrato canonico do fluxo de dashboard/apresentacao.
+- `src/types/auth.ts`: tipos da sessao autenticada e da base simulada de usuarios.
 - `src/types/README.md`: orientacoes da camada de tipos.
 
 ## Context
@@ -48,19 +49,16 @@ grupo saiba exatamente onde mexer em rotas, dados, mocks e componentes.
 
 ## API
 
-- `src/api/auth/authApiContract.ts`: contrato da autenticacao HTTP.
-- `src/api/auth/httpAuthApi.ts`: implementacao real do `POST /login`.
-- `src/api/auth/index.ts`: export da implementacao ativa de auth.
 - `src/api/presentation/defaultPresentationFilters.ts`: filtros padrao do fluxo de criacao/resultado.
 - `src/api/presentation/presentationApiContract.ts`: contrato da camada de API.
 - `src/api/presentation/mockPresentationApi.ts`: implementacao temporaria baseada em mock.
-- `src/api/presentation/presentationMapper.ts`: ponto de normalizacao de DTO externo -> contrato interno.
 - `src/api/presentation/index.ts`: export da implementacao ativa.
 - `src/api/README.md`: convencoes da camada `api`.
 
 ## Mocks
 
 - `src/mocks/presentationMockData.ts`: dataset local usado pela implementacao mock.
+- `src/mocks/authMockData.ts`: base simulada de usuarios usada pelo login local.
 - `src/mocks/README.md`: regras de uso dos mocks.
 
 ## Pages
@@ -69,6 +67,12 @@ grupo saiba exatamente onde mexer em rotas, dados, mocks e componentes.
 - `src/pages/LoginPage/LoginPage.tsx`: tela de login, validacao e redirecionamento pos-auth.
 - `src/pages/CreatePresentationPage/CreatePresentationPage.tsx`: tela de criacao e selecao de filtros.
 - `src/pages/GeneratedPresentationPage/GeneratedPresentationPage.tsx`: tela de dashboard, cards gerados e orquestracao do viewer da apresentacao.
+- `src/pages/AdminConsolePage/AdminProjectsPage.tsx`: pagina inicial da area autenticada.
+- `src/pages/AdminConsolePage/AdminMyAccountPage.tsx`: perfil local, avatar, senha e logout.
+- `src/pages/AdminConsolePage/AdminSettingsPage.tsx`: preferencias locais, acessibilidade, idioma, termos e contato.
+- `src/pages/AdminConsolePage/AdminDataPage.tsx`: modulo administrativo de dados.
+- `src/pages/AdminConsolePage/AdminAdministrationPage.tsx`: modulo administrativo de gestao.
+- `src/pages/AdminConsolePage/AdminConsoleLayout.tsx`: layout lateral compartilhado da area autenticada.
 - `src/pages/README.md`: convencoes das paginas.
 
 ## Componentes compartilhados
@@ -137,9 +141,11 @@ grupo saiba exatamente onde mexer em rotas, dados, mocks e componentes.
 ## Onde mexer em cada caso
 
 - Nova rota/tela: `src/router/paths.ts` e `src/router/AppRouter.tsx`
-- Fluxo de login e sessao: `src/pages/LoginPage/LoginPage.tsx`, `src/context/AuthContext.tsx` e `src/api/auth/`
+- Fluxo de login e sessao: `src/pages/LoginPage/LoginPage.tsx`, `src/context/AuthContext.tsx` e `src/mocks/authMockData.ts`
+- Menu lateral e navegacao da area logada: `src/pages/AdminConsolePage/AdminConsoleLayout.tsx`
 - Mudanca na query string do resultado: `src/router/presentationSearchParams.ts`
 - Integracao com API real: `src/api/presentation/`
+- Preferencias locais do sistema: `src/pages/AdminConsolePage/AdminSettingsPage.tsx`
 - Tipos de negocio: `src/types/presentation.ts`
 - Dashboard visual: `src/components/DashboardCards/` e `src/components/DashboardWidgets/`
 - Cards de apresentacao: `src/components/PresentationCards/`

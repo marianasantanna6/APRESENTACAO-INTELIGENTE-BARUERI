@@ -7,6 +7,7 @@ import {
   AdminStatusChip,
 } from "../../components/AdminConsole";
 import { useAdminConsole, useAuth } from "../../context";
+import { useModalAccessibility } from "../../hooks";
 import { formatDateTime } from "../../lib/formatters";
 import type {
   EmployeeDirectoryEntry,
@@ -207,10 +208,21 @@ export default function AdminAdministrationPage() {
     closeDeleteConfirmationModal();
   }
 
+  const createEmployeeModalRef = useModalAccessibility({
+    isOpen: isModalOpen,
+    onClose: closeModal,
+    initialFocusSelector: "[data-modal-initial-focus]",
+  });
+  const deleteEmployeeModalRef = useModalAccessibility({
+    isOpen: employeePendingRemoval !== null,
+    onClose: closeDeleteConfirmationModal,
+    initialFocusSelector: "[data-modal-initial-focus]",
+  });
+
   return (
     <section className="space-y-7">
       <div>
-        <h1 className="text-[2.2rem] font-extrabold tracking-[-0.05em] text-[#1e1e1e] sm:text-[2.8rem]">
+        <h1 className="page-title text-[2.2rem] font-extrabold tracking-[-0.05em] text-[#1e1e1e] sm:text-[2.8rem]">
           Administração
         </h1>
       </div>
@@ -363,11 +375,26 @@ export default function AdminAdministrationPage() {
       </AdminPanel>
 
       {isModalOpen ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#142133]/40 px-4 py-6 backdrop-blur-[3px]">
-          <div className="w-full max-w-[540px] rounded-[26px] bg-white p-6 shadow-[0_24px_80px_rgba(20,33,51,0.24)]">
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-[#142133]/40 px-4 py-6 backdrop-blur-[3px]"
+          onClick={closeModal}
+        >
+          <div
+            ref={createEmployeeModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-employee-dialog-title"
+            tabIndex={-1}
+            data-modal-surface="dialog"
+            className="w-full max-w-[540px] rounded-[26px] bg-white p-6 shadow-[0_24px_80px_rgba(20,33,51,0.24)]"
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-[1.65rem] font-extrabold tracking-[-0.04em] text-[#1f1f1f]">
+                <h3
+                  id="create-employee-dialog-title"
+                  className="text-[1.65rem] font-extrabold tracking-[-0.04em] text-[#1f1f1f]"
+                >
                   Cadastrar funcionário
                 </h3>
               </div>
@@ -394,6 +421,7 @@ export default function AdminAdministrationPage() {
                         name: event.target.value,
                       }))
                     }
+                    data-modal-initial-focus
                     className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
                   />
                 </label>
@@ -482,14 +510,33 @@ export default function AdminAdministrationPage() {
       ) : null}
 
       {employeePendingRemoval ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#142133]/40 px-4 py-6 backdrop-blur-[3px]">
-          <div className="w-full max-w-[540px] rounded-[26px] bg-white p-6 shadow-[0_24px_80px_rgba(20,33,51,0.24)]">
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-[#142133]/40 px-4 py-6 backdrop-blur-[3px]"
+          onClick={closeDeleteConfirmationModal}
+        >
+          <div
+            ref={deleteEmployeeModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-employee-dialog-title"
+            aria-describedby="delete-employee-dialog-description"
+            tabIndex={-1}
+            data-modal-surface="dialog"
+            className="w-full max-w-[540px] rounded-[26px] bg-white p-6 shadow-[0_24px_80px_rgba(20,33,51,0.24)]"
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-[1.65rem] font-extrabold tracking-[-0.04em] text-[#1f1f1f]">
+                <h3
+                  id="delete-employee-dialog-title"
+                  className="text-[1.65rem] font-extrabold tracking-[-0.04em] text-[#1f1f1f]"
+                >
                   Confirmar exclusão
                 </h3>
-                <p className="mt-1 text-[0.92rem] font-medium text-[#8a8a8a]">
+                <p
+                  id="delete-employee-dialog-description"
+                  className="mt-1 text-[0.92rem] font-medium text-[#8a8a8a]"
+                >
                   Confirme seu email e sua senha para evitar remoções por engano.
                 </p>
               </div>
@@ -532,6 +579,7 @@ export default function AdminAdministrationPage() {
                   onChange={(event) =>
                     handleDeleteConfirmationFieldChange("email", event)
                   }
+                  data-modal-initial-focus
                   placeholder={user?.email ?? "admin@barueri.sp.gov.br"}
                   className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
                 />
