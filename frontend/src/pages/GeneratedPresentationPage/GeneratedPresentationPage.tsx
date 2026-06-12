@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { FaFilter, FaSearch } from "react-icons/fa";
+import { FiFileText } from "react-icons/fi";
 import { DEFAULT_PRESENTATION_FILTERS } from "../../api/presentation";
 import AuthenticatedHeader from "../../components/AuthenticatedHeader";
 import DashboardSection from "../../components/DashboardSection";
@@ -13,6 +14,24 @@ import { getPresentationsRouteForUser } from "../../lib/authRouting";
 import type { PresentationCard } from "../../types/presentation";
 import { ROUTE_PATHS } from "../../router/paths";
 import { readPresentationFiltersFromSearchParams } from "../../router/presentationSearchParams";
+
+type ToastState = {
+  message: string;
+};
+
+function FeedbackToast({ message }: ToastState) {
+  return (
+    <div
+      data-toast-surface="info"
+      className="fixed left-4 right-4 top-4 z-[70] flex max-w-[360px] items-start gap-3 rounded-[18px] border px-4 py-3 shadow-[0_20px_40px_rgba(20,33,51,0.18)] backdrop-blur-[6px] sm:left-auto sm:right-6 sm:top-6"
+      role="status"
+      aria-live="polite"
+    >
+      <FiFileText className="mt-0.5 h-5 w-5 shrink-0" />
+      <p className="text-[0.9rem] font-semibold leading-6">{message}</p>
+    </div>
+  );
+}
 
 export default function GeneratedPresentationPage() {
   const navigate = useNavigate();
@@ -32,6 +51,7 @@ export default function GeneratedPresentationPage() {
   const [query, setQuery] = useState(filters.query);
   const [showFilters, setShowFilters] = useState(false);
   const [requestFullscreenOnOpen, setRequestFullscreenOnOpen] = useState(false);
+  const [toast, setToast] = useState<ToastState | null>(null);
 
   const activeCategory = filters.category;
   const activeYear = filters.year;
@@ -54,6 +74,20 @@ export default function GeneratedPresentationPage() {
     setRequestFullscreenOnOpen(false);
   }, [presentationDeck.viewerMode]);
 
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setToast(null);
+    }, 3200);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [toast]);
+
   function handleOpenDeck() {
     setRequestFullscreenOnOpen(false);
     presentationDeck.openDeck();
@@ -67,6 +101,12 @@ export default function GeneratedPresentationPage() {
   function handleLogout() {
     logout();
     navigate(ROUTE_PATHS.login);
+  }
+
+  function handleExportPdfRequest() {
+    setToast({
+      message: "A exportacao em PDF sera conectada aqui em breve.",
+    });
   }
 
   if (error) {
@@ -118,6 +158,8 @@ export default function GeneratedPresentationPage() {
       data-page-theme="generated"
       className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#efefef_100%)] text-[#1e1e1e]"
     >
+      {toast ? <FeedbackToast message={toast.message} /> : null}
+
       <AuthenticatedHeader
         activeItem="create"
         canCreate={canCreate}
@@ -131,7 +173,7 @@ export default function GeneratedPresentationPage() {
       <main
         id="main-content"
         tabIndex={-1}
-        className="mx-auto max-w-[1240px] px-5 pb-24 pt-16 sm:px-6 lg:px-8"
+        className="mx-auto max-w-[1240px] px-4 pb-24 pt-10 sm:px-6 sm:pt-16 lg:px-8"
       >
         <section className="reveal-on-scroll mb-16 space-y-6">
           <div className="relative">
@@ -140,9 +182,9 @@ export default function GeneratedPresentationPage() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               data-generated-surface="search-input"
-              className="h-[62px] w-full rounded-[50px] bg-white pl-24 pr-24 text-[1.05rem] font-light text-[#1e1e1e] shadow-[0_6px_20px_rgba(0,0,0,0.15)] outline-none transition focus:-translate-y-0.5 focus:ring-4 focus:ring-[#1675b8]/15 sm:text-[1.2rem]"
+              className="h-14 w-full rounded-[50px] bg-white pl-14 pr-16 text-[0.96rem] font-light text-[#1e1e1e] shadow-[0_6px_20px_rgba(0,0,0,0.15)] outline-none transition focus:-translate-y-0.5 focus:ring-4 focus:ring-[#1675b8]/15 sm:h-[62px] sm:pl-24 sm:pr-24 sm:text-[1.2rem]"
             />
-            <div className="pointer-events-none absolute left-11 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-[#898989]">
+            <div className="pointer-events-none absolute left-5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-[#898989] sm:left-11">
               <FaSearch className="h-4.5 w-4.5" />
             </div>
             <button
@@ -151,7 +193,7 @@ export default function GeneratedPresentationPage() {
               aria-expanded={showFilters}
               onClick={() => setShowFilters((value) => !value)}
               data-generated-surface="filter-toggle"
-              className={`absolute right-8 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border transition ${
+              className={`absolute right-4 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border transition sm:right-8 sm:h-11 sm:w-11 ${
                 showFilters
                   ? "border-[#3b82f6] bg-[#eff6ff] text-[#2563eb] shadow-[0_12px_30px_-18px_rgba(59,130,246,0.6)]"
                   : "border-slate-200 bg-white text-[#475569] hover:bg-slate-50"
@@ -167,7 +209,7 @@ export default function GeneratedPresentationPage() {
               className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_60px_-32px_rgba(15,23,42,0.32)]"
             >
               <div className="bg-gradient-to-r from-[#eff6ff] via-white to-[#f8fafc] px-5 py-4">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">Filtros ativos</p>
                     <p className="mt-1 text-xs text-slate-500">
@@ -232,6 +274,7 @@ export default function GeneratedPresentationPage() {
         viewerMode={presentationDeck.viewerMode}
         onClose={presentationDeck.closeViewer}
         onDeleteSlide={canCreate ? presentationDeck.deleteSlide : undefined}
+        onExportPdfRequest={handleExportPdfRequest}
         onFullscreenRequestHandled={() => setRequestFullscreenOnOpen(false)}
         onGoNext={presentationDeck.openNextSlide}
         onGoPrevious={presentationDeck.openPreviousSlide}

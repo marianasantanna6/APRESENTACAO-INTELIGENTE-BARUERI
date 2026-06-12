@@ -1,5 +1,5 @@
-import type { ChangeEvent, FormEvent } from "react";
-import { useMemo, useState } from "react";
+import type { ChangeEvent, FormEvent, ReactNode } from "react";
+import { useState } from "react";
 import { FiPlus, FiTrash2, FiX } from "react-icons/fi";
 import {
   AdminAvatar,
@@ -10,6 +10,7 @@ import { useAdminConsole, useAuth } from "../../context";
 import { useModalAccessibility } from "../../hooks";
 import { formatDateTime } from "../../lib/formatters";
 import type {
+  ActivityLogEntry,
   EmployeeDirectoryEntry,
   NewEmployeePayload,
 } from "../../types/admin";
@@ -49,6 +50,120 @@ function getDefaultFormValues(
     department: firstDepartment?.department ?? "",
     team: firstDepartment?.teams[0] ?? "",
   };
+}
+
+function MobileInfoField({
+  children,
+  label,
+}: {
+  children: ReactNode;
+  label: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#9aa7b2]">
+        {label}
+      </p>
+      <div className="text-[0.92rem] font-medium text-[#5f6974]">{children}</div>
+    </div>
+  );
+}
+
+function EmployeeMobileCard({
+  canManageEmployees,
+  employee,
+  onRemove,
+}: {
+  canManageEmployees: boolean;
+  employee: EmployeeDirectoryEntry;
+  onRemove: (employee: EmployeeDirectoryEntry) => void;
+}) {
+  return (
+    <article className="rounded-[22px] border border-[#e4ebf2] bg-white/88 p-4 shadow-[0_16px_40px_-28px_rgba(20,33,51,0.28)] md:hidden">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <AdminAvatar
+            name={employee.name}
+            sizeClassName="h-10 w-10"
+            textClassName="text-[0.82rem]"
+            className="shadow-none"
+          />
+          <div className="min-w-0">
+            <p className="truncate text-[1rem] font-semibold text-[#3a4651]">
+              {employee.name}
+            </p>
+            <p className="truncate text-[0.78rem] text-[#8f9aa6]">
+              {employee.email}
+            </p>
+          </div>
+        </div>
+
+        {canManageEmployees ? (
+          <button
+            type="button"
+            onClick={() => onRemove(employee)}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
+            aria-label={`Remover ${employee.name}`}
+          >
+            <FiTrash2 className="h-4.5 w-4.5" />
+          </button>
+        ) : null}
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <MobileInfoField label="Equipe">{employee.team}</MobileInfoField>
+        <MobileInfoField label="Setor">{employee.department}</MobileInfoField>
+        <MobileInfoField label="Estado">
+          <AdminStatusChip
+            tone={employee.status}
+            label={employee.status === "active" ? "Ativo" : "Inativo"}
+          />
+        </MobileInfoField>
+      </div>
+    </article>
+  );
+}
+
+function ActivityLogMobileCard({ entry }: { entry: ActivityLogEntry }) {
+  return (
+    <article className="rounded-[22px] border border-[#e4ebf2] bg-white/88 p-4 shadow-[0_16px_40px_-28px_rgba(20,33,51,0.28)] md:hidden">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[0.82rem] font-semibold text-[#8f9aa6]">
+            {formatDateTime(entry.timestamp)}
+          </p>
+          <p className="mt-1 text-[1rem] font-bold text-[#3a4651]">
+            {entry.source}
+          </p>
+        </div>
+
+        <span className="rounded-full bg-[#dcebfa] px-3 py-1 text-[0.78rem] font-semibold text-[#3d83bc]">
+          {entry.type}
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <MobileInfoField label="Usuario">{entry.userName}</MobileInfoField>
+        <MobileInfoField label="Equipe">{entry.team}</MobileInfoField>
+        <MobileInfoField label="Setor">{entry.department}</MobileInfoField>
+      </div>
+    </article>
+  );
+}
+
+function EmptyMobileState({
+  description,
+  title,
+}: {
+  description: string;
+  title: string;
+}) {
+  return (
+    <div className="rounded-[22px] border border-dashed border-[#d6dee7] bg-white/80 px-4 py-6 text-center md:hidden">
+      <p className="text-[1rem] font-semibold text-[#3a4651]">{title}</p>
+      <p className="mt-2 text-[0.88rem] leading-6 text-[#7a8694]">{description}</p>
+    </div>
+  );
 }
 
 export default function AdminAdministrationPage() {
@@ -243,20 +358,20 @@ export default function AdminAdministrationPage() {
               <button
                 type="button"
                 onClick={() => setIsModalOpen(true)}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-4 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(103,156,203,0.24)] transition hover:-translate-y-0.5"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-4 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(103,156,203,0.24)] transition hover:-translate-y-0.5 sm:w-auto"
               >
                 <FiPlus className="h-4.5 w-4.5" />
                 Novo funcionário
               </button>
             ) : null}
 
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <select
                 value={statusFilter}
                 onChange={(event) =>
                   setStatusFilter(event.target.value as StatusFilter)
                 }
-                className="h-11 appearance-none rounded-full bg-[#f1f1f4] px-4 pr-10 text-[0.9rem] font-medium text-[#818181] outline-none"
+                className="h-11 w-full appearance-none rounded-full bg-[#f1f1f4] px-4 pr-10 text-[0.9rem] font-medium text-[#818181] outline-none sm:w-auto"
               >
                 <option value="all">Todos</option>
                 <option value="active">Ativos</option>
@@ -269,63 +384,85 @@ export default function AdminAdministrationPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full border-separate border-spacing-y-3 text-left">
-            <thead>
-              <tr className="text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-[#b1b1b1]">
-                <th className="pb-1">Nome</th>
-                <th className="pb-1">Equipe</th>
-                <th className="pb-1">Setor</th>
-                <th className="pb-1">Estado</th>
-                {canManageEmployees ? <th className="pb-1">Ações</th> : null}
-              </tr>
-            </thead>
-            <tbody>
+        {filteredEmployees.length ? (
+          <>
+            <div className="space-y-3 md:hidden">
               {filteredEmployees.map((employee) => (
-                <tr key={employee.id} className="text-[0.95rem] font-medium text-[#7a7a7a]">
-                  <td className="rounded-l-[18px] bg-white/72 px-0 py-1.5">
-                    <div className="flex items-center gap-3 px-4">
-                      <AdminAvatar
-                        name={employee.name}
-                        sizeClassName="h-8.5 w-8.5"
-                        textClassName="text-[0.78rem]"
-                        className="shadow-none"
-                      />
-                      <div>
-                        <p className="text-[0.96rem] text-[#747474]">{employee.name}</p>
-                        <p className="text-[0.76rem] text-[#b1b1b1]">{employee.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="bg-white/72 px-4 py-1.5 text-[0.92rem] text-[#9b9b9b]">
-                    {employee.team}
-                  </td>
-                  <td className="bg-white/72 px-4 py-1.5 text-[0.92rem] text-[#9b9b9b]">
-                    {employee.department}
-                  </td>
-                  <td className={`${canManageEmployees ? "" : "rounded-r-[18px]"} bg-white/72 px-4 py-1.5`}>
-                    <AdminStatusChip
-                      tone={employee.status}
-                      label={employee.status === "active" ? "Ativo" : "Inativo"}
-                    />
-                  </td>
-                  {canManageEmployees ? (
-                    <td className="rounded-r-[18px] bg-white/72 px-4 py-1.5">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenDeleteConfirmation(employee)}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
-                        aria-label={`Remover ${employee.name}`}
-                      >
-                        <FiTrash2 className="h-4.5 w-4.5" />
-                      </button>
-                    </td>
-                  ) : null}
-                </tr>
+                <EmployeeMobileCard
+                  key={employee.id}
+                  canManageEmployees={canManageEmployees}
+                  employee={employee}
+                  onRemove={handleOpenDeleteConfirmation}
+                />
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+
+            <div className="hidden md:block">
+              <div className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
+                <table className="min-w-[760px] border-separate border-spacing-y-3 text-left">
+                  <thead>
+                    <tr className="text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-[#b1b1b1]">
+                      <th className="pb-1">Nome</th>
+                      <th className="pb-1">Equipe</th>
+                      <th className="pb-1">Setor</th>
+                      <th className="pb-1">Estado</th>
+                      {canManageEmployees ? <th className="pb-1">Ações</th> : null}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredEmployees.map((employee) => (
+                      <tr key={employee.id} className="text-[0.95rem] font-medium text-[#7a7a7a]">
+                        <td className="rounded-l-[18px] bg-white/72 px-0 py-1.5">
+                          <div className="flex items-center gap-3 px-4">
+                            <AdminAvatar
+                              name={employee.name}
+                              sizeClassName="h-8.5 w-8.5"
+                              textClassName="text-[0.78rem]"
+                              className="shadow-none"
+                            />
+                            <div className="min-w-0">
+                              <p className="text-[0.96rem] text-[#747474]">{employee.name}</p>
+                              <p className="text-[0.76rem] text-[#b1b1b1]">{employee.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="bg-white/72 px-4 py-1.5 text-[0.92rem] text-[#9b9b9b]">
+                          {employee.team}
+                        </td>
+                        <td className="bg-white/72 px-4 py-1.5 text-[0.92rem] text-[#9b9b9b]">
+                          {employee.department}
+                        </td>
+                        <td className={`${canManageEmployees ? "" : "rounded-r-[18px]"} bg-white/72 px-4 py-1.5`}>
+                          <AdminStatusChip
+                            tone={employee.status}
+                            label={employee.status === "active" ? "Ativo" : "Inativo"}
+                          />
+                        </td>
+                        {canManageEmployees ? (
+                          <td className="rounded-r-[18px] bg-white/72 px-4 py-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenDeleteConfirmation(employee)}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
+                              aria-label={`Remover ${employee.name}`}
+                            >
+                              <FiTrash2 className="h-4.5 w-4.5" />
+                            </button>
+                          </td>
+                        ) : null}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        ) : (
+          <EmptyMobileState
+            title="Nenhum funcionário encontrado"
+            description="Ajuste o filtro atual para visualizar os funcionários disponíveis."
+          />
+        )}
       </AdminPanel>
 
       <AdminPanel className="space-y-5 px-5 py-5 sm:px-7">
@@ -335,48 +472,65 @@ export default function AdminAdministrationPage() {
           </h2>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full border-separate border-spacing-y-3 text-left">
-            <thead>
-              <tr className="text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-[#b1b1b1]">
-                <th className="pb-1">Data</th>
-                <th className="pb-1">Equipe</th>
-                <th className="pb-1">Fonte</th>
-                <th className="pb-1">Tipo</th>
-                <th className="pb-1">Usuário</th>
-              </tr>
-            </thead>
-            <tbody>
+        {activityLog.length ? (
+          <>
+            <div className="space-y-3 md:hidden">
               {activityLog.map((entry) => (
-                <tr key={entry.id} className="text-[0.9rem] font-medium text-[#7a7a7a]">
-                  <td className="rounded-l-[18px] bg-white/72 px-4 py-3 text-[#9b9b9b]">
-                    {formatDateTime(entry.timestamp)}
-                  </td>
-                  <td className="bg-white/72 px-4 py-3 text-[#9b9b9b]">
-                    <p>{entry.team}</p>
-                    <p className="text-[0.76rem] text-[#b1b1b1]">{entry.department}</p>
-                  </td>
-                  <td className="bg-white/72 px-4 py-3 font-bold text-[#353535]">
-                    {entry.source}
-                  </td>
-                  <td className="bg-white/72 px-4 py-3">
-                    <span className="rounded-full bg-[#dcebfa] px-3 py-1 text-[0.78rem] font-semibold text-[#3d83bc]">
-                      {entry.type}
-                    </span>
-                  </td>
-                  <td className="rounded-r-[18px] bg-white/72 px-4 py-3 text-[#7a7a7a]">
-                    {entry.userName}
-                  </td>
-                </tr>
+                <ActivityLogMobileCard key={entry.id} entry={entry} />
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+
+            <div className="hidden md:block">
+              <div className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
+                <table className="min-w-[720px] border-separate border-spacing-y-3 text-left">
+                  <thead>
+                    <tr className="text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-[#b1b1b1]">
+                      <th className="pb-1">Data</th>
+                      <th className="pb-1">Equipe</th>
+                      <th className="pb-1">Fonte</th>
+                      <th className="pb-1">Tipo</th>
+                      <th className="pb-1">Usuário</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activityLog.map((entry) => (
+                      <tr key={entry.id} className="text-[0.9rem] font-medium text-[#7a7a7a]">
+                        <td className="rounded-l-[18px] bg-white/72 px-4 py-3 text-[#9b9b9b]">
+                          {formatDateTime(entry.timestamp)}
+                        </td>
+                        <td className="bg-white/72 px-4 py-3 text-[#9b9b9b]">
+                          <p>{entry.team}</p>
+                          <p className="text-[0.76rem] text-[#b1b1b1]">{entry.department}</p>
+                        </td>
+                        <td className="bg-white/72 px-4 py-3 font-bold text-[#353535]">
+                          {entry.source}
+                        </td>
+                        <td className="bg-white/72 px-4 py-3">
+                          <span className="rounded-full bg-[#dcebfa] px-3 py-1 text-[0.78rem] font-semibold text-[#3d83bc]">
+                            {entry.type}
+                          </span>
+                        </td>
+                        <td className="rounded-r-[18px] bg-white/72 px-4 py-3 text-[#7a7a7a]">
+                          {entry.userName}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        ) : (
+          <EmptyMobileState
+            title="Nenhum log disponível"
+            description="Os registros de atividade aparecerão aqui conforme novas ações forem executadas."
+          />
+        )}
       </AdminPanel>
 
       {isModalOpen ? (
         <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-[#142133]/40 px-4 py-6 backdrop-blur-[3px]"
+          className="fixed inset-0 z-40 flex items-end justify-center overflow-y-auto bg-[#142133]/40 px-4 py-4 backdrop-blur-[3px] sm:items-center sm:py-6"
           onClick={closeModal}
         >
           <div
@@ -493,13 +647,13 @@ export default function AdminAdministrationPage() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="h-11 rounded-full border border-[#d7dde4] px-5 text-[0.92rem] font-semibold text-[#6a6a6a] transition hover:bg-[#f5f7f9]"
+                  className="h-11 w-full rounded-full border border-[#d7dde4] px-5 text-[0.92rem] font-semibold text-[#6a6a6a] transition hover:bg-[#f5f7f9] sm:w-auto"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="h-11 rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-5 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(103,156,203,0.24)] transition hover:-translate-y-0.5"
+                  className="h-11 w-full rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-5 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(103,156,203,0.24)] transition hover:-translate-y-0.5 sm:w-auto"
                 >
                   Salvar funcionário
                 </button>
@@ -511,7 +665,7 @@ export default function AdminAdministrationPage() {
 
       {employeePendingRemoval ? (
         <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-[#142133]/40 px-4 py-6 backdrop-blur-[3px]"
+          className="fixed inset-0 z-40 flex items-end justify-center overflow-y-auto bg-[#142133]/40 px-4 py-4 backdrop-blur-[3px] sm:items-center sm:py-6"
           onClick={closeDeleteConfirmationModal}
         >
           <div
@@ -607,13 +761,13 @@ export default function AdminAdministrationPage() {
                 <button
                   type="button"
                   onClick={closeDeleteConfirmationModal}
-                  className="h-11 rounded-full border border-[#d7dde4] px-5 text-[0.92rem] font-semibold text-[#6a6a6a] transition hover:bg-[#f5f7f9]"
+                  className="h-11 w-full rounded-full border border-[#d7dde4] px-5 text-[0.92rem] font-semibold text-[#6a6a6a] transition hover:bg-[#f5f7f9] sm:w-auto"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="h-11 rounded-full bg-[#d86b6b] px-5 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(216,107,107,0.24)] transition hover:-translate-y-0.5 hover:bg-[#ca5a5a]"
+                  className="h-11 w-full rounded-full bg-[#d86b6b] px-5 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(216,107,107,0.24)] transition hover:-translate-y-0.5 hover:bg-[#ca5a5a] sm:w-auto"
                 >
                   Excluir funcionário
                 </button>

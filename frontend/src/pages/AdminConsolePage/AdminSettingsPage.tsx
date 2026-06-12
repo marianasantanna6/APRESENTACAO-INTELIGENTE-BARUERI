@@ -57,7 +57,7 @@ function FeedbackToast({ kind, message }: ToastState) {
   return (
     <div
       data-toast-surface={isSuccess ? "success" : "error"}
-      className={`fixed right-4 top-4 z-50 flex max-w-[320px] items-start gap-3 rounded-[18px] border px-4 py-3 shadow-[0_20px_40px_rgba(20,33,51,0.18)] backdrop-blur-[6px] sm:right-6 sm:top-6 ${
+      className={`fixed left-4 right-4 top-4 z-50 flex max-w-[320px] items-start gap-3 rounded-[18px] border px-4 py-3 shadow-[0_20px_40px_rgba(20,33,51,0.18)] backdrop-blur-[6px] sm:left-auto sm:right-6 sm:top-6 ${
         isSuccess
           ? "border-[#d8ece1] bg-white/92 text-[#2f6f4b]"
           : "border-[#f2d7d7] bg-white/92 text-[#a44a4a]"
@@ -125,9 +125,9 @@ function ToggleSwitch({
   return (
     <div
       data-settings-toggle="surface"
-      className="flex items-start justify-between gap-4 rounded-[18px] border border-[#ebf0f4] bg-white/82 px-4 py-4"
+      className="flex flex-col gap-4 rounded-[18px] border border-[#ebf0f4] bg-white/82 px-4 py-4 sm:flex-row sm:items-start sm:justify-between"
     >
-      <div className="max-w-[420px]">
+      <div className="max-w-full sm:max-w-[420px]">
         <p className="text-[0.98rem] font-semibold text-[#26313b]">{label}</p>
         <p className="mt-1 text-[0.86rem] font-medium leading-6 text-[#8a949d]">
           {description}
@@ -191,7 +191,7 @@ function DocumentModal({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-[#142133]/40 px-4 py-6 backdrop-blur-[3px]"
+      className="fixed inset-0 z-40 flex items-end justify-center overflow-y-auto bg-[#142133]/40 px-4 py-4 backdrop-blur-[3px] sm:items-center sm:py-6"
       onClick={onClose}
     >
       <div
@@ -603,7 +603,7 @@ export default function AdminSettingsPage() {
               <button
                 type="button"
                 onClick={handleCopyEmail}
-                className={secondaryButtonClass}
+                className={`${secondaryButtonClass} w-full lg:w-auto`}
               >
                 <FiCopy className="h-4.5 w-4.5" />
                 Copiar e-mail
@@ -612,12 +612,12 @@ export default function AdminSettingsPage() {
           </SettingsCard>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-stretch sm:justify-end">
           <button
             type="button"
             onClick={handleSaveSettings}
             disabled={isSaving || !hasPendingChanges}
-            className={`${primaryButtonClass} min-w-[220px]`}
+            className={`${primaryButtonClass} w-full sm:min-w-[220px] sm:w-auto`}
           >
             {isSaving ? (
               <LoadingLabel>Salvando...</LoadingLabel>

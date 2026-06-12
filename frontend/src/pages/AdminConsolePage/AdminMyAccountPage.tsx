@@ -82,7 +82,7 @@ function FeedbackToast({ kind, message }: ToastState) {
   return (
     <div
       data-toast-surface={isSuccess ? "success" : "error"}
-      className={`fixed right-4 top-4 z-50 flex max-w-[320px] items-start gap-3 rounded-[18px] border px-4 py-3 shadow-[0_20px_40px_rgba(20,33,51,0.18)] backdrop-blur-[6px] sm:right-6 sm:top-6 ${
+      className={`fixed left-4 right-4 top-4 z-50 flex max-w-[320px] items-start gap-3 rounded-[18px] border px-4 py-3 shadow-[0_20px_40px_rgba(20,33,51,0.18)] backdrop-blur-[6px] sm:left-auto sm:right-6 sm:top-6 ${
         isSuccess
           ? "border-[#d8ece1] bg-white/92 text-[#2f6f4b]"
           : "border-[#f2d7d7] bg-white/92 text-[#a44a4a]"
@@ -385,7 +385,7 @@ export default function AdminMyAccountPage() {
 
       {isPasswordModalOpen ? (
         <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-[#142133]/40 px-4 py-6 backdrop-blur-[3px]"
+          className="fixed inset-0 z-40 flex items-end justify-center overflow-y-auto bg-[#142133]/40 px-4 py-4 backdrop-blur-[3px] sm:items-center sm:py-6"
           onClick={closePasswordModal}
         >
           <div
@@ -473,14 +473,14 @@ export default function AdminMyAccountPage() {
                 <button
                   type="button"
                   onClick={closePasswordModal}
-                  className={secondaryButtonClass}
+                  className={`${secondaryButtonClass} w-full sm:w-auto`}
                   disabled={isSavingPassword}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className={primaryButtonClass}
+                  className={`${primaryButtonClass} w-full sm:w-auto`}
                   disabled={isSavingPassword}
                 >
                   {isSavingPassword ? (

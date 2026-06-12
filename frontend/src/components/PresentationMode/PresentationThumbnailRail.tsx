@@ -24,9 +24,9 @@ export function PresentationThumbnailRail({
   return (
     <section
       data-presentation-surface="thumbnail-rail"
-      className="overflow-hidden rounded-[24px] border border-white/50 bg-[linear-gradient(98deg,#ffffff_0.9%,#ececec_100%)] px-4 py-4 shadow-[0_10px_24px_rgba(0,0,0,0.08)] sm:px-5"
+      className="overflow-hidden rounded-[24px] border border-white/50 bg-[linear-gradient(98deg,#ffffff_0.9%,#ececec_100%)] px-3 py-3 shadow-[0_10px_24px_rgba(0,0,0,0.08)] sm:px-5 sm:py-4"
     >
-      <div className="mb-3.5 flex items-center justify-between gap-3">
+      <div className="mb-3.5 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-[0.94rem] font-bold text-[#1e1e1e]">Slides da apresentação</h2>
           <p className="mt-1 text-[0.76rem] text-[#5b6474]">
@@ -41,7 +41,7 @@ export function PresentationThumbnailRail({
         </span>
       </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-1.5">
+      <div className="flex gap-2.5 overflow-x-auto pb-1.5 sm:gap-3">
         {slides.map((slide, index) => {
           const isActive = slide.id === activeSlideId;
 
@@ -50,7 +50,7 @@ export function PresentationThumbnailRail({
               key={slide.id}
               data-presentation-surface="thumbnail-card"
               data-active={isActive ? "true" : "false"}
-              className={`shrink-0 rounded-[20px] p-1.5 transition ${
+              className={`shrink-0 snap-start rounded-[20px] p-1.5 transition ${
                 isActive
                   ? "bg-white shadow-[0_14px_28px_rgba(13,82,131,0.16)]"
                   : "bg-white/80 shadow-[0_10px_22px_rgba(0,0,0,0.08)]"
@@ -59,7 +59,7 @@ export function PresentationThumbnailRail({
               <button
                 type="button"
                 onClick={() => onSelectSlide(slide.id)}
-                className="block text-left"
+                className="block w-full text-left"
                 aria-label={`Selecionar slide ${index + 1}: ${slide.title}`}
               >
                 <PresentationSlide card={slide} data={data} variant="thumbnail" />
@@ -70,7 +70,7 @@ export function PresentationThumbnailRail({
                   <p className="text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#0d5283]">
                     Slide {index + 1}
                   </p>
-                  <p className="mt-1 max-w-[136px] truncate text-[0.74rem] text-[#4b5563]">
+                  <p className="mt-1 max-w-[112px] truncate text-[0.74rem] text-[#4b5563] sm:max-w-[136px]">
                     {slide.title}
                   </p>
                 </div>

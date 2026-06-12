@@ -1,8 +1,9 @@
+import { useState } from "react";
+import { FiHelpCircle, FiLogOut, FiMenu, FiX } from "react-icons/fi";
 import { Link } from "react-router-dom";
-import { FiHelpCircle, FiLogOut } from "react-icons/fi";
 import createLogo from "../assets/images/create-logo.png";
-import type { AuthSessionUser } from "../types/auth";
 import { ROUTE_PATHS } from "../router/paths";
+import type { AuthSessionUser } from "../types/auth";
 import { AdminAvatar } from "./AdminConsole";
 
 type HeaderActiveItem = "create" | "presentations";
@@ -54,6 +55,13 @@ export default function AuthenticatedHeader({
   showMobilePresentationsShortcut = false,
   user,
 }: AuthenticatedHeaderProps) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const shouldShowMobileMenu = canCreate || Boolean(user) || Boolean(onLogout);
+
+  function handleCloseMobileMenu() {
+    setIsMobileMenuOpen(false);
+  }
+
   return (
     <header
       data-surface="header"
@@ -65,6 +73,7 @@ export default function AuthenticatedHeader({
             to={logoTo}
             aria-label="Ir para a área logada"
             className={getLogoVisibilityClass(showDesktopLogo, showMobileLogo)}
+            onClick={handleCloseMobileMenu}
           >
             <img
               src={createLogo}
@@ -111,9 +120,10 @@ export default function AuthenticatedHeader({
             <Link
               to={presentationsTo}
               data-header-action="button"
-              className="inline-flex h-11 items-center justify-center rounded-[8px] px-3 text-[0.94rem] font-semibold !text-white transition-all hover:-translate-y-0.5 hover:bg-white/12 focus:outline-none focus:ring-4 focus:ring-white/25 md:hidden"
+              onClick={handleCloseMobileMenu}
+              className="inline-flex h-10.5 max-w-[11rem] items-center justify-center rounded-[8px] px-2.5 text-[0.82rem] font-semibold !text-white transition-all hover:-translate-y-0.5 hover:bg-white/12 focus:outline-none focus:ring-4 focus:ring-white/25 md:hidden"
             >
-              Minhas apresentações
+              Apresentações
             </Link>
           ) : null}
 
@@ -122,7 +132,8 @@ export default function AuthenticatedHeader({
               to={ROUTE_PATHS.myAccount}
               aria-label="Abrir Minha Conta"
               data-header-account="button"
-              className={accountPillClass}
+              onClick={handleCloseMobileMenu}
+              className={`${accountPillClass} hidden md:inline-flex`}
             >
               <AdminAvatar
                 name={user.name}
@@ -141,7 +152,7 @@ export default function AuthenticatedHeader({
             type="button"
             aria-label="Ajuda"
             data-header-action="button"
-            className={iconButtonClass}
+            className={`${iconButtonClass} hidden md:inline-flex`}
           >
             <FiHelpCircle className="h-5.5 w-5.5 text-white" />
             <span className="hidden text-white sm:inline">Ajuda</span>
@@ -153,14 +164,87 @@ export default function AuthenticatedHeader({
               aria-label="Encerrar sessão"
               onClick={onLogout}
               data-header-action="button"
-              className={iconButtonClass}
+              className={`${iconButtonClass} hidden md:inline-flex`}
             >
               <FiLogOut className="h-5.5 w-5.5 text-white" />
               <span className="hidden text-white sm:inline">Sair</span>
             </button>
           ) : null}
+
+          {shouldShowMobileMenu ? (
+            <button
+              type="button"
+              aria-label={isMobileMenuOpen ? "Fechar menu" : "Abrir menu"}
+              aria-expanded={isMobileMenuOpen}
+              onClick={() => setIsMobileMenuOpen((current) => !current)}
+              data-header-action="button"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full !text-white transition-all hover:-translate-y-0.5 hover:bg-white/12 focus:outline-none focus:ring-4 focus:ring-white/25 md:hidden"
+            >
+              {isMobileMenuOpen ? (
+                <FiX className="h-5 w-5 text-white" />
+              ) : (
+                <FiMenu className="h-5 w-5 text-white" />
+              )}
+            </button>
+          ) : null}
         </div>
       </div>
+
+      {shouldShowMobileMenu && isMobileMenuOpen ? (
+        <div
+          data-header-mobile-panel
+          className="border-t px-4 pb-4 pt-3 md:hidden"
+        >
+          <nav aria-label="Menu logado mobile" className="grid gap-2">
+            {canCreate ? (
+              <Link
+                to={ROUTE_PATHS.createPresentation}
+                aria-current={activeItem === "create" ? "page" : undefined}
+                onClick={handleCloseMobileMenu}
+                data-header-link="pill"
+                className={`inline-flex h-11 items-center rounded-[8px] px-3 text-[0.94rem] font-semibold !text-white transition-all hover:-translate-y-0.5 hover:bg-white/12 focus:outline-none focus:ring-4 focus:ring-white/25 ${activeItem === "create" ? activeNavPillClass : ""}`}
+              >
+                Criar
+              </Link>
+            ) : null}
+
+            <Link
+              to={presentationsTo}
+              aria-current={activeItem === "presentations" ? "page" : undefined}
+              onClick={handleCloseMobileMenu}
+              data-header-link="pill"
+              className={`inline-flex h-11 items-center rounded-[8px] px-3 text-[0.94rem] font-semibold !text-white transition-all hover:-translate-y-0.5 hover:bg-white/12 focus:outline-none focus:ring-4 focus:ring-white/25 ${activeItem === "presentations" ? activeNavPillClass : ""}`}
+            >
+              Minhas apresentações
+            </Link>
+
+            {user ? (
+              <Link
+                to={ROUTE_PATHS.myAccount}
+                onClick={handleCloseMobileMenu}
+                data-header-account="button"
+                className="inline-flex h-11 items-center rounded-[8px] px-3 text-[0.94rem] font-semibold !text-white transition-all hover:-translate-y-0.5 hover:bg-white/12 focus:outline-none focus:ring-4 focus:ring-white/25"
+              >
+                Minha conta
+              </Link>
+            ) : null}
+
+            {onLogout ? (
+              <button
+                type="button"
+                onClick={() => {
+                  handleCloseMobileMenu();
+                  onLogout();
+                }}
+                data-header-action="button"
+                className="inline-flex h-11 items-center rounded-[8px] px-3 text-left text-[0.94rem] font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-white/12 focus:outline-none focus:ring-4 focus:ring-white/25"
+              >
+                Sair
+              </button>
+            ) : null}
+          </nav>
+        </div>
+      ) : null}
     </header>
   );
 }
