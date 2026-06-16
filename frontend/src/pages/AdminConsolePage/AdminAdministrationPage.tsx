@@ -399,21 +399,21 @@ export default function AdminAdministrationPage() {
 
             <div className="hidden md:block">
               <div className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
-                <table className="min-w-[760px] border-separate border-spacing-y-3 text-left">
+                <table className="min-w-[760px] w-full border-separate border-spacing-y-4 text-left">
                   <thead>
                     <tr className="text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-[#b1b1b1]">
-                      <th className="pb-1">Nome</th>
-                      <th className="pb-1">Equipe</th>
-                      <th className="pb-1">Setor</th>
-                      <th className="pb-1">Estado</th>
+                      <th className="w-[38%] pb-2 pr-4">Nome</th>
+                      <th className="w-[22%] pb-2 px-4">Equipe</th>
+                      <th className="w-[20%] pb-2 px-4">Setor</th>
+                      <th className="w-[14%] pb-2 px-4">Estado</th>
                       {canManageEmployees ? <th className="pb-1">Ações</th> : null}
                     </tr>
                   </thead>
                   <tbody>
                     {filteredEmployees.map((employee) => (
                       <tr key={employee.id} className="text-[0.95rem] font-medium text-[#7a7a7a]">
-                        <td className="rounded-l-[18px] bg-white/72 px-0 py-1.5">
-                          <div className="flex items-center gap-3 px-4">
+                        <td className="rounded-l-[18px] bg-white/72 px-0 py-2.5">
+                          <div className="flex items-center gap-3.5 px-5">
                             <AdminAvatar
                               name={employee.name}
                               sizeClassName="h-8.5 w-8.5"
@@ -426,20 +426,20 @@ export default function AdminAdministrationPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="bg-white/72 px-4 py-1.5 text-[0.92rem] text-[#9b9b9b]">
+                        <td className="bg-white/72 px-5 py-2.5 text-[0.92rem] text-[#9b9b9b]">
                           {employee.team}
                         </td>
-                        <td className="bg-white/72 px-4 py-1.5 text-[0.92rem] text-[#9b9b9b]">
+                        <td className="bg-white/72 px-5 py-2.5 text-[0.92rem] text-[#9b9b9b]">
                           {employee.department}
                         </td>
-                        <td className={`${canManageEmployees ? "" : "rounded-r-[18px]"} bg-white/72 px-4 py-1.5`}>
+                        <td className={`${canManageEmployees ? "" : "rounded-r-[18px]"} bg-white/72 px-5 py-2.5`}>
                           <AdminStatusChip
                             tone={employee.status}
                             label={employee.status === "active" ? "Ativo" : "Inativo"}
                           />
                         </td>
                         {canManageEmployees ? (
-                          <td className="rounded-r-[18px] bg-white/72 px-4 py-1.5">
+                          <td className="rounded-r-[18px] bg-white/72 px-5 py-2.5 text-right">
                             <button
                               type="button"
                               onClick={() => handleOpenDeleteConfirmation(employee)}
@@ -482,35 +482,35 @@ export default function AdminAdministrationPage() {
 
             <div className="hidden md:block">
               <div className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
-                <table className="min-w-[720px] border-separate border-spacing-y-3 text-left">
+                <table className="min-w-[780px] w-full border-separate border-spacing-y-4 text-left">
                   <thead>
                     <tr className="text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-[#b1b1b1]">
-                      <th className="pb-1">Data</th>
-                      <th className="pb-1">Equipe</th>
-                      <th className="pb-1">Fonte</th>
-                      <th className="pb-1">Tipo</th>
+                      <th className="w-[19%] pb-2 pr-4">Data</th>
+                      <th className="w-[25%] pb-2 px-4">Equipe</th>
+                      <th className="w-[20%] pb-2 px-4">Fonte</th>
+                      <th className="w-[22%] pb-2 px-4">Tipo</th>
                       <th className="pb-1">Usuário</th>
                     </tr>
                   </thead>
                   <tbody>
                     {activityLog.map((entry) => (
                       <tr key={entry.id} className="text-[0.9rem] font-medium text-[#7a7a7a]">
-                        <td className="rounded-l-[18px] bg-white/72 px-4 py-3 text-[#9b9b9b]">
+                        <td className="rounded-l-[18px] bg-white/72 px-5 py-3.5 text-[#9b9b9b]">
                           {formatDateTime(entry.timestamp)}
                         </td>
-                        <td className="bg-white/72 px-4 py-3 text-[#9b9b9b]">
+                        <td className="bg-white/72 px-5 py-3.5 text-[#9b9b9b]">
                           <p>{entry.team}</p>
-                          <p className="text-[0.76rem] text-[#b1b1b1]">{entry.department}</p>
+                          <p className="mt-1 text-[0.76rem] text-[#b1b1b1]">{entry.department}</p>
                         </td>
-                        <td className="bg-white/72 px-4 py-3 font-bold text-[#353535]">
+                        <td className="bg-white/72 px-5 py-3.5 font-bold text-[#353535]">
                           {entry.source}
                         </td>
-                        <td className="bg-white/72 px-4 py-3">
-                          <span className="rounded-full bg-[#dcebfa] px-3 py-1 text-[0.78rem] font-semibold text-[#3d83bc]">
+                        <td className="bg-white/72 px-5 py-3.5">
+                          <span className="inline-flex whitespace-nowrap rounded-full bg-[#dcebfa] px-3 py-1 text-[0.78rem] font-semibold text-[#3d83bc]">
                             {entry.type}
                           </span>
                         </td>
-                        <td className="rounded-r-[18px] bg-white/72 px-4 py-3 text-[#7a7a7a]">
+                        <td className="rounded-r-[18px] bg-white/72 px-5 py-3.5 text-[#7a7a7a]">
                           {entry.userName}
                         </td>
                       </tr>

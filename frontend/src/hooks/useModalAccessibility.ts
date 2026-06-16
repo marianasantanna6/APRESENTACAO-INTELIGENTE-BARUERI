@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 
 const focusableSelector = [
   "button:not([disabled])",
@@ -27,22 +27,56 @@ export function useModalAccessibility({
   initialFocusSelector?: string;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const handleClose = useEffectEvent(onClose);
+  const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (isOpen || typeof document === "undefined") {
+      return;
+    }
+
+    const previouslyFocusedElement = previouslyFocusedElementRef.current;
+    previouslyFocusedElementRef.current = null;
+
+    if (!previouslyFocusedElement) {
+      return;
+    }
+
+    const animationFrameId = window.requestAnimationFrame(() => {
+      previouslyFocusedElement.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen || typeof document === "undefined") {
       return;
     }
 
-    const previouslyFocusedElement = document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null;
     const modalElement = containerRef.current;
 
     if (!modalElement) {
       return;
     }
 
+    if (!previouslyFocusedElementRef.current) {
+      previouslyFocusedElementRef.current =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+    }
+
     const focusInitialElement = () => {
+      if (
+        document.activeElement instanceof HTMLElement
+        && modalElement.contains(document.activeElement)
+      ) {
+        return;
+      }
+
       const preferredElement = initialFocusSelector
         ? modalElement.querySelector<HTMLElement>(initialFocusSelector)
         : null;
@@ -57,7 +91,7 @@ export function useModalAccessibility({
     function handleKeyDown(event: KeyboardEvent) {
       if (closeOnEscape && event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        handleClose();
         return;
       }
 
@@ -97,14 +131,8 @@ export function useModalAccessibility({
     return () => {
       window.cancelAnimationFrame(animationFrameId);
       document.removeEventListener("keydown", handleKeyDown);
-
-      if (previouslyFocusedElement) {
-        window.requestAnimationFrame(() => {
-          previouslyFocusedElement.focus();
-        });
-      }
     };
-  }, [closeOnEscape, initialFocusSelector, isOpen, onClose]);
+  }, [closeOnEscape, initialFocusSelector, isOpen]);
 
   return containerRef;
 }
