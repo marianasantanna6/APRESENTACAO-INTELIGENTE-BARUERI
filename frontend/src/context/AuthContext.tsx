@@ -244,14 +244,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!matchingUser) {
       return {
         ok: false,
-        message: "Usuario nao encontrado.",
+        message: "Usuário não encontrado.",
       };
     }
 
     if (matchingUser.status !== "active") {
       return {
         ok: false,
-        message: "Este usuario esta marcado como inativo.",
+        message: "Este usuário está marcado como inativo.",
       };
     }
 
@@ -277,7 +277,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!user) {
       return {
         ok: false,
-        message: "Nenhum usuario autenticado para atualizar.",
+        message: "Nenhum usuário autenticado para atualizar.",
       };
     }
 
@@ -294,7 +294,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!updatedUser) {
       return {
         ok: false,
-        message: "Usuario nao encontrado no diretorio local.",
+        message: "Usuário não encontrado no diretório local.",
       };
     }
 
@@ -316,7 +316,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!user) {
       return {
         ok: false,
-        message: "Nenhum usuario autenticado para alterar a senha.",
+        message: "Nenhum usuário autenticado para alterar a senha.",
       };
     }
 
@@ -325,14 +325,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!currentUser) {
       return {
         ok: false,
-        message: "Usuario nao encontrado no diretorio local.",
+        message: "Usuário não encontrado no diretório local.",
       };
     }
 
     if (currentUser.password !== currentPassword.trim()) {
       return {
         ok: false,
-        message: "A senha atual informada nao confere.",
+        message: "A senha atual informada não confere.",
       };
     }
 
@@ -361,7 +361,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!user) {
       return {
         ok: false,
-        message: "Nenhum usuario autenticado para confirmar a acao.",
+        message: "Nenhum usuário autenticado para confirmar a ação.",
       };
     }
 
@@ -370,21 +370,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!currentUser) {
       return {
         ok: false,
-        message: "Usuario nao encontrado no diretorio local.",
+        message: "Usuário não encontrado no diretório local.",
       };
     }
 
     if (currentUser.email.toLowerCase() !== email.trim().toLowerCase()) {
       return {
         ok: false,
-        message: "Informe o email institucional do usuario logado.",
+        message: "Informe o e-mail institucional do usuário logado.",
       };
     }
 
     if (currentUser.password !== password.trim()) {
       return {
         ok: false,
-        message: "A senha informada nao confere.",
+        message: "A senha informada não confere.",
       };
     }
 

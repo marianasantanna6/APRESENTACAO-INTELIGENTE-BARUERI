@@ -11,26 +11,35 @@ export function PresentationCardShell({
   children: ReactNode;
   variant?: PresentationCardVariant;
 }) {
+  const isStage = variant === "stage";
   const shellClassName =
-    variant === "stage"
-      ? "rounded-[20px] border border-black/5 bg-white shadow-[0_4px_16px_rgba(0,0,0,0.18)] flex flex-col gap-6 px-6 py-6 sm:px-8 sm:py-8"
-      : "h-full overflow-hidden rounded-[14px] border border-black/5 bg-white shadow-[0_4px_14px_rgba(0,0,0,0.12)] flex flex-col gap-3 px-3.5 py-3.5 sm:px-4 sm:py-4";
+    isStage
+      ? "relative flex flex-col gap-6 overflow-hidden rounded-[28px] border px-6 py-6 sm:px-8 sm:py-8"
+      : "relative flex h-full flex-col gap-2.5 overflow-hidden rounded-[24px] border px-3.5 py-3.5 sm:px-4 sm:py-4";
+  const headerClassName =
+    isStage
+      ? "relative z-[1] flex min-h-[72px] flex-col items-center text-center"
+      : "relative z-[1] flex min-h-[36px] flex-col";
   const titleClassName =
-    variant === "stage"
-      ? "text-[1.75rem] font-bold leading-tight text-[#1e1e1e] text-center sm:text-[2.15rem]"
-      : "text-[1.08rem] font-bold leading-5 text-[#1e1e1e] sm:text-[1.18rem]";
+    isStage
+      ? "max-w-[22ch] text-[1.78rem] font-bold leading-tight text-[#1e1e1e] sm:text-[2.15rem]"
+      : "max-w-[24ch] text-[1.08rem] font-bold leading-5 text-[#1e1e1e] sm:text-[1.18rem]";
   const bodyClassName =
-    variant === "stage"
-      ? "grid flex-1 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:items-center"
-      : "grid flex-1 gap-3 lg:grid-cols-[minmax(0,336px)_minmax(0,1fr)] lg:items-stretch";
+    isStage
+      ? "relative z-[1] grid flex-1 gap-6 xl:grid-cols-[minmax(0,1.04fr)_minmax(0,0.96fr)] xl:items-center"
+      : "relative z-[1] grid flex-1 content-stretch gap-3 xl:grid-cols-[minmax(0,1.04fr)_minmax(0,0.96fr)] xl:items-stretch";
+  const sourceWrapperClassName =
+    isStage
+      ? "relative z-[1] mt-auto flex border-t border-[#dfe7ef] pt-4"
+      : "relative z-[1] mt-auto flex border-t border-[#dfe7ef] pt-2";
   const sourceClassName =
-    variant === "stage"
-      ? "border-t border-[#e7edf3] pt-3 text-left text-[0.95rem] text-[#898989]"
-      : "border-t border-[#e7edf3] pt-2 text-right text-[0.74rem] text-[#898989]";
+    isStage
+      ? "inline-flex items-center rounded-full px-4 py-2 text-[0.88rem] font-medium text-[#5b6474]"
+      : "inline-flex items-center rounded-full px-3 py-0.5 text-[0.72rem] font-medium text-[#5b6474]";
 
   return (
     <article data-presentation-surface="shell" className={shellClassName}>
-      <div className={variant === "stage" ? "min-h-[72px]" : "min-h-[40px]"}>
+      <div className={headerClassName}>
         <h3 className={titleClassName}>
           {card.title}
         </h3>
@@ -40,9 +49,11 @@ export function PresentationCardShell({
         {children}
       </div>
 
-      <p className={sourceClassName}>
-        {card.source}
-      </p>
+      <div className={sourceWrapperClassName}>
+        <p data-presentation-surface="source-pill" className={sourceClassName}>
+          {card.source}
+        </p>
+      </div>
     </article>
   );
 }

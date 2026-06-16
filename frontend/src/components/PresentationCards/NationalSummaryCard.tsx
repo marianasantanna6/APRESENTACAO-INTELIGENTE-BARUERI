@@ -13,7 +13,7 @@ export function NationalSummaryCard({
   const metricBlockClassName =
     variant === "stage"
       ? "rounded-[18px] bg-white px-5 py-4 text-left shadow-[0_4px_14px_rgba(0,0,0,0.08)]"
-      : "rounded-[14px] bg-white px-4 py-3 text-center shadow-[0_2px_8px_rgba(0,0,0,0.05)]";
+      : "flex h-full flex-col justify-center rounded-[14px] bg-white px-4 py-3 text-center shadow-[0_2px_8px_rgba(0,0,0,0.05)]";
   const labelClassName =
     variant === "stage"
       ? "text-[0.82rem] uppercase tracking-[0.12em] text-[#706e6e]"
@@ -26,7 +26,7 @@ export function NationalSummaryCard({
   return (
     <PresentationCardShell card={card} variant={variant}>
       <PresentationPreview variant={variant} className="items-stretch">
-        <div className={`grid w-full ${variant === "stage" ? "gap-4" : "gap-2.5"}`}>
+        <div className={`grid h-full w-full ${variant === "stage" ? "gap-4" : "gap-2.5"}`}>
           <div
             data-presentation-surface="summary-metric"
             className={metricBlockClassName}

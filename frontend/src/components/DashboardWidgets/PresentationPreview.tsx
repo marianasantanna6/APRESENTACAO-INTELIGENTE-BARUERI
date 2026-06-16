@@ -10,16 +10,23 @@ export function PresentationPreview({
   className?: string;
   variant?: PresentationCardVariant;
 }) {
-  const baseClassName =
+  const frameClassName =
     variant === "stage"
-      ? "min-h-[280px] w-full items-center justify-center self-start px-2 py-2 sm:min-h-[320px]"
-      : "h-full min-h-[208px] w-full items-center justify-center self-stretch p-0";
+      ? "w-full self-start"
+      : "w-full self-stretch";
+  const previewPanelClassName =
+    variant === "stage"
+      ? "flex min-h-[300px] w-full items-center justify-center rounded-[24px] px-4 py-4 sm:min-h-[340px] sm:px-6 sm:py-6"
+      : "flex h-full min-h-[184px] w-full items-center justify-center rounded-[20px] px-2.5 py-2.5 sm:px-3 sm:py-3";
 
   return (
-    <div
-      className={`flex ${baseClassName} ${className}`}
-    >
-      {children}
+    <div className={`flex ${frameClassName}`}>
+      <div
+        data-presentation-surface="preview-panel"
+        className={`${previewPanelClassName} ${className}`}
+      >
+        {children}
+      </div>
     </div>
   );
 }

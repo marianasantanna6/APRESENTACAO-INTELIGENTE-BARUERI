@@ -65,6 +65,19 @@
   --generated-surface-background: rgba(255, 255, 255, 0.92);
   --generated-surface-border: rgba(148, 163, 184, 0.24);
   --generated-surface-shadow: 0 18px 48px rgba(15, 23, 42, 0.14);
+  --presentation-shell-background:
+    linear-gradient(180deg, rgba(248, 251, 255, 0.98) 0%, rgba(236, 243, 250, 0.98) 100%);
+  --presentation-shell-border: rgba(188, 206, 221, 0.9);
+  --presentation-shell-shadow: 0 28px 60px rgba(20, 33, 51, 0.12);
+  --presentation-inner-background: #ffffff;
+  --presentation-inner-border: rgba(225, 233, 240, 0.96);
+  --presentation-inner-shadow: 0 18px 34px rgba(15, 23, 42, 0.08);
+  --presentation-section-background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(239, 246, 252, 0.96) 100%);
+  --presentation-section-border: rgba(196, 216, 231, 0.86);
+  --presentation-section-shadow: 0 24px 56px rgba(13, 82, 131, 0.12);
+  --presentation-accent-glow:
+    radial-gradient(circle, rgba(124, 198, 255, 0.38) 0%, rgba(124, 198, 255, 0) 72%);
   --viewer-control-background: rgba(255, 255, 255, 0.96);
   --viewer-control-border: rgba(148, 163, 184, 0.24);
   --viewer-control-text: #1e1e1e;
@@ -154,6 +167,19 @@ html[data-theme="dark"] {
   --generated-surface-background: rgba(18, 31, 45, 0.96);
   --generated-surface-border: rgba(96, 124, 151, 0.42);
   --generated-surface-shadow: 0 18px 48px rgba(3, 6, 12, 0.36);
+  --presentation-shell-background:
+    linear-gradient(180deg, rgba(17, 32, 47, 0.98) 0%, rgba(12, 25, 39, 0.98) 100%);
+  --presentation-shell-border: rgba(88, 118, 146, 0.78);
+  --presentation-shell-shadow: 0 24px 60px rgba(2, 6, 12, 0.38);
+  --presentation-inner-background: rgba(13, 27, 40, 0.96);
+  --presentation-inner-border: rgba(82, 110, 136, 0.76);
+  --presentation-inner-shadow: 0 18px 34px rgba(2, 6, 12, 0.34);
+  --presentation-section-background:
+    linear-gradient(180deg, rgba(14, 28, 43, 0.98) 0%, rgba(11, 22, 35, 0.99) 100%);
+  --presentation-section-border: rgba(86, 115, 142, 0.82);
+  --presentation-section-shadow: 0 28px 72px rgba(2, 6, 10, 0.46);
+  --presentation-accent-glow:
+    radial-gradient(circle, rgba(89, 175, 232, 0.34) 0%, rgba(89, 175, 232, 0) 72%);
   --viewer-control-background: rgba(18, 31, 45, 0.96);
   --viewer-control-border: rgba(96, 124, 151, 0.46);
   --viewer-control-text: #edf4fa;
@@ -239,6 +265,16 @@ html[data-contrast="high"] {
   --generated-surface-background: #111111;
   --generated-surface-border: #7cf2ff;
   --generated-surface-shadow: none;
+  --presentation-shell-background: #111111;
+  --presentation-shell-border: #ffd84d;
+  --presentation-shell-shadow: none;
+  --presentation-inner-background: #111111;
+  --presentation-inner-border: #ffffff;
+  --presentation-inner-shadow: none;
+  --presentation-section-background: #111111;
+  --presentation-section-border: #ffd84d;
+  --presentation-section-shadow: none;
+  --presentation-accent-glow: none;
   --viewer-control-background: #111111;
   --viewer-control-border: #ffd84d;
   --viewer-control-text: #ffffff;
@@ -806,8 +842,6 @@ html[data-contrast="high"] [data-page-theme="create"] [data-create-surface="cate
 [data-dashboard-surface="legend-panel"],
 [data-dashboard-surface="contribution-card"],
 [data-dashboard-surface="tooltip"],
-[data-presentation-surface="shell"],
-[data-presentation-surface="summary-metric"],
 [data-presentation-surface="thumbnail-frame"],
 [data-presentation-surface="thumbnail-rail"],
 [data-presentation-surface="empty-state"] {
@@ -816,12 +850,48 @@ html[data-contrast="high"] [data-page-theme="create"] [data-create-surface="cate
   box-shadow: var(--generated-surface-shadow) !important;
 }
 
-[data-generated-surface="filter-chip"],
-[data-presentation-surface="slide-badge"] {
+[data-generated-surface="filter-chip"] {
   background:
     color-mix(in srgb, var(--generated-surface-background) 82%, var(--accent-primary) 18%) !important;
   border: 1px solid color-mix(in srgb, var(--accent-primary) 24%, transparent) !important;
   color: var(--accent-strong) !important;
+}
+
+[data-presentation-surface="section-panel"] {
+  background: var(--presentation-section-background) !important;
+  border: 1px solid var(--presentation-section-border) !important;
+  box-shadow: var(--presentation-section-shadow) !important;
+}
+
+[data-presentation-surface="shell"] {
+  background: var(--presentation-shell-background) !important;
+  border-color: var(--presentation-shell-border) !important;
+  box-shadow: var(--presentation-shell-shadow) !important;
+}
+
+[data-presentation-surface="preview-panel"],
+[data-presentation-surface="summary-metric"],
+[data-presentation-surface="insight-card"],
+[data-presentation-surface="source-pill"] {
+  background: var(--presentation-inner-background) !important;
+  border: 1px solid var(--presentation-inner-border) !important;
+  box-shadow: var(--presentation-inner-shadow) !important;
+  color: var(--panel-text-color) !important;
+}
+
+[data-presentation-surface="meta-chip"],
+[data-presentation-surface="slide-badge"] {
+  background:
+    color-mix(in srgb, var(--presentation-inner-background) 72%, var(--accent-primary) 28%) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 24%, transparent) !important;
+  color: var(--accent-strong) !important;
+  box-shadow: 0 12px 24px rgba(13, 82, 131, 0.12) !important;
+}
+
+[data-presentation-surface="shell-glow"],
+[data-presentation-surface="section-glow"],
+[data-presentation-surface="card-glow"] {
+  background: var(--presentation-accent-glow) !important;
 }
 
 [data-presentation-surface="card-action"],
@@ -903,16 +973,10 @@ html[data-contrast="high"] [data-page-theme="create"] [data-create-surface="cate
   color: var(--panel-muted-color) !important;
 }
 
-[data-presentation-surface="insight-item"] {
-  background:
-    color-mix(in srgb, var(--generated-surface-background) 82%, var(--accent-primary) 18%) !important;
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--generated-surface-border) 84%, transparent) !important;
-  color: var(--panel-text-color) !important;
-}
-
 [data-dashboard-surface="tooltip"] :where(p, span, div),
-[data-presentation-surface="summary-metric"] :where(p, span) {
+[data-presentation-surface="summary-metric"] :where(p, span),
+[data-presentation-surface="insight-card"] :where(p, span, strong),
+[data-presentation-surface="source-pill"] :where(p, span, strong) {
   color: var(--panel-text-color) !important;
 }
 

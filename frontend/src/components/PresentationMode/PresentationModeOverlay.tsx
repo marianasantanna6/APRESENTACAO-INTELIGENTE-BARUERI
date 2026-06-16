@@ -209,7 +209,7 @@ export function PresentationModeOverlay({
       ref={overlayRef}
       role="dialog"
       aria-modal="true"
-      aria-label="Visualizador de apresentacao"
+      aria-label="Visualizador de apresentação"
       tabIndex={-1}
       data-page-theme="viewer"
       data-presentation-mode={showFullscreenSlideOnly ? "fullscreen" : viewerMode}

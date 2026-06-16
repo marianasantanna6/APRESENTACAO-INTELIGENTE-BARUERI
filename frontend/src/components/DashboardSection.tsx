@@ -8,13 +8,16 @@ import {
   RegionLongevityCard,
   RegionPillarsCard,
   StateDistributionCard,
+  type PresentationCardId,
   type PresentationMockData,
 } from "./DashboardCards";
 
 export default function DashboardSection({
   data,
+  onOpenSlide,
 }: {
   data: PresentationMockData;
+  onOpenSlide?: (slideId: PresentationCardId) => void;
 }) {
   return (
     <div
@@ -23,28 +26,28 @@ export default function DashboardSection({
     >
       <div className="grid gap-3 xl:grid-cols-[290px_minmax(0,1fr)]">
         <div className="grid gap-3">
-          <NationalIdhCard data={data} />
+          <NationalIdhCard data={data} onOpenSlide={onOpenSlide} />
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-            <LifeExpectancyCard data={data} />
-            <IncomePerCapitaCard data={data} />
+            <LifeExpectancyCard data={data} onOpenSlide={onOpenSlide} />
+            <IncomePerCapitaCard data={data} onOpenSlide={onOpenSlide} />
           </div>
 
-          <EvolutionIdhCard data={data} />
+          <EvolutionIdhCard data={data} onOpenSlide={onOpenSlide} />
         </div>
 
         <div className="grid gap-3">
           <div className="grid gap-3 2xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
-            <StateDistributionCard data={data} />
-            <RankingTopIdhCard data={data} />
+            <StateDistributionCard data={data} onOpenSlide={onOpenSlide} />
+            <RankingTopIdhCard data={data} onOpenSlide={onOpenSlide} />
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2">
-            <RegionLongevityCard data={data} />
-            <RegionPillarsCard data={data} />
+            <RegionLongevityCard data={data} onOpenSlide={onOpenSlide} />
+            <RegionPillarsCard data={data} onOpenSlide={onOpenSlide} />
           </div>
 
-          <ContributionCard data={data} />
+          <ContributionCard data={data} onOpenSlide={onOpenSlide} />
         </div>
       </div>
     </div>

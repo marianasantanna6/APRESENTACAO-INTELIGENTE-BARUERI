@@ -143,7 +143,7 @@ function ActivityLogMobileCard({ entry }: { entry: ActivityLogEntry }) {
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <MobileInfoField label="Usuario">{entry.userName}</MobileInfoField>
+        <MobileInfoField label="Usuário">{entry.userName}</MobileInfoField>
         <MobileInfoField label="Equipe">{entry.team}</MobileInfoField>
         <MobileInfoField label="Setor">{entry.department}</MobileInfoField>
       </div>
@@ -230,7 +230,7 @@ export default function AdminAdministrationPage() {
       || !formValues.team.trim()
     ) {
       setFormError(
-        "Preencha nome, email, setor e equipe para cadastrar o funcionário.",
+        "Preencha nome, e-mail, setor e equipe para cadastrar o funcionário.",
       );
       return;
     }
@@ -298,7 +298,7 @@ export default function AdminAdministrationPage() {
       || !deleteConfirmationForm.password.trim()
     ) {
       setDeleteConfirmationError(
-        "Confirme email institucional e senha antes de excluir o funcionário.",
+        "Confirme e-mail institucional e senha antes de excluir o funcionário.",
       );
       return;
     }
@@ -581,7 +581,7 @@ export default function AdminAdministrationPage() {
                 </label>
 
                 <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                  Email
+                  E-mail
                   <input
                     type="email"
                     value={formValues.email}
@@ -691,7 +691,7 @@ export default function AdminAdministrationPage() {
                   id="delete-employee-dialog-description"
                   className="mt-1 text-[0.92rem] font-medium text-[#8a8a8a]"
                 >
-                  Confirme seu email e sua senha para evitar remoções por engano.
+                  Confirme seu e-mail e sua senha para evitar remoções por engano.
                 </p>
               </div>
 
@@ -726,7 +726,7 @@ export default function AdminAdministrationPage() {
 
             <form className="space-y-4" onSubmit={handleRemoveEmployee}>
               <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                Email institucional do administrador
+                E-mail institucional do administrador
                 <input
                   type="email"
                   value={deleteConfirmationForm.email}

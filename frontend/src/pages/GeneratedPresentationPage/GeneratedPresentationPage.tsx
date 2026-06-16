@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
 import { FaFilter, FaSearch } from "react-icons/fa";
 import { FiFileText } from "react-icons/fi";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { DEFAULT_PRESENTATION_FILTERS } from "../../api/presentation";
 import AuthenticatedHeader from "../../components/AuthenticatedHeader";
 import DashboardSection from "../../components/DashboardSection";
@@ -11,9 +11,9 @@ import { useAuth } from "../../context";
 import { usePresentationData, usePresentationDeck } from "../../hooks";
 import { canCreatePresentations } from "../../lib/accessControl";
 import { getPresentationsRouteForUser } from "../../lib/authRouting";
-import type { PresentationCard } from "../../types/presentation";
-import { ROUTE_PATHS } from "../../router/paths";
 import { readPresentationFiltersFromSearchParams } from "../../router/presentationSearchParams";
+import { ROUTE_PATHS } from "../../router/paths";
+import type { PresentationCard } from "../../types/presentation";
 
 type ToastState = {
   message: string;
@@ -93,6 +93,11 @@ export default function GeneratedPresentationPage() {
     presentationDeck.openDeck();
   }
 
+  function handleOpenDashboardSlide(slideId: PresentationCard["id"]) {
+    setRequestFullscreenOnOpen(false);
+    presentationDeck.openDeck(slideId);
+  }
+
   function handleOpenSolo(slideId: PresentationCard["id"]) {
     setRequestFullscreenOnOpen(true);
     presentationDeck.openSolo(slideId);
@@ -105,7 +110,7 @@ export default function GeneratedPresentationPage() {
 
   function handleExportPdfRequest() {
     setToast({
-      message: "A exportacao em PDF sera conectada aqui em breve.",
+      message: "A exportação em PDF será conectada aqui em breve.",
     });
   }
 
@@ -246,7 +251,10 @@ export default function GeneratedPresentationPage() {
           <h2 className="page-title text-[2.45rem] font-extrabold tracking-[-0.04em] text-[#1e1e1e] sm:text-[3.5rem]">
             DASHBOARD
           </h2>
-          <DashboardSection data={presentationData} />
+          <DashboardSection
+            data={presentationData}
+            onOpenSlide={handleOpenDashboardSlide}
+          />
         </section>
 
         <PresentationCardsSection

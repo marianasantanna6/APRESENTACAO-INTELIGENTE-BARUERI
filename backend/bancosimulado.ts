@@ -1,4 +1,4 @@
-//Dados pegos do "authMockData.ts" no caminho "frontend/src/mocks/authMockData.ts"
+// Dados pegos do "authMockData.ts" no caminho "frontend/src/mocks/authMockData.ts"
 
 export const Users = [
   {
@@ -8,12 +8,12 @@ export const Users = [
     password: "barueri123",
     accessLevel: "admin_level_2",
     department: "Gabinete de Dados",
-    team: "Plataforma Analítica",
+    team: "Plataforma Analitica",
     status: "active",
   },
   {
     id: "admin-joao",
-    name: "João Lemes",
+    name: "Joao Lemes",
     email: "joao.lemes@barueri.sp.gov.br",
     password: "barueri123",
     accessLevel: "admin_level_1",

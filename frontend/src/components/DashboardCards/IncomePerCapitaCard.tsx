@@ -1,16 +1,17 @@
 import { DashboardMetric } from "../DashboardWidgets";
-import type { PresentationMockData } from "./types";
+import type { DashboardSlideAction, PresentationMockData } from "./types";
 
 export function IncomePerCapitaCard({
   data,
-}: {
-  data: PresentationMockData;
-}) {
+  onOpenSlide,
+}: { data: PresentationMockData } & DashboardSlideAction) {
   return (
     <DashboardMetric
       title="Renda per Capita"
       titleClassName="text-center"
       contentClassName="flex h-full items-center justify-center"
+      ariaLabel="Abrir slide de síntese nacional"
+      onClick={() => onOpenSlide?.("national-summary")}
     >
       <div className="mx-auto max-w-[200px] space-y-0 text-center">
         <p className="text-[2.15rem] font-extrabold leading-tight text-[#0d5283]">

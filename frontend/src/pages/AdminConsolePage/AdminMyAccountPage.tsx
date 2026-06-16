@@ -201,7 +201,7 @@ export default function AdminMyAccountPage() {
       return;
     }
 
-    showToast("success", "Alteracoes salvas com sucesso.");
+    showToast("success", "Alterações salvas com sucesso.");
   }
 
   function updatePasswordField(
@@ -218,7 +218,7 @@ export default function AdminMyAccountPage() {
       || !passwordForm.newPassword.trim()
       || !passwordForm.confirmPassword.trim()
     ) {
-      return "Preencha a senha atual, a nova senha e a confirmacao.";
+      return "Preencha a senha atual, a nova senha e a confirmação.";
     }
 
     if (passwordForm.newPassword.trim().length < 6) {
@@ -230,7 +230,7 @@ export default function AdminMyAccountPage() {
     }
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      return "A confirmacao da nova senha nao confere.";
+      return "A confirmação da nova senha não confere.";
     }
 
     return "";
@@ -337,7 +337,7 @@ export default function AdminMyAccountPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <AccountField label="CPF" value={formatCpf(user.cpf)} />
                 <AccountField
-                  label="Email institucional"
+                  label="E-mail institucional"
                   value={user.email}
                 />
               </div>
@@ -356,7 +356,7 @@ export default function AdminMyAccountPage() {
                   {isSavingProfile ? (
                     <LoadingLabel>Salvando...</LoadingLabel>
                   ) : (
-                    "Salvar alteracoes"
+                    "Salvar alterações"
                   )}
                 </button>
               ) : null}
@@ -411,7 +411,7 @@ export default function AdminMyAccountPage() {
                   id="change-password-dialog-description"
                   className="mt-1 text-[0.92rem] font-medium text-[#8a8a8a]"
                 >
-                  Atualize sua senha com validacao basica antes de salvar.
+                  Atualize sua senha com validação básica antes de salvar.
                 </p>
               </div>
 
@@ -419,7 +419,7 @@ export default function AdminMyAccountPage() {
                 type="button"
                 onClick={closePasswordModal}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#f2f4f7] text-[#7a7a7a] transition hover:bg-[#e6ecf3]"
-                aria-label="Fechar modal de alteracao de senha"
+                aria-label="Fechar modal de alteração de senha"
               >
                 <FiX className="h-5 w-5" />
               </button>

@@ -6,13 +6,18 @@ import { LegendDot } from "./LegendDot";
 export function ContributionBars({
   data,
   size = "dashboard",
+  showLegend,
+  showDetails = true,
   showNotes = true,
 }: {
   data: ContributionItem[];
   size?: "dashboard" | "card" | "presentation";
+  showLegend?: boolean;
+  showDetails?: boolean;
   showNotes?: boolean;
 }) {
   const isPresentation = size === "presentation";
+  const shouldShowLegend = showLegend ?? !showNotes;
   const chartData = [
     data.reduce<Record<string, number | string>>(
       (accumulator, item, index) => {
@@ -24,8 +29,32 @@ export function ContributionBars({
   ];
 
   return (
-    <div className={size === "card" ? "mx-auto w-full max-w-[336px] space-y-4" : isPresentation ? "space-y-5" : "space-y-4"}>
-      <div className={isPresentation ? "h-[108px] w-full" : size === "card" ? "h-[116px] w-full" : "h-[92px] w-full"}>
+    <div
+      className={
+        size === "card"
+          ? "flex h-full w-full flex-col gap-3"
+          : isPresentation
+            ? "w-full space-y-5"
+            : "w-full space-y-4"
+      }
+    >
+      <div
+        className={
+          isPresentation
+            ? showDetails
+              ? "h-[108px] w-full"
+              : shouldShowLegend
+                ? "h-[170px] w-full"
+                : "h-[220px] w-full"
+            : size === "card"
+              ? showDetails
+                ? showNotes
+                  ? "h-[158px] w-full"
+                  : "h-[188px] w-full"
+                : "h-[236px] w-full"
+              : "h-[92px] w-full"
+        }
+      >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
             <XAxis type="number" hide domain={[0, 100]} />
@@ -73,7 +102,7 @@ export function ContributionBars({
         </ResponsiveContainer>
       </div>
 
-      {!showNotes ? (
+      {shouldShowLegend ? (
         <div className="flex flex-wrap justify-center gap-2.5 text-[0.76rem] text-[#706e6e]">
           {data.map((item) => (
             <LegendDot key={item.label} color={item.color} label={getContributionShortLabel(item.label)} />
@@ -81,38 +110,64 @@ export function ContributionBars({
         </div>
       ) : null}
 
-      <div
-        className={
-          size === "card"
-            ? "grid gap-3.5 sm:grid-cols-2"
-            : isPresentation
-              ? "grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
-            : "grid gap-2 sm:grid-cols-2 xl:grid-cols-4"
-        }
-      >
-        {data.map((item) => (
-          <div
-            key={item.label}
-            data-dashboard-surface="contribution-card"
-            className={`rounded-[14px] bg-[linear-gradient(180deg,#ffffff_0%,#f7fbff_100%)] shadow-[0_4px_12px_rgba(18,94,148,0.08)] ${
-              isPresentation ? "px-4 py-4" : size === "card" ? "px-3.5 py-3.5" : "px-3.5 py-3"
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: item.color }} />
-              <span className={`font-bold uppercase tracking-[0.04em] text-[#1e1e1e] ${isPresentation ? "text-[0.82rem]" : size === "card" ? "text-[0.78rem]" : "text-[0.74rem]"}`}>
-                {getContributionShortLabel(item.label)}
-              </span>
+      {showDetails ? (
+        <div
+          className={
+            size === "card"
+              ? "grid flex-1 auto-rows-fr gap-2 sm:grid-cols-2"
+              : isPresentation
+                ? "grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+              : "grid gap-2 sm:grid-cols-2 xl:grid-cols-4"
+          }
+        >
+          {data.map((item) => (
+            <div
+              key={item.label}
+              data-dashboard-surface="contribution-card"
+              className={`rounded-[14px] bg-[linear-gradient(180deg,#ffffff_0%,#f7fbff_100%)] shadow-[0_4px_12px_rgba(18,94,148,0.08)] ${
+                isPresentation
+                  ? "px-4 py-4"
+                  : size === "card"
+                    ? showNotes
+                      ? "px-3 py-3"
+                      : "px-3 py-2.5"
+                    : "px-3.5 py-3"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: item.color }} />
+                <span className={`font-bold uppercase tracking-[0.04em] text-[#1e1e1e] ${isPresentation ? "text-[0.82rem]" : size === "card" ? "text-[0.74rem]" : "text-[0.74rem]"}`}>
+                  {getContributionShortLabel(item.label)}
+                </span>
+              </div>
+              <div className={`mt-1.5 font-extrabold text-[#0d5283] ${isPresentation ? "text-[1.3rem]" : size === "card" ? "text-[1.18rem]" : "text-[1.08rem]"}`}>
+                {item.value.toFixed(2)}%
+              </div>
+              {showNotes ? (
+                <p
+                  className={`mt-1 text-[#706e6e] ${
+                    isPresentation
+                      ? "text-[0.82rem] leading-5"
+                      : size === "card"
+                        ? "overflow-hidden text-[0.72rem] leading-[1.05rem] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]"
+                        : "text-[0.73rem] leading-4"
+                  }`}
+                >
+                  {item.note}
+                </p>
+              ) : null}
+              {size === "card" ? (
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e8eff6]">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${item.value}%`, background: item.color }}
+                  />
+                </div>
+              ) : null}
             </div>
-            <div className={`mt-1.5 font-extrabold text-[#0d5283] ${isPresentation ? "text-[1.3rem]" : size === "card" ? "text-[1.22rem]" : "text-[1.08rem]"}`}>
-              {item.value.toFixed(2)}%
-            </div>
-            {showNotes ? (
-              <p className={`mt-1 text-[#706e6e] ${isPresentation ? "text-[0.82rem] leading-5" : size === "card" ? "text-[0.78rem] leading-[1.15rem]" : "text-[0.73rem] leading-4"}`}>{item.note}</p>
-            ) : null}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -174,7 +174,7 @@ export function SystemPreferencesProvider({
       } catch {
         return {
           ok: false,
-          message: "Nao foi possivel salvar as configuracoes localmente.",
+          message: "Não foi possível salvar as configurações localmente.",
         };
       }
     },

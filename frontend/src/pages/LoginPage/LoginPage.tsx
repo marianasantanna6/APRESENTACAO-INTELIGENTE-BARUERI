@@ -98,7 +98,7 @@ function LoginPage() {
     const nextErrors: FormErrors = {};
 
     if (!formValues.identifier.trim()) {
-      nextErrors.identifier = "Informe seu usuario, CPF ou email.";
+      nextErrors.identifier = "Informe seu usuário, CPF ou e-mail.";
     }
 
     if (!formValues.password.trim()) {
@@ -154,7 +154,7 @@ function LoginPage() {
       >
         <Link
           to={ROUTE_PATHS.home}
-          aria-label="Voltar para a pagina inicial"
+          aria-label="Voltar para a página inicial"
           className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2"
         >
           <img
@@ -168,7 +168,7 @@ function LoginPage() {
           className="page-title reveal-on-scroll mt-4 text-center text-[1.95rem] font-extrabold tracking-[-0.04em] text-[#1e1e1e] sm:mt-5 sm:text-[2.7rem]"
           style={{ "--reveal-delay": "100ms" } as CSSProperties}
         >
-          Faca seu Login
+          Faça seu Login
         </h1>
 
         <form
@@ -185,7 +185,7 @@ function LoginPage() {
                 updateField("identifier", event.target.value)
               }
               data-login-field="text"
-              placeholder="Usuario / CPF / Email"
+              placeholder="Usuário / CPF / E-mail"
               className={`h-15.25 w-full rounded-[20px] border bg-[#f8fafc] px-5 text-[0.98rem] font-medium text-[#1e1e1e] shadow-[0_4px_10px_rgba(0,0,0,0.25)] outline-none transition focus:-translate-y-0.5 focus:border-[#1675b8] focus:ring-4 focus:ring-[#1675b8]/15 disabled:cursor-not-allowed disabled:opacity-70 sm:text-[1.15rem] ${
                 errors.identifier ? "border-[#d64545]" : "border-[#d5d5d5]"
               }`}

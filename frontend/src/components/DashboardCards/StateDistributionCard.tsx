@@ -1,13 +1,16 @@
 import { BrazilIdhMap, DashboardMetric } from "../DashboardWidgets";
-import type { PresentationMockData } from "./types";
+import type { DashboardSlideAction, PresentationMockData } from "./types";
 
 export function StateDistributionCard({
   data,
-}: {
-  data: PresentationMockData;
-}) {
+  onOpenSlide,
+}: { data: PresentationMockData } & DashboardSlideAction) {
   return (
-    <DashboardMetric title="Distribuição Geográfica do IDH por UF">
+    <DashboardMetric
+      title="Distribuição Geográfica do IDH por UF"
+      ariaLabel="Abrir slide de distribuição geográfica do IDH"
+      onClick={() => onOpenSlide?.("map")}
+    >
       <BrazilIdhMap data={data.stateDistribution} />
     </DashboardMetric>
   );

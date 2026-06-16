@@ -82,7 +82,7 @@ function App() {
   return (
     <div className="app-shell">
       <a href="#main-content" className="skip-link">
-        Pular para o conteudo principal
+        Pular para o conteúdo principal
       </a>
       <SystemPreferencesRuntime />
       <ScrollReveal />

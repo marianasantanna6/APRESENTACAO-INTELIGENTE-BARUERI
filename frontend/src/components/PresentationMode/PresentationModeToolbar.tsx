@@ -55,7 +55,7 @@ export function PresentationModeToolbar({
   onToggleFullscreen: () => void;
 }) {
   const titleLabel =
-    viewerMode === "solo" ? "MODO APRESENTACAO SOLO" : "MODO APRESENTACAO";
+    viewerMode === "solo" ? "MODO APRESENTAÇÃO SOLO" : "MODO APRESENTAÇÃO";
 
   return (
     <div data-presentation-surface="toolbar" className="space-y-4">
@@ -88,7 +88,7 @@ export function PresentationModeToolbar({
                 onClick={onGoNext}
                 data-presentation-control="icon"
                 disabled={!canGoNext}
-                aria-label="Proximo slide"
+                aria-label="Próximo slide"
                 className={iconButtonClass}
               >
                 <FiChevronRight className="h-4.5 w-4.5" />
@@ -107,7 +107,7 @@ export function PresentationModeToolbar({
             </p>
           ) : (
             <p className="page-subtitle mx-auto mt-1.5 max-w-[46rem] text-[0.84rem] text-[#5b6474] sm:text-[0.92rem]">
-              Nenhum slide disponivel no momento.
+              Nenhum slide disponível no momento.
             </p>
           )}
         </div>
@@ -167,7 +167,7 @@ export function PresentationModeToolbar({
             onClick={onClose}
             data-presentation-control="icon"
             className="inline-flex h-10.5 w-10.5 items-center justify-center rounded-full bg-white text-[#1e1e1e] shadow-[0_10px_24px_rgba(0,0,0,0.12)] transition hover:-translate-y-0.5"
-            aria-label="Fechar modo apresentacao"
+            aria-label="Fechar modo apresentação"
           >
             <FiX className="h-4.5 w-4.5" />
           </button>
@@ -191,7 +191,7 @@ export function PresentationModeToolbar({
             onClick={onGoNext}
             disabled={!canGoNext}
             data-presentation-control="icon"
-            aria-label="Proximo slide"
+            aria-label="Próximo slide"
             className={iconButtonClass}
           >
             <FiChevronRight className="h-4.5 w-4.5" />
