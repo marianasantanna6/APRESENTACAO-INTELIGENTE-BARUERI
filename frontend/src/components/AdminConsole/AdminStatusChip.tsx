@@ -43,6 +43,11 @@ const toneMap: Record<
     text: "text-[#6d6d6d]",
     background: "bg-transparent",
   },
+  error: {
+    dot: "bg-[#e53935]",
+    text: "text-[#7c1a1a]",
+    background: "bg-[#fff5f5]",
+  },
 };
 
 export default function AdminStatusChip({

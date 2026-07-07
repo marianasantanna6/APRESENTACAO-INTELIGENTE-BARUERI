@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from "react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import type { UILanguage } from "../types/i18n";
 
 export type ThemeMode = "light" | "dark";
 
@@ -7,6 +8,7 @@ export type SystemPreferences = {
   theme: ThemeMode;
   highContrast: boolean;
   keyboardNavigation: boolean;
+  uiLanguage: UILanguage;
 };
 
 type SavePreferencesResult =
@@ -32,6 +34,7 @@ export const defaultSystemPreferences: SystemPreferences = {
   theme: "light",
   highContrast: false,
   keyboardNavigation: false,
+  uiLanguage: "pt-BR",
 };
 
 const SystemPreferencesContext = createContext<
@@ -46,11 +49,18 @@ function arePreferencesEqual(
     left.theme === right.theme
     && left.highContrast === right.highContrast
     && left.keyboardNavigation === right.keyboardNavigation
+    && left.uiLanguage === right.uiLanguage
   );
 }
 
 function normalizeThemeMode(value: unknown): ThemeMode | null {
   return value === "dark" || value === "light" ? value : null;
+}
+
+function normalizeUILanguage(value: unknown): UILanguage | null {
+  return value === "pt-BR" || value === "en-US" || value === "es"
+    ? value
+    : null;
 }
 
 export function readStoredSystemPreferences(): SystemPreferences {
@@ -69,11 +79,13 @@ export function readStoredSystemPreferences(): SystemPreferences {
       ? (JSON.parse(rawPreferences) as Partial<SystemPreferences>)
       : null;
     const nextTheme = normalizeThemeMode(parsedPreferences?.theme) ?? storedTheme;
+    const nextLanguage = normalizeUILanguage(parsedPreferences?.uiLanguage);
 
     return {
       ...defaultSystemPreferences,
       ...(parsedPreferences ?? {}),
       ...(nextTheme ? { theme: nextTheme } : {}),
+      ...(nextLanguage ? { uiLanguage: nextLanguage } : {}),
     };
   } catch {
     return defaultSystemPreferences;
@@ -106,6 +118,9 @@ export function applySystemPreferencesToDocument(
     || preferences.theme === "dark"
     ? "dark"
     : "light";
+
+  // Fase 20 — i18n: sincroniza o atributo lang para leitores de tela e SEO
+  documentElement.lang = preferences.uiLanguage;
 }
 
 export function SystemPreferencesProvider({

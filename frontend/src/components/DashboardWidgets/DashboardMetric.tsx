@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { KeyboardEvent } from "react";
 
 const dashboardPanelClass =
-  "rounded-[12px] border border-black/5 bg-[#f8fafc] shadow-[0_3px_10px_rgba(0,0,0,0.08)]";
+  "rounded-[20px] border border-[#e5e7eb] bg-white shadow-[0_1px_6px_rgba(20,33,51,0.05)]";
 
 export function DashboardMetric({
   title,
@@ -45,11 +45,11 @@ export function DashboardMetric({
       }`}
     >
       <h3
-        className={`text-[0.92rem] font-bold uppercase tracking-[0.08em] text-[#1e1e1e] ${titleClassName}`}
+        className={`text-[0.67rem] font-bold uppercase tracking-[0.13em] text-[#9ca3af] ${titleClassName}`}
       >
         {title}
       </h3>
-      <div className={`mt-1.5 ${contentClassName}`}>{children}</div>
+      <div className={`mt-2 ${contentClassName}`}>{children}</div>
     </div>
   );
 }

@@ -8,6 +8,8 @@ export const ROUTE_PATHS = {
   home: "/",
   login: "/login",
   presentations: "/apresentacoes",
+  institutionalProjects: "/projetos",
+  templates: "/templates",
   myAccount: "/minha-conta",
   settings: "/configuracoes",
   adminRoot: "/admin",
@@ -16,6 +18,7 @@ export const ROUTE_PATHS = {
   adminAdministration: "/admin/administracao",
   createPresentation: "/criar",
   generatedPresentation: "/criar/resultado",
+  analytics: "/analytics",
 } as const;
 
 export type AppRoutePath = (typeof ROUTE_PATHS)[keyof typeof ROUTE_PATHS];

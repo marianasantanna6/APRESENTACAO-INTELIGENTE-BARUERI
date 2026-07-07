@@ -10,6 +10,8 @@ export type MockUser = {
   username: string;
   password: string;
   accessLevel: UserAccessLevel;
+  /** Cargo explícito no novo modelo RBAC. Quando presente, tem prioridade sobre accessLevel. */
+  role?: string;
   department: string;
   team: string;
   status: AccountStatus;

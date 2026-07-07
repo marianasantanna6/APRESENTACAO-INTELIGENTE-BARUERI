@@ -1,14 +1,18 @@
 import { useEffect, useState } from "react";
 import type { IconType } from "react-icons";
 import {
+  FiBarChart2,
+  FiBookOpen,
   FiDatabase,
   FiFolder,
   FiHelpCircle,
+  FiLayers,
   FiMenu,
   FiSettings,
   FiShield,
   FiX,
 } from "react-icons/fi";
+import { useTranslation } from "react-i18next";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import AuthenticatedHeader from "../../components/AuthenticatedHeader";
 import {
@@ -22,36 +26,54 @@ import {
 } from "../../lib/accessControl";
 import { ROUTE_PATHS } from "../../router/paths";
 
-type SidebarItem = {
-  label: string;
+type SidebarItemDef = {
+  labelKey: string;
   path: string;
   icon: IconType;
   requiresAdmin: boolean;
 };
 
-const primarySidebarItems: SidebarItem[] = [
+const primarySidebarDefs: SidebarItemDef[] = [
   {
-    label: "Projetos",
+    labelKey: "nav.projetos",
     path: ROUTE_PATHS.presentations,
     icon: FiFolder,
     requiresAdmin: false,
   },
   {
-    label: "Dados (API)",
+    labelKey: "nav.projetosInstitucionais",
+    path: ROUTE_PATHS.institutionalProjects,
+    icon: FiLayers,
+    requiresAdmin: false,
+  },
+  {
+    labelKey: "nav.templates",
+    path: ROUTE_PATHS.templates,
+    icon: FiBookOpen,
+    requiresAdmin: false,
+  },
+  {
+    labelKey: "nav.analytics",
+    path: ROUTE_PATHS.analytics,
+    icon: FiBarChart2,
+    requiresAdmin: true,
+  },
+  {
+    labelKey: "nav.dados",
     path: ROUTE_PATHS.adminData,
     icon: FiDatabase,
     requiresAdmin: true,
   },
   {
-    label: "Administração",
+    labelKey: "nav.administracao",
     path: ROUTE_PATHS.adminAdministration,
     icon: FiShield,
     requiresAdmin: true,
   },
 ];
 
-const settingsSidebarItem: SidebarItem = {
-  label: "Configurações",
+const settingsSidebarDef: SidebarItemDef = {
+  labelKey: "nav.configuracoes",
   path: ROUTE_PATHS.settings,
   icon: FiSettings,
   requiresAdmin: false,
@@ -66,23 +88,24 @@ function getSidebarLinkClass(isActive: boolean) {
 }
 
 function SidebarLink({
-  item,
+  def,
   onNavigate,
 }: {
-  item: SidebarItem;
+  def: SidebarItemDef;
   onNavigate?: () => void;
 }) {
-  const Icon = item.icon;
+  const { t } = useTranslation();
+  const Icon = def.icon;
 
   return (
     <NavLink
-      to={item.path}
+      to={def.path}
       end
       onClick={onNavigate}
       className={({ isActive }) => getSidebarLinkClass(isActive)}
     >
-      <Icon className="h-4.5 w-4.5" />
-      {item.label}
+      <Icon className="h-4.5 w-4.5" aria-hidden="true" />
+      {t(def.labelKey)}
     </NavLink>
   );
 }
@@ -94,22 +117,26 @@ function SidebarContent({
   canSeeAdminModules: boolean;
   onNavigate?: () => void;
 }) {
-  const visiblePrimaryItems = primarySidebarItems.filter(
-    (item) => !item.requiresAdmin || canSeeAdminModules,
+  const { t } = useTranslation();
+  const visiblePrimaryDefs = primarySidebarDefs.filter(
+    (def) => !def.requiresAdmin || canSeeAdminModules,
   );
 
   return (
     <>
-      <nav className="flex-1 px-4 py-6" aria-label="Módulos da área logada">
+      <nav
+        className="flex-1 px-4 py-6"
+        aria-label={t("accessibility.sidebarNav")}
+      >
         <div className="space-y-3">
-          {visiblePrimaryItems.map((item) => (
-            <SidebarLink key={item.path} item={item} onNavigate={onNavigate} />
+          {visiblePrimaryDefs.map((def) => (
+            <SidebarLink key={def.path} def={def} onNavigate={onNavigate} />
           ))}
         </div>
       </nav>
 
       <div className="border-t border-[#d7d7d7] px-4 py-5">
-        <SidebarLink item={settingsSidebarItem} onNavigate={onNavigate} />
+        <SidebarLink def={settingsSidebarDef} onNavigate={onNavigate} />
       </div>
     </>
   );
@@ -124,6 +151,8 @@ function MobileSidebar({
   isOpen: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
+
   if (!isOpen) {
     return null;
   }
@@ -132,16 +161,21 @@ function MobileSidebar({
     <div className="fixed inset-0 z-30 md:hidden">
       <button
         type="button"
-        aria-label="Fechar menu lateral"
+        aria-label={t("accessibility.closeMenu")}
         onClick={onClose}
         className="absolute inset-0 bg-[#142133]/40 backdrop-blur-[2px]"
       />
 
-      <div className="absolute inset-y-0 left-0 flex w-[min(18rem,calc(100vw-2rem))] flex-col border-r border-[#d7d7d7] bg-[#f4f5f7] shadow-[0_20px_48px_rgba(20,33,51,0.24)]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("accessibility.sidebarNav")}
+        className="absolute inset-y-0 left-0 flex w-[min(18rem,calc(100vw-2rem))] flex-col border-r border-[#d7d7d7] bg-[#f4f5f7] shadow-[0_20px_48px_rgba(20,33,51,0.24)]"
+      >
         <div className="flex items-center justify-between border-b border-[#d7d7d7] px-4 py-4">
           <div>
             <p className="text-[0.82rem] font-semibold uppercase tracking-[0.08em] text-[#8a8a8a]">
-              Navegação
+              {t("accessibility.sidebarNav")}
             </p>
             <p className="mt-1 text-[1rem] font-bold text-[#1e1e1e]">Menu</p>
           </div>
@@ -150,9 +184,9 @@ function MobileSidebar({
             type="button"
             onClick={onClose}
             className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#4f6475] shadow-[0_10px_24px_rgba(20,33,51,0.12)] transition hover:-translate-y-0.5"
-            aria-label="Fechar menu"
+            aria-label={t("accessibility.closeMenu")}
           >
-            <FiX className="h-5 w-5" />
+            <FiX className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
 
@@ -170,6 +204,7 @@ function AdminConsoleLayoutContent() {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   const { preferences } = useSystemPreferences();
+  const { t } = useTranslation();
   const canSeeAdminModules = canAccessAdminModules(user);
   const canSeeCreateFlow = canCreatePresentations(user);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -194,6 +229,14 @@ function AdminConsoleLayoutContent() {
       data-surface="console-shell"
       className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.92)_0%,rgba(239,240,250,0.96)_46%,rgba(226,227,247,0.96)_100%)] text-[#1e1e1e]"
     >
+      {/* Fase 21 — Acessibilidade: link para pular para o conteúdo principal */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-xl focus:bg-[#1675b8] focus:px-4 focus:py-3 focus:text-[0.95rem] focus:font-semibold focus:text-white focus:shadow-[0_8px_24px_rgba(22,117,184,0.35)] focus:outline-none"
+      >
+        {t("accessibility.skipToMain")}
+      </a>
+
       <AuthenticatedHeader
         activeItem={activeHeaderItem}
         canCreate={canSeeCreateFlow}
@@ -228,15 +271,17 @@ function AdminConsoleLayoutContent() {
             <button
               type="button"
               aria-expanded={isMobileSidebarOpen}
+              aria-controls="mobile-sidebar"
+              aria-label={t("accessibility.openMenu")}
               onClick={() => setIsMobileSidebarOpen(true)}
               className="inline-flex h-11 items-center gap-2 rounded-full border border-white/75 bg-white/88 px-4 text-[0.92rem] font-semibold text-[#4f6475] shadow-[0_12px_30px_-24px_rgba(20,33,51,0.32)] transition hover:-translate-y-0.5"
             >
-              <FiMenu className="h-4.5 w-4.5" />
+              <FiMenu className="h-4.5 w-4.5" aria-hidden="true" />
               Menu
             </button>
 
             <span className="text-[0.82rem] font-medium uppercase tracking-[0.08em] text-[#8a8a8a]">
-              Área administrativa
+              {t("nav.administracao")}
             </span>
           </div>
 
@@ -245,17 +290,15 @@ function AdminConsoleLayoutContent() {
           <div className="mt-8 flex flex-col gap-2 text-[0.92rem] font-medium text-[#8a8a8a] sm:flex-row sm:items-center sm:justify-between">
             {preferences.keyboardNavigation ? (
               <span className="inline-flex max-w-full flex-wrap items-center gap-2 text-[0.84rem]">
-                Atalhos: Alt+1 Projetos, Alt+2 Minha conta, Alt+3 Configurações
-                {canSeeCreateFlow ? ", Alt+4 Criar" : ""}
-                {canSeeAdminModules ? ", Alt+5 Dados" : ""}
+                {t("settings.atalhosTeclas")}
               </span>
             ) : (
               <span />
             )}
 
             <span className="inline-flex items-center gap-2 self-end sm:self-auto">
-              <FiHelpCircle className="h-4 w-4" />
-              Ajuda
+              <FiHelpCircle className="h-4 w-4" aria-hidden="true" />
+              {t("landing.help")}
             </span>
           </div>
         </main>

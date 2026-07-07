@@ -1,14 +1,29 @@
+/**
+ * Domínio: Console Administrativo
+ *
+ * Tipos usados pelas páginas de administração: diretório de funcionários,
+ * log de atividades, integrações e resumo de apresentações.
+ * Mantém compatibilidade total com o código existente.
+ */
+
 import type { AccountStatus, UserAccessLevel } from "./auth";
 import type { PresentationFilters } from "./presentation";
+import type { IntegrationStatus } from "./integration";
 
-export type PresentationSummaryStatus = "presented" | "ready";
+// ─── Re-exports para compatibilidade (código existente importa daqui) ────────
 
-export type ApiIntegrationStatus = "active" | "inactive" | "maintenance";
+export type { IntegrationStatus as ApiIntegrationStatus };
+
+// ─── Organização ─────────────────────────────────────────────────────────────
 
 export type OrganizationDirectoryEntry = {
   department: string;
   teams: string[];
 };
+
+// ─── Apresentações (resumo para listagem admin) ───────────────────────────────
+
+export type PresentationSummaryStatus = "presented" | "ready";
 
 export type AdminPresentationSummary = {
   id: string;
@@ -23,13 +38,17 @@ export type AdminPresentationSummary = {
   filters: PresentationFilters;
 };
 
+// ─── Integrações de API (listagem admin — legado) ─────────────────────────────
+
 export type ApiIntegration = {
   id: string;
   name: string;
-  status: ApiIntegrationStatus;
+  status: IntegrationStatus;
   lastUpdated: string;
   tags: string[];
 };
+
+// ─── Diretório de funcionários ────────────────────────────────────────────────
 
 export type EmployeeDirectoryEntry = {
   id: string;
@@ -41,7 +60,29 @@ export type EmployeeDirectoryEntry = {
   status: AccountStatus;
 };
 
+export type NewEmployeePayload = {
+  name: string;
+  email: string;
+  department: string;
+  team: string;
+};
+
+// ─── Log de atividades ────────────────────────────────────────────────────────
+
+export type ActivityLogCategory =
+  | "Apresentações"
+  | "Projetos"
+  | "Templates"
+  | "Usuários"
+  | "Integrações"
+  | "Aprovações"
+  | "Compartilhamentos";
+
+export type ActivityLogStatus = "success" | "error" | "warning";
+export type ActivityUpdateType = "manual" | "automatic";
+
 export type ActivityLogEntry = {
+  // Campos originais (compatibilidade)
   id: string;
   timestamp: string;
   source: string;
@@ -49,11 +90,17 @@ export type ActivityLogEntry = {
   userName: string;
   department: string;
   team: string;
-};
 
-export type NewEmployeePayload = {
-  name: string;
-  email: string;
-  department: string;
-  team: string;
+  // Campos novos (Fase 17)
+  category?: ActivityLogCategory;
+  action?: string;          // descrição legível da ação (substitui "type" como exibição principal)
+  entityName?: string;      // nome da entidade afetada (apresentação, projeto, template…)
+  entityType?: string;      // "apresentação" | "projeto" | "template" | "usuário" | …
+  entityId?: string;        // para navegação futura
+  userRole?: string;        // cargo legível: "Administrador Geral", "Editor" …
+  status?: ActivityLogStatus;
+  previousValue?: string;   // valor anterior (quando houver alteração de conteúdo)
+  newValue?: string;        // novo valor
+  updateType?: ActivityUpdateType;
+  notes?: string;
 };

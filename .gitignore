@@ -26,3 +26,8 @@ ia/*.pyc
 *.log
 .vscode/
 .DS_Store
+
+# =========================
+# CLAUDE CODE (memória local)
+# =========================
+.claude/

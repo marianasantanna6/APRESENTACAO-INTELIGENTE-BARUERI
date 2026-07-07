@@ -5,9 +5,12 @@ import App from "./App";
 import {
   applySystemPreferencesToDocument,
   AuthProvider,
+  I18nSyncProvider,
   readStoredSystemPreferences,
   SystemPreferencesProvider,
 } from "./context";
+// Inicializa i18next antes da renderização
+import "./lib/i18n";
 import "./index.css";
 
 const rootElement = document.getElementById("root");
@@ -22,9 +25,11 @@ createRoot(rootElement).render(
   <StrictMode>
     <BrowserRouter>
       <SystemPreferencesProvider>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
+        <I18nSyncProvider>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </I18nSyncProvider>
       </SystemPreferencesProvider>
     </BrowserRouter>
   </StrictMode>,
