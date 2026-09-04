@@ -6,6 +6,8 @@
 export {
   activityLogMock as mockActivityLog,
   organizationMock as organizationDirectory,
+  secretariasMock,
+  timesMock,
 } from "./integrationsMock";
 
 // ApiIntegration mantém formato legado usado pelo AdminDataPage e AdminConsoleContext

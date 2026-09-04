@@ -2,7 +2,6 @@ import type { CSSProperties, ChangeEvent, FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import loginLogo from "../../assets/images/create-logo.png";
-import loginGovLogo from "../../assets/images/login-gov.png";
 import { useAuth } from "../../context";
 import {
   canAccessPathForUser,
@@ -98,7 +97,7 @@ function LoginPage() {
     const nextErrors: FormErrors = {};
 
     if (!formValues.identifier.trim()) {
-      nextErrors.identifier = "Informe seu usuário, CPF ou e-mail.";
+      nextErrors.identifier = "Informe seu CPF ou e-mail.";
     }
 
     if (!formValues.password.trim()) {
@@ -185,7 +184,7 @@ function LoginPage() {
                 updateField("identifier", event.target.value)
               }
               data-login-field="text"
-              placeholder="Usuário / CPF / E-mail"
+              placeholder="CPF / E-mail"
               className={`h-15.25 w-full rounded-[20px] border bg-[#f8fafc] px-5 text-[0.98rem] font-medium text-[#1e1e1e] shadow-[0_4px_10px_rgba(0,0,0,0.25)] outline-none transition focus:-translate-y-0.5 focus:border-[#1675b8] focus:ring-4 focus:ring-[#1675b8]/15 disabled:cursor-not-allowed disabled:opacity-70 sm:text-[1.15rem] ${
                 errors.identifier ? "border-[#d64545]" : "border-[#d5d5d5]"
               }`}
@@ -265,23 +264,6 @@ function LoginPage() {
               Esqueci minha senha
             </a>
           </div>
-
-          <button
-            type="button"
-            disabled={isSubmitting}
-            data-login-action="secondary"
-            className="mt-1 flex h-16.5 items-center justify-between gap-4 rounded-[20px] border-[2.5px] border-[#1675b8] bg-white px-5 text-[#898989] shadow-[0_4px_10px_rgba(0,0,0,0.25)] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
-          >
-            <img
-              src={loginGovLogo}
-              alt="Entrar com GOV"
-              className="h-6.5 w-17.5 object-contain"
-            />
-            <span className="flex-1 text-center text-[1.05rem] font-semibold sm:text-[1.55rem]">
-              Entrar com o GOV
-            </span>
-            <span className="w-17.5" aria-hidden="true" />
-          </button>
 
         </form>
       </section>

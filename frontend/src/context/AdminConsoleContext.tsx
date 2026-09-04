@@ -7,13 +7,17 @@ import {
   mockEmployeeDirectory,
   mockPresentations,
   organizationDirectory,
+  secretariasMock,
+  timesMock,
 } from "../mocks/adminMockData";
-import type { NewEmployeePayload } from "../types/admin";
+import type { NewEmployeePayload, NewSecretariaPayload, NewTimePayload } from "../types/admin";
 import { useAuth } from "./AuthContext";
 
-type EmployeeMutationResult =
+type MutationResult =
   | { ok: true }
   | { ok: false; message: string };
+
+type EmployeeMutationResult = MutationResult;
 
 type AdminConsoleContextValue = {
   activityLog: typeof mockActivityLog;
@@ -21,9 +25,15 @@ type AdminConsoleContextValue = {
   employees: typeof mockEmployeeDirectory;
   organization: typeof organizationDirectory;
   presentations: typeof mockPresentations;
+  secretarias: typeof secretariasMock;
+  times: typeof timesMock;
   canManageEmployees: boolean;
-  addEmployee: (payload: NewEmployeePayload) => EmployeeMutationResult;
-  removeEmployee: (employeeId: string) => EmployeeMutationResult;
+  addEmployee: (payload: NewEmployeePayload) => MutationResult;
+  removeEmployee: (employeeId: string) => MutationResult;
+  addSecretaria: (payload: NewSecretariaPayload) => MutationResult;
+  removeSecretaria: (id: string) => MutationResult;
+  addTime: (payload: NewTimePayload) => MutationResult;
+  removeTime: (id: string) => MutationResult;
 };
 
 const AdminConsoleContext = createContext<AdminConsoleContextValue | undefined>(
@@ -44,6 +54,8 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
   const [apiIntegrations] = useState(mockApiIntegrations);
   const [employeesState, setEmployeesState] = useState(mockEmployeeDirectory);
   const [activityLogState, setActivityLogState] = useState(mockActivityLog);
+  const [secretariasState, setSecretariasState] = useState(secretariasMock);
+  const [timesState, setTimesState] = useState(timesMock);
   const allowCrossTeamData = canViewCrossTeamData(user);
   const allowEmployeeManagement = canManageEmployees(user);
 
@@ -174,6 +186,80 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     return { ok: true };
   }
 
+  function addSecretaria(payload: NewSecretariaPayload): MutationResult {
+    if (!user || !allowEmployeeManagement) {
+      return { ok: false, message: "Somente administradores de nível 2 podem cadastrar secretarias." };
+    }
+    if (!payload.nome.trim() || !payload.setor.trim()) {
+      return { ok: false, message: "Preencha nome e setor da secretaria." };
+    }
+    const next = { id: createId("sec"), nome: payload.nome.trim(), setor: payload.setor.trim() };
+    setSecretariasState((cur) => [...cur, next]);
+    setActivityLogState((cur) => [
+      {
+        id: createId("log"), timestamp: new Date().toISOString(),
+        source: "Administração", type: "Secretaria cadastrada",
+        category: "Usuários" as const, action: "Nova secretaria cadastrada",
+        entityName: payload.nome.trim(), entityType: "secretaria",
+        userName: user.name, userRole: "Administrador Geral",
+        department: payload.setor.trim(), team: "", status: "success" as const,
+        updateType: "manual" as const,
+      },
+      ...cur,
+    ]);
+    return { ok: true };
+  }
+
+  function removeSecretaria(id: string): MutationResult {
+    if (!user || !allowEmployeeManagement) {
+      return { ok: false, message: "Somente administradores de nível 2 podem remover secretarias." };
+    }
+    const target = secretariasState.find((s) => s.id === id);
+    if (!target) return { ok: false, message: "Secretaria não encontrada." };
+    setSecretariasState((cur) => cur.filter((s) => s.id !== id));
+    setTimesState((cur) => cur.filter((t) => t.secretariaId !== id));
+    return { ok: true };
+  }
+
+  function addTime(payload: NewTimePayload): MutationResult {
+    if (!user || !allowEmployeeManagement) {
+      return { ok: false, message: "Somente administradores de nível 2 podem cadastrar times." };
+    }
+    if (!payload.nome.trim() || !payload.setor.trim() || !payload.secretariaId) {
+      return { ok: false, message: "Preencha nome, setor e secretaria responsável." };
+    }
+    const secretaria = secretariasState.find((s) => s.id === payload.secretariaId);
+    if (!secretaria) return { ok: false, message: "Secretaria selecionada não encontrada." };
+    const next = {
+      id: createId("time"), nome: payload.nome.trim(), setor: payload.setor.trim(),
+      secretariaId: payload.secretariaId, secretariaNome: secretaria.nome,
+    };
+    setTimesState((cur) => [...cur, next]);
+    setActivityLogState((cur) => [
+      {
+        id: createId("log"), timestamp: new Date().toISOString(),
+        source: "Administração", type: "Time cadastrado",
+        category: "Usuários" as const, action: "Novo time cadastrado",
+        entityName: payload.nome.trim(), entityType: "time",
+        userName: user.name, userRole: "Administrador Geral",
+        department: payload.setor.trim(), team: payload.nome.trim(),
+        status: "success" as const, updateType: "manual" as const,
+      },
+      ...cur,
+    ]);
+    return { ok: true };
+  }
+
+  function removeTime(id: string): MutationResult {
+    if (!user || !allowEmployeeManagement) {
+      return { ok: false, message: "Somente administradores de nível 2 podem remover times." };
+    }
+    const target = timesState.find((t) => t.id === id);
+    if (!target) return { ok: false, message: "Time não encontrado." };
+    setTimesState((cur) => cur.filter((t) => t.id !== id));
+    return { ok: true };
+  }
+
   return (
     <AdminConsoleContext.Provider
       value={{
@@ -182,9 +268,15 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
         employees,
         organization: organizationDirectory,
         presentations,
+        secretarias: secretariasState,
+        times: timesState,
         canManageEmployees: allowEmployeeManagement,
         addEmployee,
         removeEmployee,
+        addSecretaria,
+        removeSecretaria,
+        addTime,
+        removeTime,
       }}
     >
       {children}

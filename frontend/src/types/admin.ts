@@ -67,6 +67,35 @@ export type NewEmployeePayload = {
   team: string;
 };
 
+// ─── Secretarias ─────────────────────────────────────────────────────────────
+
+export type SecretariaEntry = {
+  id: string;
+  nome: string;
+  setor: string;
+};
+
+export type NewSecretariaPayload = {
+  nome: string;
+  setor: string;
+};
+
+// ─── Times ───────────────────────────────────────────────────────────────────
+
+export type TimeEntry = {
+  id: string;
+  nome: string;
+  setor: string;
+  secretariaId: string;
+  secretariaNome: string;
+};
+
+export type NewTimePayload = {
+  nome: string;
+  setor: string;
+  secretariaId: string;
+};
+
 // ─── Log de atividades ────────────────────────────────────────────────────────
 
 export type ActivityLogCategory =

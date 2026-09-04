@@ -641,3 +641,27 @@ export const organizationMock: OrganizationDirectoryEntry[] = [
   { department: "Jurídico", teams: ["Consultivo Interno"] },
   { department: "Recursos Humanos", teams: ["Gestão de Pessoas"] },
 ];
+
+// ─── Secretarias ──────────────────────────────────────────────────────────────
+
+import type { SecretariaEntry, TimeEntry } from "../types/admin";
+
+export const secretariasMock: SecretariaEntry[] = [
+  { id: "sec-1", nome: "Secretaria de Planejamento e Urbanismo", setor: "Planejamento" },
+  { id: "sec-2", nome: "Secretaria de Finanças e Orçamento", setor: "Financeiro" },
+  { id: "sec-3", nome: "Secretaria de Recursos Humanos", setor: "Recursos Humanos" },
+  { id: "sec-4", nome: "Secretaria Jurídica e Legislativa", setor: "Jurídico" },
+  { id: "sec-5", nome: "Gabinete de Dados e Inteligência", setor: "Gabinete de Dados" },
+];
+
+// ─── Times ────────────────────────────────────────────────────────────────────
+
+export const timesMock: TimeEntry[] = [
+  { id: "time-1", nome: "Plataforma Analítica", setor: "Gabinete de Dados", secretariaId: "sec-5", secretariaNome: "Gabinete de Dados e Inteligência" },
+  { id: "time-2", nome: "Inteligência Operacional", setor: "Gabinete de Dados", secretariaId: "sec-5", secretariaNome: "Gabinete de Dados e Inteligência" },
+  { id: "time-3", nome: "Planejamento Territorial", setor: "Planejamento", secretariaId: "sec-1", secretariaNome: "Secretaria de Planejamento e Urbanismo" },
+  { id: "time-4", nome: "Indicadores Urbanos", setor: "Planejamento", secretariaId: "sec-1", secretariaNome: "Secretaria de Planejamento e Urbanismo" },
+  { id: "time-5", nome: "Orçamento Municipal", setor: "Financeiro", secretariaId: "sec-2", secretariaNome: "Secretaria de Finanças e Orçamento" },
+  { id: "time-6", nome: "Consultivo Interno", setor: "Jurídico", secretariaId: "sec-4", secretariaNome: "Secretaria Jurídica e Legislativa" },
+  { id: "time-7", nome: "Gestão de Pessoas", setor: "Recursos Humanos", secretariaId: "sec-3", secretariaNome: "Secretaria de Recursos Humanos" },
+];
