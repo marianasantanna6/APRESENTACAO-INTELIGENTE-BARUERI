@@ -1,21 +1,144 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client-js"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
-model User {
-  id    Int    @id @default(autoincrement())
-  name  String
-  email String @unique
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model areas {
+  id   BigInt @id(map: "area_pkey") @default(autoincrement())
+  name String
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model departments {
+  id       BigInt     @id(map: "secretary_pkey") @default(autoincrement())
+  name     String
+  projects projects[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model projects {
+  id                  BigInt          @id(map: "project_pkey") @default(autoincrement())
+  name                String
+  user                BigInt
+  version             BigInt
+  family              BigInt
+  short_description   String?         @map("short-description")
+  full_description    String?         @map("full-description")
+  source              String
+  main_department     BigInt          @map("main-department")
+  related_departments BigInt[]        @map("related-departments")
+  areas               BigInt[]
+  ods                 Int[]           @db.SmallInt
+  theme               String?
+  audience            String?
+  technologies        String?
+  implementation_date DateTime?       @map("implementation-date") @db.Date
+  awards              String[]
+  status              Boolean         @default(true)
+  last_update         DateTime        @map("last-update") @db.Timestamptz(6)
+  users               users           @relation(fields: [user], references: [id], onDelete: Cascade, map: "project_user_fkey")
+  departments         departments     @relation(fields: [main_department], references: [id], onDelete: Cascade)
+  projects_logs       projects_logs[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model sectors {
+  id            BigInt          @id(map: "sector_pkey") @default(autoincrement())
+  name          String
+  teams         teams[]
+  users_sectors users_sectors[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model teams {
+  id          BigInt        @id(map: "team_pkey") @default(autoincrement())
+  name        String
+  sector      BigInt
+  level_acess Int           @map("level-acess") @db.SmallInt
+  status      Boolean       @default(true)
+  sectors     sectors       @relation(fields: [sector], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "team_sector_fkey")
+  users_teams users_teams[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model users {
+  id            BigInt          @id(map: "user_pkey") @default(autoincrement())
+  name          String
+  email         String
+  password      String
+  cpf           String          @db.VarChar
+  photo         String?
+  projects      projects[]
+  projects_logs projects_logs[]
+  users_logs    users_logs[]
+  users_sectors users_sectors[]
+  users_teams   users_teams[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model projects_logs {
+  id       BigInt   @id(map: "log-analytics_pkey") @default(autoincrement())
+  user     BigInt
+  action   String
+  project  BigInt
+  moment   DateTime @db.Timestamptz(6)
+  users    users    @relation(fields: [user], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "log-analytics_user_fkey")
+  projects projects @relation(fields: [project], references: [id], onDelete: Cascade, map: "project-logs_project_fkey")
+
+  @@map("projects-logs")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model users_logs {
+  id       BigInt    @id(map: "analytics_pkey") @default(autoincrement())
+  user     BigInt
+  device   String?
+  language String?
+  start    DateTime? @db.Timestamptz(6)
+  end      DateTime? @db.Timestamptz(6)
+  users    users     @relation(fields: [user], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "analytics_user_fkey")
+
+  @@map("users-logs")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model users_sectors {
+  id                BigInt  @id(map: "user-sector_pkey") @default(autoincrement())
+  user              BigInt
+  sector            BigInt
+  general_admin     Boolean @default(false) @map("general-admin")
+  institute_manager Boolean @default(false) @map("institute-manager")
+  sectors           sectors @relation(fields: [sector], references: [id], onDelete: Cascade, map: "user-sector_sector_fkey")
+  users             users   @relation(fields: [user], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user-sector_user_fkey")
+
+  @@map("users-sectors")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model users_teams {
+  id           BigInt  @id(map: "user-team_pkey") @default(autoincrement())
+  user         BigInt
+  team         BigInt
+  area_manager Boolean @default(false) @map("area-manager")
+  area_editor  Boolean @default(false) @map("area-editor")
+  approver     Boolean @default(false)
+  teams        teams   @relation(fields: [team], references: [id], onDelete: Cascade, map: "user-team_team_fkey")
+  users        users   @relation(fields: [user], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user-team_user_fkey")
+
+  @@map("users-teams")
 }

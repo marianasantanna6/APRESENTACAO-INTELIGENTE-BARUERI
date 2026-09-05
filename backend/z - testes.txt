@@ -1,0 +1,184 @@
+Areas:
+
+Rota POST: http://localhost:3000/areas
+
+Body:
+{
+  "name": "Tecnologia"
+}
+
+Rota GET: http://localhost:3000/areas?parameter=value
+parameters: id & name
+
+--------------------------------------------------------------
+
+Departments:
+
+Rota POST: http://localhost:3000/departments
+
+Body:
+{
+  "name": "Secretaria de Educação"
+}
+
+Rota GET: http://localhost:3000/departments?parameter=value
+parameters: id & name
+
+--------------------------------------------------------------
+
+Projects:
+
+Rota POST: http://localhost:3000/projects
+
+Body Novo Projeto:
+{
+  "name": "Projeto de Tecnologia",
+  "user": 1,
+  "short_description": "Descrição curta do projeto",
+  "full_description": "Descrição completa do projeto",
+  "source": "Prefeitura de Barueri",
+  "main_department": 1,
+  "related_departments": [1],
+  "areas": [1],
+  "ods": [1, 2],
+  "theme": "Educação e Tecnologia",
+  "audience": "Alunos e Professores",
+  "technologies": "React, NestJS, PostgreSQL",
+  "implementation_date": "2026-09-04",
+  "awards": [ "Prêmio de Inovação", "Prêmio de Tecnologia" ]
+}
+
+Body Atualizando Projeto:
+{
+  "name": "Projeto de Tecnologia - Atualizado",
+  "user": 1,
+  "family": 2,
+  "short_description": "Descrição curta do projeto - Atualizado",
+  "full_description": "Descrição completa do projeto - Atualizado",
+  "source": "Prefeitura de Barueri",
+  "main_department": 1,
+  "related_departments": [1],
+  "areas": [1],
+  "ods": [1, 2, 3],
+  "theme": "Educação e Tecnologia",
+  "audience": "Alunos e Professores",
+  "technologies": "React, NestJS, PostgreSQL, TypeScript",
+  "implementation_date": "2026-09-04",
+  "awards": [ "Prêmio de Inovação", "Prêmio de Tecnologia", "Prêmio Nobel da Paz" ]
+}
+
+Rota GET: http://localhost:3000/projects?parameter=value
+parameters: id & name & user & family & main_department & related_departments & areas & ods & implementation-date & awards & status
+
+
+--------------------------------------------------------------
+
+Projects-logs:
+
+Rota POST / GET: http://localhost:3000/projects-logs
+
+Body:
+{
+  "user": "1",
+  "action": "Criou",
+  "project": "1"
+}
+
+--------------------------------------------------------------
+
+Sectors:
+
+Rota POST: http://localhost:3000/sectors
+
+Body:
+{
+  "name": "Arte e Cultura"
+}
+
+Rota GET: http://localhost:3000/sectors?parameter=value
+parameters: id & name
+
+--------------------------------------------------------------
+
+Teams:
+
+Rota POST: http://localhost:3000/teams
+
+Body:
+{
+  "name": "Educação em Barueri",
+  "sector": 1,
+  "level_acess": 1
+}
+
+Rota GET: http://localhost:3000/teams?parameter=value
+parameters: id & name
+
+--------------------------------------------------------------
+
+Login:
+
+Rota POST: http://localhost:3000/login
+
+Body:
+{
+  "login": "ney@email.com",
+  "password": "20102026"
+}
+
+--------------------------------------------------------------
+
+Management:
+
+Rota GET: http://localhost:3000/management?parameter=value
+parameters: id & name & email
+
+--------------------------------------------------------------
+
+Register:
+
+Rota POST: http://localhost:3000/register
+
+Body:
+{
+  "name": "Neymar Júnior",
+  "email": "NEY@EMAIL.COM",
+  "password": "20102026",
+  "cpf": "130.080.059-26",
+  "photo": "OuroOlímpico2016.jpg"
+}
+
+--------------------------------------------------------------
+
+Users-sectors:
+
+Rota POST: http://localhost:3000/users-sectors
+
+Body:
+{
+  "user": 1,
+  "sector": 1,
+  "general_admin": false,
+  "institute_manager": false
+}
+
+Rota GET: http://localhost:3000/users-sectors?parameter=value
+parameters: user & sector & general_admin & institute_manager
+
+--------------------------------------------------------------
+
+Users-teams:
+
+Rota POST: http://localhost:3000/users-teams
+
+Body:
+{
+  "user": 1,
+  "team": 1,
+  "area_manager": false,
+  "area_editor": false,
+  "approver": false
+}
+
+Rota GET: http://localhost:3000/users-teams?parameter=value
+parameters: user & team & area_manager & area_editor & approver
