@@ -1,4 +1,4 @@
-import type { ChangeEvent, FormEvent, ReactNode } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useId, useState } from "react";
 import {
   FiAlertCircle,
@@ -11,6 +11,7 @@ import {
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { AdminAvatar, AdminPanel } from "../../components/AdminConsole";
+import { useModalAccessibility } from "../../hooks";
 import { useAuth } from "../../context";
 import { formatCpf } from "../../lib/formatters";
 import { ROUTE_PATHS } from "../../router/paths";
@@ -34,6 +35,8 @@ const primaryButtonClass =
   "inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-5 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(103,156,203,0.24)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0";
 const secondaryButtonClass =
   "inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[#d7dde4] px-5 text-[0.92rem] font-semibold text-[#6a6a6a] transition hover:bg-[#f5f7f9]";
+const passwordButtonClass =
+  "inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#edf5fb] px-4 text-[0.9rem] font-semibold text-[#3d83bc] transition hover:bg-[#e1eef8]";
 const destructiveButtonClass =
   "inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[#f2d8d8] bg-[#fff5f5] px-5 text-[0.92rem] font-semibold text-[#bd5d5d] transition hover:bg-[#ffeded]";
 const acceptedImageTypes = ["image/png", "image/jpeg"];
@@ -61,20 +64,15 @@ function LoadingLabel({ children }: { children: string }) {
 function AccountField({
   label,
   value,
-  action,
 }: {
   label: string;
   value: string;
-  action?: ReactNode;
 }) {
   return (
-    <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-      <label className={fieldLabelClass}>
-        {label}
-        <input type="text" value={value} readOnly className={readOnlyInputClass} />
-      </label>
-      {action ? <div className="md:pb-[1px]">{action}</div> : null}
-    </div>
+    <label className={fieldLabelClass}>
+      {label}
+      <input type="text" value={value} readOnly className={readOnlyInputClass} />
+    </label>
   );
 }
 
@@ -83,7 +81,8 @@ function FeedbackToast({ kind, message }: ToastState) {
 
   return (
     <div
-      className={`fixed right-4 top-4 z-50 flex max-w-[320px] items-start gap-3 rounded-[18px] border px-4 py-3 shadow-[0_20px_40px_rgba(20,33,51,0.18)] backdrop-blur-[6px] sm:right-6 sm:top-6 ${
+      data-toast-surface={isSuccess ? "success" : "error"}
+      className={`fixed left-4 right-4 top-4 z-50 flex max-w-[320px] items-start gap-3 rounded-[18px] border px-4 py-3 shadow-[0_20px_40px_rgba(20,33,51,0.18)] backdrop-blur-[6px] sm:left-auto sm:right-6 sm:top-6 ${
         isSuccess
           ? "border-[#d8ece1] bg-white/92 text-[#2f6f4b]"
           : "border-[#f2d7d7] bg-white/92 text-[#a44a4a]"
@@ -266,14 +265,20 @@ export default function AdminMyAccountPage() {
     showToast("success", "Senha alterada com sucesso.");
   }
 
+  const passwordModalRef = useModalAccessibility({
+    isOpen: isPasswordModalOpen,
+    onClose: closePasswordModal,
+    initialFocusSelector: "[data-modal-initial-focus]",
+  });
+
   return (
     <>
       <section className="space-y-7">
         <div>
-          <h1 className="text-[2.2rem] font-extrabold tracking-[-0.05em] text-[#1e1e1e] sm:text-[2.8rem]">
+          <h1 className="page-title text-[2.2rem] font-extrabold tracking-[-0.05em] text-[#1e1e1e] sm:text-[2.8rem]">
             Minha Conta
           </h1>
-          <p className="mt-1 text-[1rem] font-medium text-[#878787]">
+          <p className="page-subtitle mt-1 text-[1rem] font-medium text-[#878787]">
             Visualize seus dados de acesso e gerencie sua foto e senha.
           </p>
         </div>
@@ -332,34 +337,21 @@ export default function AdminMyAccountPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <AccountField label="CPF" value={formatCpf(user.cpf)} />
                 <AccountField
-                  label="Email institucional"
+                  label="E-mail institucional"
                   value={user.email}
                 />
               </div>
 
-              <AccountField
-                label="Senha"
-                value="••••••••"
-                action={(
-                  <button
-                    type="button"
-                    onClick={() => setIsPasswordModalOpen(true)}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#edf5fb] px-4 text-[0.9rem] font-semibold text-[#3d83bc] transition hover:bg-[#e1eef8]"
-                  >
-                    <FiLock className="h-4.5 w-4.5" />
-                    Alterar senha
-                  </button>
-                )}
-              />
+              <AccountField label="Senha" value="********" />
             </div>
 
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {hasPendingProfileChanges || isSavingProfile ? (
                 <button
                   type="button"
                   onClick={handleSaveProfile}
                   disabled={isSavingProfile}
-                  className={primaryButtonClass}
+                  className={`${primaryButtonClass} w-full sm:col-span-2`}
                 >
                   {isSavingProfile ? (
                     <LoadingLabel>Salvando...</LoadingLabel>
@@ -371,8 +363,17 @@ export default function AdminMyAccountPage() {
 
               <button
                 type="button"
+                onClick={() => setIsPasswordModalOpen(true)}
+                className={passwordButtonClass}
+              >
+                <FiLock className="h-4.5 w-4.5" />
+                Alterar senha
+              </button>
+
+              <button
+                type="button"
                 onClick={handleLogout}
-                className={destructiveButtonClass}
+                className={`${destructiveButtonClass} w-full`}
               >
                 <FiLogOut className="h-4.5 w-4.5" />
                 Sair da conta
@@ -383,14 +384,33 @@ export default function AdminMyAccountPage() {
       </section>
 
       {isPasswordModalOpen ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#142133]/40 px-4 py-6 backdrop-blur-[3px]">
-          <div className="w-full max-w-[540px] rounded-[26px] bg-white p-6 shadow-[0_24px_80px_rgba(20,33,51,0.24)]">
+        <div
+          className="fixed inset-0 z-40 flex items-end justify-center overflow-y-auto bg-[#142133]/40 px-4 py-4 backdrop-blur-[3px] sm:items-center sm:py-6"
+          onClick={closePasswordModal}
+        >
+          <div
+            ref={passwordModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="change-password-dialog-title"
+            aria-describedby="change-password-dialog-description"
+            tabIndex={-1}
+            data-modal-surface="dialog"
+            className="w-full max-w-[540px] rounded-[26px] bg-white p-6 shadow-[0_24px_80px_rgba(20,33,51,0.24)]"
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-[1.65rem] font-extrabold tracking-[-0.04em] text-[#1f1f1f]">
+                <h3
+                  id="change-password-dialog-title"
+                  className="text-[1.65rem] font-extrabold tracking-[-0.04em] text-[#1f1f1f]"
+                >
                   Alterar senha
                 </h3>
-                <p className="mt-1 text-[0.92rem] font-medium text-[#8a8a8a]">
+                <p
+                  id="change-password-dialog-description"
+                  className="mt-1 text-[0.92rem] font-medium text-[#8a8a8a]"
+                >
                   Atualize sua senha com validação básica antes de salvar.
                 </p>
               </div>
@@ -414,6 +434,7 @@ export default function AdminMyAccountPage() {
                   onChange={(event) =>
                     updatePasswordField("currentPassword", event.target.value)
                   }
+                  data-modal-initial-focus
                   className={`${readOnlyInputClass} shadow-none focus:border-[#72a8d4]`}
                 />
               </label>
@@ -452,14 +473,14 @@ export default function AdminMyAccountPage() {
                 <button
                   type="button"
                   onClick={closePasswordModal}
-                  className={secondaryButtonClass}
+                  className={`${secondaryButtonClass} w-full sm:w-auto`}
                   disabled={isSavingPassword}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className={primaryButtonClass}
+                  className={`${primaryButtonClass} w-full sm:w-auto`}
                   disabled={isSavingPassword}
                 >
                   {isSavingPassword ? (

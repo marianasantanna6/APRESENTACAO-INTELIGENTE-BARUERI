@@ -89,7 +89,7 @@ export function BrazilIdhMap({
                       textAnchor="middle"
                       fontSize={isPresentation ? 8.2 : size === "card" ? 7.8 : 7.4}
                       fontWeight={700}
-                      fill="#1e1e1e"
+                      fill="var(--app-foreground)"
                     >
                       {item.uf}
                     </text>
@@ -101,7 +101,7 @@ export function BrazilIdhMap({
         </ResponsiveContainer>
       </div>
 
-      <div className={legendClassName}>
+      <div data-dashboard-surface="legend-panel" className={legendClassName}>
         {legendBuckets.map((bucket) => (
           <div key={bucket.label} className="flex items-center gap-2">
             <span className="h-3 w-3 rounded-full" style={{ background: bucket.color }} />

@@ -6,9 +6,9 @@ import StepsSection from "../../components/StepsSection";
 
 function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-[#1e1e1e]">
+    <div data-page-theme="public" className="min-h-screen bg-[#f8fafc] text-[#1e1e1e]">
       <Navbar />
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <HeroSection />
         <CategoriesSection />
         <FeaturesSection />

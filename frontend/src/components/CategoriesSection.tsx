@@ -21,6 +21,7 @@ function CategoriesSection() {
   return (
     <section
       id="sobre"
+      data-public-section="surface"
       className="bg-[linear-gradient(113.55deg,#f4f4f4_0%,#ffffff_101.25%)] px-5 py-20 sm:px-6 lg:px-8"
     >
       <div className="mx-auto max-w-286">
@@ -38,13 +39,17 @@ function CategoriesSection() {
             return (
               <article
                 key={category.title}
+                data-public-card="tile"
                 className={`reveal-on-scroll ${cardBase} flex min-h-23.25 items-center justify-center gap-3 px-6 py-5`}
                 style={
                   { "--reveal-delay": `${index * 100}ms` } as CSSProperties
                 }
               >
                 <Icon className="h-8 w-8 shrink-0 text-[#1675b8]" />
-                <span className="text-[1.1rem] font-bold tracking-[-0.02em] sm:text-[1.4rem]">
+                <span
+                  data-public-heading
+                  className="text-[1.1rem] font-bold tracking-[-0.02em] sm:text-[1.4rem]"
+                >
                   {category.title}
                 </span>
               </article>

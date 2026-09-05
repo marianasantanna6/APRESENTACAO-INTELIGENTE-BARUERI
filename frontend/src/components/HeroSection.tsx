@@ -26,11 +26,15 @@ function HeroSection() {
   return (
     <section
       id="inicio"
+      data-public-section="hero"
       className="bg-[linear-gradient(180deg,#f8fafc_24%,rgba(158,172,181,0.07)_100%)]"
     >
       <div className="mx-auto flex max-w-310 flex-col gap-10 px-5 pb-20 pt-12 sm:px-6 md:pb-24 md:pt-16 lg:px-8">
         <div className="max-w-none">
-          <h1 className="max-w-[21ch] text-[2.25rem] leading-[1.02] font-extrabold tracking-[-0.05em] text-[#222] [text-wrap:balance] sm:text-[3rem] lg:max-w-[24ch] lg:text-[3.95rem] xl:text-[4.45rem]">
+          <h1
+            data-public-heading
+            className="max-w-[21ch] text-[2.25rem] leading-[1.02] font-extrabold tracking-[-0.05em] text-[#222] [text-wrap:balance] sm:text-[3rem] lg:max-w-[24ch] lg:text-[3.95rem] xl:text-[4.45rem]"
+          >
             O fim das apresentações institucionais{" "}
             <span className="relative inline-block align-bottom">
               <span aria-hidden="true" className="invisible">
@@ -43,6 +47,7 @@ function HeroSection() {
           </h1>
 
           <p
+            data-public-text
             className="reveal-on-scroll mt-5 max-w-240 text-[0.98rem] leading-7 text-black/45 sm:text-[1.05rem] lg:text-[1.3rem] lg:leading-[2.2rem]"
             style={{ "--reveal-delay": "180ms" } as CSSProperties}
           >
@@ -57,6 +62,7 @@ function HeroSection() {
           >
             <Link
               to={ROUTE_PATHS.login}
+              data-public-action="primary"
               className="inline-flex h-13.5 items-center justify-center gap-3 rounded-[18px] bg-[linear-gradient(100.26deg,rgba(10,52,82,0.63)_1.91%,#1675b8_68.48%)] px-6 text-[0.98rem] font-bold !text-white shadow-[0_4px_4px_rgba(0,0,0,0.15)] transition-transform hover:-translate-y-0.5 sm:h-15.5 sm:px-7 sm:text-[1.05rem]"
             >
               <span className="font-bold !text-white">Criar Apresentação</span>
@@ -65,6 +71,7 @@ function HeroSection() {
 
             <Link
               to={ROUTE_PATHS.login}
+              data-public-action="secondary"
               className="inline-flex h-13.5 items-center justify-center rounded-[18px] border-[3px] border-[#1675b8] bg-white px-6 text-[0.98rem] font-bold text-[#1675b8] shadow-[0_4px_4px_rgba(0,0,0,0.15)] transition-transform hover:-translate-y-0.5 sm:h-15.5 sm:px-7 sm:text-[1.05rem]"
             >
               Criar Dashboard
@@ -73,6 +80,7 @@ function HeroSection() {
         </div>
 
         <div
+          data-public-card="hero-showcase"
           className="reveal-on-scroll mx-auto w-full max-w-220 rounded-[30px] bg-white px-4 pb-6 pt-5 shadow-[0_4px_29px_rgba(0,0,0,0.25)] sm:px-8 sm:pb-8"
           style={{ "--reveal-delay": "360ms" } as CSSProperties}
         >
@@ -83,7 +91,7 @@ function HeroSection() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[383px_1fr]">
-            <div className="animated-pie-chart flex items-center justify-center rounded-[26px] bg-[rgba(202,196,208,0.25)] px-5 py-8 sm:px-7">
+            <div className="theme-public-showcase-surface animated-pie-chart flex items-center justify-center rounded-[26px] bg-[rgba(202,196,208,0.25)] px-5 py-8 sm:px-7">
               <div
                 className="flex aspect-square w-full max-w-80 items-center justify-center rounded-full"
                 role="img"
@@ -128,7 +136,7 @@ function HeroSection() {
             </div>
 
             <div className="grid gap-4">
-              <div className="animated-bar-chart rounded-[26px] bg-[rgba(202,196,208,0.25)] px-5 py-7 sm:px-8">
+              <div className="theme-public-showcase-surface animated-bar-chart rounded-[26px] bg-[rgba(202,196,208,0.25)] px-5 py-7 sm:px-8">
                 <div
                   className="grid h-40 grid-cols-5 items-end gap-3 border-b border-[#aeb8c2]/35"
                   role="img"
@@ -155,16 +163,16 @@ function HeroSection() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-5 rounded-[26px] bg-[rgba(202,196,208,0.25)] px-6 py-7">
+              <div className="theme-public-showcase-surface flex items-center gap-5 rounded-[26px] bg-[rgba(202,196,208,0.25)] px-6 py-7">
                 <div className="flex h-20 w-26 shrink-0 items-center justify-center rounded-[10px] bg-[linear-gradient(180deg,#8cb3ce_0%,#1675b8_100%)]">
                   <FaServer className="h-11 w-11 text-white" />
                 </div>
 
                 <div className="min-w-0">
-                  <p className="text-[1.15rem] font-bold text-black sm:text-[1.5rem]">
+                  <p data-public-heading className="text-[1.15rem] font-bold text-black sm:text-[1.5rem]">
                     Atualizado
                   </p>
-                  <p className="text-[1rem] font-semibold text-[#706e6e] sm:text-[1.25rem]">
+                  <p data-public-text className="text-[1rem] font-semibold text-[#706e6e] sm:text-[1.25rem]">
                     Agora mesmo
                   </p>
                 </div>

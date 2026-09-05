@@ -92,7 +92,10 @@ export function ChartTooltipBox({
   rows: TooltipRow[];
 }) {
   return (
-    <div className="min-w-[148px] rounded-[14px] border border-[#dbe7f4] bg-white px-3 py-2 text-[0.74rem] shadow-[0_12px_32px_-18px_rgba(15,23,42,0.3)]">
+    <div
+      data-dashboard-surface="tooltip"
+      className="min-w-[148px] rounded-[14px] border border-[#dbe7f4] bg-white px-3 py-2 text-[0.74rem] shadow-[0_12px_32px_-18px_rgba(15,23,42,0.3)]"
+    >
       {label ? (
         <p className="mb-1 text-[0.7rem] font-bold uppercase tracking-[0.08em] text-[#0d5283]">
           {label}

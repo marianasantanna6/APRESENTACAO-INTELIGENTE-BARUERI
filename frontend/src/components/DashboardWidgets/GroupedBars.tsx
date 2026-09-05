@@ -41,7 +41,7 @@ export function GroupedBars({
               const legendLabel = {
                 longevity: "Longevidade",
                 income: "Renda",
-                education: "Educacao",
+                education: "Educação",
               }[String(value) as "longevity" | "income" | "education"];
 
               return legendLabel ?? String(value);
@@ -89,7 +89,7 @@ export function GroupedBars({
                   rows={[
                     { name: "Longevidade", value: item.longevity.toFixed(2), color: "#f59e0b" },
                     { name: "Renda", value: item.income.toFixed(2), color: "#8b5cf6" },
-                    { name: "Educacao", value: item.education.toFixed(2), color: "#60a5fa" },
+                    { name: "Educação", value: item.education.toFixed(2), color: "#60a5fa" },
                   ]}
                 />
               );

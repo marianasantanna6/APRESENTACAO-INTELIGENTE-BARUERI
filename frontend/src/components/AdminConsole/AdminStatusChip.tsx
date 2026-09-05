@@ -43,6 +43,11 @@ const toneMap: Record<
     text: "text-[#6d6d6d]",
     background: "bg-transparent",
   },
+  error: {
+    dot: "bg-[#e53935]",
+    text: "text-[#7c1a1a]",
+    background: "bg-[#fff5f5]",
+  },
 };
 
 export default function AdminStatusChip({
@@ -53,6 +58,8 @@ export default function AdminStatusChip({
 
   return (
     <span
+      data-status-chip
+      data-status-tone={tone}
       className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[0.82rem] font-medium ${palette.text} ${palette.background}`}
     >
       <span className={`h-2.5 w-2.5 rounded-full ${palette.dot}`} />

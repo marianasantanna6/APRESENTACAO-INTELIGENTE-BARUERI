@@ -45,7 +45,11 @@ const cardBase =
 
 function StepsSection() {
   return (
-    <section id="como-funciona" className="px-5 py-20 sm:px-6 lg:px-8">
+    <section
+      id="como-funciona"
+      data-public-section="surface"
+      className="px-5 py-20 sm:px-6 lg:px-8"
+    >
       <div className="mx-auto max-w-325.5">
         <div className="reveal-on-scroll">
           <SectionHeader
@@ -67,6 +71,7 @@ function StepsSection() {
                 }
               >
                 <article
+                  data-public-card="tile"
                   className={`${cardBase} flex h-full w-full max-w-92 flex-col items-center px-6 pb-10 pt-11 text-center`}
                 >
                   <div className="flex h-26.75 w-29 items-center justify-center rounded-[15px] bg-[linear-gradient(180deg,#8cb3ce_0%,#1675b8_100%)]">
@@ -80,10 +85,16 @@ function StepsSection() {
                   <span className="mt-7 bg-[linear-gradient(180deg,#1675b8_49.519%,#ffffff_100%)] bg-clip-text text-[1rem] font-extrabold tracking-[0.03em] text-transparent">
                     {step.step}
                   </span>
-                  <h3 className="mt-4 text-[1.65rem] font-bold tracking-[-0.02em] text-[#1e1e1e]">
+                  <h3
+                    data-public-heading
+                    className="mt-4 text-[1.65rem] font-bold tracking-[-0.02em] text-[#1e1e1e]"
+                  >
                     {step.title}
                   </h3>
-                  <p className="mt-6 max-w-84 text-[0.95rem] leading-loose tracking-[0.02em] text-[#706e6e]">
+                  <p
+                    data-public-text
+                    className="mt-6 max-w-84 text-[0.95rem] leading-loose tracking-[0.02em] text-[#706e6e]"
+                  >
                     {step.description}
                   </p>
                 </article>
@@ -101,6 +112,7 @@ function StepsSection() {
         <div className="reveal-on-scroll mt-10 flex justify-center">
           <Link
             to={ROUTE_PATHS.login}
+            data-public-action="primary"
             className="inline-flex h-14.5 items-center justify-center gap-3 rounded-[18px] bg-[linear-gradient(100.26deg,rgba(10,52,82,0.63)_1.91%,#1675b8_68.48%)] px-7 text-[1rem] font-bold !text-white shadow-[0_4px_4px_rgba(0,0,0,0.15)] transition-transform hover:-translate-y-0.5 sm:h-17.25 sm:px-8 sm:text-[1.15rem]"
           >
             <span className="font-bold !text-white">Criar Apresentação</span>

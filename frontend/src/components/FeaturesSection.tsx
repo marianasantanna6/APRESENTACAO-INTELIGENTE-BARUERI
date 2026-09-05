@@ -41,6 +41,7 @@ function FeaturesSection() {
   return (
     <section
       id="funcionalidades"
+      data-public-section="surface"
       className="bg-[linear-gradient(121.94deg,#ffffff_0%,#f5f0f0_84.07%)] px-5 py-20 sm:px-6 lg:px-8"
     >
       <div className="mx-auto max-w-303.5">
@@ -58,6 +59,7 @@ function FeaturesSection() {
             return (
               <article
                 key={feature.title}
+                data-public-card="tile"
                 className={`reveal-on-scroll ${cardBase} min-h-57.5 px-6 py-6 sm:px-7`}
                 style={
                   { "--reveal-delay": `${index * 100}ms` } as CSSProperties
@@ -67,10 +69,16 @@ function FeaturesSection() {
                   <Icon className="h-11 w-11 text-white" />
                 </div>
 
-                <h3 className="mt-7 text-[1.35rem] font-semibold tracking-[-0.02em] text-black sm:text-[1.5rem]">
+                <h3
+                  data-public-heading
+                  className="mt-7 text-[1.35rem] font-semibold tracking-[-0.02em] text-black sm:text-[1.5rem]"
+                >
                   {feature.title}
                 </h3>
-                <p className="mt-4 max-w-126.25 text-sm leading-[2.1] tracking-[0.01em] text-black/70">
+                <p
+                  data-public-text
+                  className="mt-4 max-w-126.25 text-sm leading-[2.1] tracking-[0.01em] text-black/70"
+                >
                   {feature.description}
                 </p>
               </article>

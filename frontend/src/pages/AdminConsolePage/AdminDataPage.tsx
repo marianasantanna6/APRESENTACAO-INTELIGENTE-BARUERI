@@ -16,10 +16,10 @@ export default function AdminDataPage() {
   return (
     <section>
       <div className="mb-7">
-        <h1 className="text-[2.2rem] font-extrabold tracking-[-0.05em] text-[#1e1e1e] sm:text-[2.8rem]">
+        <h1 className="page-title text-[2.2rem] font-extrabold tracking-[-0.05em] text-[#1e1e1e] sm:text-[2.8rem]">
           Integração de Dados
         </h1>
-        <p className="mt-1 text-[1rem] font-medium text-[#878787]">
+        <p className="page-subtitle mt-1 text-[1rem] font-medium text-[#878787]">
           Gerencie suas fontes de dados e APIs conectadas
         </p>
       </div>

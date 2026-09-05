@@ -9,6 +9,4 @@ import { mockPresentationApi } from "./mockPresentationApi";
 export const presentationApi = mockPresentationApi;
 
 export * from "./defaultPresentationFilters";
-export * from "./mockPresentationApi";
 export * from "./presentationApiContract";
-export * from "./presentationMapper";

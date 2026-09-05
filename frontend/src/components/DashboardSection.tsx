@@ -8,40 +8,46 @@ import {
   RegionLongevityCard,
   RegionPillarsCard,
   StateDistributionCard,
+  type PresentationCardId,
   type PresentationMockData,
 } from "./DashboardCards";
 
 export default function DashboardSection({
   data,
+  onOpenSlide,
 }: {
   data: PresentationMockData;
+  onOpenSlide?: (slideId: PresentationCardId) => void;
 }) {
   return (
-    <div className="reveal-on-scroll rounded-[14px] border border-black/5 bg-white shadow-[0_4px_14px_rgba(0,0,0,0.12)] p-4 sm:p-5">
-      <div className="grid gap-3 xl:grid-cols-[290px_minmax(0,1fr)]">
+    <div
+      data-dashboard-surface="shell"
+      className="reveal-on-scroll"
+    >
+      <div className="grid gap-3 xl:grid-cols-[280px_minmax(0,1fr)]">
         <div className="grid gap-3">
-          <NationalIdhCard data={data} />
+          <NationalIdhCard data={data} onOpenSlide={onOpenSlide} />
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-            <LifeExpectancyCard data={data} />
-            <IncomePerCapitaCard data={data} />
+            <LifeExpectancyCard data={data} onOpenSlide={onOpenSlide} />
+            <IncomePerCapitaCard data={data} onOpenSlide={onOpenSlide} />
           </div>
 
-          <EvolutionIdhCard data={data} />
+          <EvolutionIdhCard data={data} onOpenSlide={onOpenSlide} />
         </div>
 
         <div className="grid gap-3">
           <div className="grid gap-3 2xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
-            <StateDistributionCard data={data} />
-            <RankingTopIdhCard data={data} />
+            <StateDistributionCard data={data} onOpenSlide={onOpenSlide} />
+            <RankingTopIdhCard data={data} onOpenSlide={onOpenSlide} />
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2">
-            <RegionLongevityCard data={data} />
-            <RegionPillarsCard data={data} />
+            <RegionLongevityCard data={data} onOpenSlide={onOpenSlide} />
+            <RegionPillarsCard data={data} onOpenSlide={onOpenSlide} />
           </div>
 
-          <ContributionCard data={data} />
+          <ContributionCard data={data} onOpenSlide={onOpenSlide} />
         </div>
       </div>
     </div>
