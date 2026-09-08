@@ -283,13 +283,13 @@ export default function AdminAdministrationPage() {
     useState<EmployeeDirectoryEntry | null>(null);
   // ── Estado: Secretarias ────────────────────────────────────────────────────
   const [isSecretariaModalOpen, setIsSecretariaModalOpen] = useState(false);
-  const [secretariaForm, setSecretariaForm] = useState<NewSecretariaPayload>({ nome: "", setor: "" });
+  const [secretariaForm, setSecretariaForm] = useState<NewSecretariaPayload>({ nome: "" });
   const [secretariaFormError, setSecretariaFormError] = useState("");
   const [secretariaPendingRemoval, setSecretariaPendingRemoval] = useState<SecretariaEntry | null>(null);
 
   // ── Estado: Times ──────────────────────────────────────────────────────────
   const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
-  const [timeForm, setTimeForm] = useState<NewTimePayload>({ nome: "", setor: "", secretariaId: secretarias[0]?.id ?? "" });
+  const [timeForm, setTimeForm] = useState<NewTimePayload>({ nome: "", secretariaId: secretarias[0]?.id ?? "", levelAcess: 1 });
   const [timeFormError, setTimeFormError] = useState("");
   const [timePendingRemoval, setTimePendingRemoval] = useState<TimeEntry | null>(null);
 
@@ -464,34 +464,34 @@ export default function AdminAdministrationPage() {
   }
 
   // ── Handlers: Secretarias ─────────────────────────────────────────────────
-  function handleSubmitSecretaria(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmitSecretaria(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSecretariaFormError("");
-    const result = addSecretaria(secretariaForm);
+    const result = await addSecretaria(secretariaForm);
     if ("message" in result) { setSecretariaFormError(result.message); return; }
     setIsSecretariaModalOpen(false);
-    setSecretariaForm({ nome: "", setor: "" });
+    setSecretariaForm({ nome: "" });
   }
 
-  function handleConfirmRemoveSecretaria() {
+  async function handleConfirmRemoveSecretaria() {
     if (!secretariaPendingRemoval) return;
-    removeSecretaria(secretariaPendingRemoval.id);
+    await removeSecretaria(secretariaPendingRemoval.id);
     setSecretariaPendingRemoval(null);
   }
 
   // ── Handlers: Times ───────────────────────────────────────────────────────
-  function handleSubmitTime(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmitTime(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setTimeFormError("");
-    const result = addTime(timeForm);
+    const result = await addTime(timeForm);
     if ("message" in result) { setTimeFormError(result.message); return; }
     setIsTimeModalOpen(false);
-    setTimeForm({ nome: "", setor: "", secretariaId: secretarias[0]?.id ?? "" });
+    setTimeForm({ nome: "", secretariaId: secretarias[0]?.id ?? "", levelAcess: 1 });
   }
 
-  function handleConfirmRemoveTime() {
+  async function handleConfirmRemoveTime() {
     if (!timePendingRemoval) return;
-    removeTime(timePendingRemoval.id);
+    await removeTime(timePendingRemoval.id);
     setTimePendingRemoval(null);
   }
 
@@ -692,7 +692,6 @@ export default function AdminAdministrationPage() {
                         </span>
                         <div className="min-w-0">
                           <p className="truncate text-[1rem] font-semibold text-[#3a4651]">{sec.nome}</p>
-                          <p className="truncate text-[0.78rem] text-[#8f9aa6]">{sec.setor}</p>
                         </div>
                       </div>
                       <button
@@ -713,8 +712,7 @@ export default function AdminAdministrationPage() {
                   <table className="min-w-[560px] w-full border-separate border-spacing-y-4 text-left">
                     <thead>
                       <tr className="text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-[#b1b1b1]">
-                        <th className="w-[55%] pb-2 pr-4">Nome</th>
-                        <th className="w-[35%] pb-2 px-4">Setor</th>
+                        <th className="w-[88%] pb-2 pr-4">Nome</th>
                         <th className="pb-1">Ações</th>
                       </tr>
                     </thead>
@@ -729,7 +727,6 @@ export default function AdminAdministrationPage() {
                               <span className="text-[0.96rem] text-[#3a4651] font-semibold">{sec.nome}</span>
                             </div>
                           </td>
-                          <td className="bg-white/72 px-5 py-2.5 text-[0.92rem] text-[#9b9b9b]">{sec.setor}</td>
                           <td className="rounded-r-[18px] bg-white/72 px-5 py-2.5 text-right">
                             <button
                               type="button"
@@ -788,7 +785,6 @@ export default function AdminAdministrationPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate text-[1rem] font-semibold text-[#3a4651]">{time.nome}</p>
-                        <p className="truncate text-[0.78rem] text-[#8f9aa6]">{time.setor}</p>
                       </div>
                       <button
                         type="button"
@@ -808,12 +804,11 @@ export default function AdminAdministrationPage() {
               {/* Desktop */}
               <div className="hidden md:block">
                 <div className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
-                  <table className="min-w-[680px] w-full border-separate border-spacing-y-4 text-left">
+                  <table className="min-w-[560px] w-full border-separate border-spacing-y-4 text-left">
                     <thead>
                       <tr className="text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-[#b1b1b1]">
-                        <th className="w-[28%] pb-2 pr-4">Nome do Time</th>
-                        <th className="w-[22%] pb-2 px-4">Setor</th>
-                        <th className="w-[40%] pb-2 px-4">Secretaria Responsável</th>
+                        <th className="w-[45%] pb-2 pr-4">Nome do Time</th>
+                        <th className="w-[45%] pb-2 px-4">Secretaria Responsável</th>
                         <th className="pb-1">Ações</th>
                       </tr>
                     </thead>
@@ -821,7 +816,6 @@ export default function AdminAdministrationPage() {
                       {timesSorted.map((time) => (
                         <tr key={time.id} className="text-[0.95rem] font-medium text-[#7a7a7a]">
                           <td className="rounded-l-[18px] bg-white/72 px-5 py-2.5 font-semibold text-[#3a4651]">{time.nome}</td>
-                          <td className="bg-white/72 px-5 py-2.5 text-[0.92rem] text-[#9b9b9b]">{time.setor}</td>
                           <td className="bg-white/72 px-5 py-2.5 text-[0.88rem] text-[#7a8694]">{time.secretariaNome}</td>
                           <td className="rounded-r-[18px] bg-white/72 px-5 py-2.5 text-right">
                             <button
@@ -1087,7 +1081,6 @@ export default function AdminAdministrationPage() {
 
             <div className="mb-5 rounded-[18px] border border-[#f0dcdc] bg-[#fff7f7] px-4 py-3">
               <p className="text-[1rem] font-semibold text-[#5d3a3a]">{secretariaPendingRemoval.nome}</p>
-              <p className="mt-0.5 text-[0.82rem] text-[#b16c6c]">{secretariaPendingRemoval.setor}</p>
               <p className="mt-2 text-[0.8rem] text-[#c45b5b]">
                 Todos os times vinculados a esta secretaria também serão removidos.
               </p>
@@ -1145,9 +1138,7 @@ export default function AdminAdministrationPage() {
 
             <div className="mb-5 rounded-[18px] border border-[#f0dcdc] bg-[#fff7f7] px-4 py-3">
               <p className="text-[1rem] font-semibold text-[#5d3a3a]">{timePendingRemoval.nome}</p>
-              <p className="mt-0.5 text-[0.82rem] text-[#b16c6c]">
-                {timePendingRemoval.setor} · {timePendingRemoval.secretariaNome}
-              </p>
+              <p className="mt-0.5 text-[0.82rem] text-[#b16c6c]">{timePendingRemoval.secretariaNome}</p>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
@@ -1208,16 +1199,6 @@ export default function AdminAdministrationPage() {
                   onChange={(e) => setSecretariaForm((c) => ({ ...c, nome: e.target.value }))}
                   data-modal-initial-focus
                   placeholder="Ex.: Secretaria de Educação"
-                  className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
-                />
-              </label>
-              <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                Setor
-                <input
-                  type="text"
-                  value={secretariaForm.setor}
-                  onChange={(e) => setSecretariaForm((c) => ({ ...c, setor: e.target.value }))}
-                  placeholder="Ex.: Educação"
                   className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
                 />
               </label>
@@ -1285,14 +1266,16 @@ export default function AdminAdministrationPage() {
                 />
               </label>
               <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                Setor
-                <input
-                  type="text"
-                  value={timeForm.setor}
-                  onChange={(e) => setTimeForm((c) => ({ ...c, setor: e.target.value }))}
-                  placeholder="Ex.: Planejamento"
+                Nível de acesso
+                <select
+                  value={timeForm.levelAcess}
+                  onChange={(e) => setTimeForm((c) => ({ ...c, levelAcess: parseInt(e.target.value) }))}
                   className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
-                />
+                >
+                  <option value={1}>Funcionário</option>
+                  <option value={2}>Administrador Nível 1</option>
+                  <option value={3}>Administrador Nível 2</option>
+                </select>
               </label>
               <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
                 Secretaria responsável

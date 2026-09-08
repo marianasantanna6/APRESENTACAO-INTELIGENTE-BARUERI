@@ -72,12 +72,10 @@ export type NewEmployeePayload = {
 export type SecretariaEntry = {
   id: string;
   nome: string;
-  setor: string;
 };
 
 export type NewSecretariaPayload = {
   nome: string;
-  setor: string;
 };
 
 // ─── Times ───────────────────────────────────────────────────────────────────
@@ -85,15 +83,15 @@ export type NewSecretariaPayload = {
 export type TimeEntry = {
   id: string;
   nome: string;
-  setor: string;
   secretariaId: string;
   secretariaNome: string;
+  levelAcess: number;
 };
 
 export type NewTimePayload = {
   nome: string;
-  setor: string;
   secretariaId: string;
+  levelAcess: number;
 };
 
 // ─── Log de atividades ────────────────────────────────────────────────────────

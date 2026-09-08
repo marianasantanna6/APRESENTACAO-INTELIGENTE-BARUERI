@@ -53,14 +53,22 @@ export class TeamsService {
     }
 
     const teams = await this.prisma.teams.findMany({
-      where, orderBy: { id: 'asc' }
+      where,
+      orderBy: { id: 'asc' },
+      include: { sectors: true },
     });
     return teams.map((team) => ({
       id: team.id.toString(),
       name: team.name,
-      sector: team.sector.toString(),
+      sectorId: team.sector.toString(),
+      sectorName: team.sectors.name,
       level_acess: team.level_acess,
       status: team.status,
     }));
+  }
+
+  async remove(id: string) {
+    await this.prisma.teams.delete({ where: { id: BigInt(id) } });
+    return { ok: true };
   }
 }

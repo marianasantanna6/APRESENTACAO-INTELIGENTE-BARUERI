@@ -46,4 +46,11 @@ export class SectorsService {
       name: sector.name,
     }));
   }
+
+  async remove(id: string) {
+    // FK onDelete: NoAction — apagar times antes de apagar o setor
+    await this.prisma.teams.deleteMany({ where: { sector: BigInt(id) } });
+    await this.prisma.sectors.delete({ where: { id: BigInt(id) } });
+    return { ok: true };
+  }
 }

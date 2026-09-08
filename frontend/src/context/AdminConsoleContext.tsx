@@ -1,5 +1,5 @@
 import type { PropsWithChildren } from "react";
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { canManageEmployees, canViewCrossTeamData } from "../lib/accessControl";
 import {
   mockActivityLog,
@@ -7,10 +7,8 @@ import {
   mockEmployeeDirectory,
   mockPresentations,
   organizationDirectory,
-  secretariasMock,
-  timesMock,
 } from "../mocks/adminMockData";
-import type { NewEmployeePayload, NewSecretariaPayload, NewTimePayload } from "../types/admin";
+import type { NewEmployeePayload, NewSecretariaPayload, NewTimePayload, SecretariaEntry, TimeEntry } from "../types/admin";
 import { useAuth } from "./AuthContext";
 
 type MutationResult =
@@ -25,15 +23,15 @@ type AdminConsoleContextValue = {
   employees: typeof mockEmployeeDirectory;
   organization: typeof organizationDirectory;
   presentations: typeof mockPresentations;
-  secretarias: typeof secretariasMock;
-  times: typeof timesMock;
+  secretarias: SecretariaEntry[];
+  times: TimeEntry[];
   canManageEmployees: boolean;
   addEmployee: (payload: NewEmployeePayload) => MutationResult;
   removeEmployee: (employeeId: string) => MutationResult;
-  addSecretaria: (payload: NewSecretariaPayload) => MutationResult;
-  removeSecretaria: (id: string) => MutationResult;
-  addTime: (payload: NewTimePayload) => MutationResult;
-  removeTime: (id: string) => MutationResult;
+  addSecretaria: (payload: NewSecretariaPayload) => Promise<MutationResult>;
+  removeSecretaria: (id: string) => Promise<MutationResult>;
+  addTime: (payload: NewTimePayload) => Promise<MutationResult>;
+  removeTime: (id: string) => Promise<MutationResult>;
 };
 
 const AdminConsoleContext = createContext<AdminConsoleContextValue | undefined>(
@@ -54,8 +52,30 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
   const [apiIntegrations] = useState(mockApiIntegrations);
   const [employeesState, setEmployeesState] = useState(mockEmployeeDirectory);
   const [activityLogState, setActivityLogState] = useState(mockActivityLog);
-  const [secretariasState, setSecretariasState] = useState(secretariasMock);
-  const [timesState, setTimesState] = useState(timesMock);
+  const [secretariasState, setSecretariasState] = useState<SecretariaEntry[]>([]);
+  const [timesState, setTimesState] = useState<TimeEntry[]>([]);
+
+  useEffect(() => {
+    fetch("/api/sectors")
+      .then((r) => r.json())
+      .then((data: Array<{ id: string; name: string }>) => {
+        setSecretariasState(data.map((s) => ({ id: s.id, nome: s.name })));
+      })
+      .catch(() => {});
+
+    fetch("/api/teams")
+      .then((r) => r.json())
+      .then((data: Array<{ id: string; name: string; sectorId: string; sectorName: string; level_acess: number }>) => {
+        setTimesState(data.map((t) => ({
+          id: t.id,
+          nome: t.name,
+          secretariaId: t.sectorId,
+          secretariaNome: t.sectorName,
+          levelAcess: t.level_acess,
+        })));
+      })
+      .catch(() => {});
+  }, []);
   const allowCrossTeamData = canViewCrossTeamData(user);
   const allowEmployeeManagement = canManageEmployees(user);
 
@@ -186,76 +206,80 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     return { ok: true };
   }
 
-  function addSecretaria(payload: NewSecretariaPayload): MutationResult {
+  async function addSecretaria(payload: NewSecretariaPayload): Promise<MutationResult> {
     if (!user || !allowEmployeeManagement) {
       return { ok: false, message: "Somente administradores de nível 2 podem cadastrar secretarias." };
     }
-    if (!payload.nome.trim() || !payload.setor.trim()) {
-      return { ok: false, message: "Preencha nome e setor da secretaria." };
+    if (!payload.nome.trim()) {
+      return { ok: false, message: "Preencha o nome da secretaria." };
     }
-    const next = { id: createId("sec"), nome: payload.nome.trim(), setor: payload.setor.trim() };
-    setSecretariasState((cur) => [...cur, next]);
-    setActivityLogState((cur) => [
-      {
-        id: createId("log"), timestamp: new Date().toISOString(),
-        source: "Administração", type: "Secretaria cadastrada",
-        category: "Usuários" as const, action: "Nova secretaria cadastrada",
-        entityName: payload.nome.trim(), entityType: "secretaria",
-        userName: user.name, userRole: "Administrador Geral",
-        department: payload.setor.trim(), team: "", status: "success" as const,
-        updateType: "manual" as const,
-      },
-      ...cur,
-    ]);
+    const res = await fetch("/api/sectors", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: payload.nome.trim() }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({})) as { message?: string };
+      return { ok: false, message: err.message ?? "Erro ao cadastrar secretaria." };
+    }
+    const data = await res.json() as { id: string; name: string };
+    setSecretariasState((cur) => [...cur, { id: data.id, nome: data.name }]);
     return { ok: true };
   }
 
-  function removeSecretaria(id: string): MutationResult {
+  async function removeSecretaria(id: string): Promise<MutationResult> {
     if (!user || !allowEmployeeManagement) {
       return { ok: false, message: "Somente administradores de nível 2 podem remover secretarias." };
     }
-    const target = secretariasState.find((s) => s.id === id);
-    if (!target) return { ok: false, message: "Secretaria não encontrada." };
+    const res = await fetch(`/api/sectors/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({})) as { message?: string };
+      return { ok: false, message: err.message ?? "Erro ao remover secretaria." };
+    }
     setSecretariasState((cur) => cur.filter((s) => s.id !== id));
     setTimesState((cur) => cur.filter((t) => t.secretariaId !== id));
     return { ok: true };
   }
 
-  function addTime(payload: NewTimePayload): MutationResult {
+  async function addTime(payload: NewTimePayload): Promise<MutationResult> {
     if (!user || !allowEmployeeManagement) {
       return { ok: false, message: "Somente administradores de nível 2 podem cadastrar times." };
     }
-    if (!payload.nome.trim() || !payload.setor.trim() || !payload.secretariaId) {
-      return { ok: false, message: "Preencha nome, setor e secretaria responsável." };
+    if (!payload.nome.trim() || !payload.secretariaId) {
+      return { ok: false, message: "Preencha nome e secretaria responsável." };
     }
     const secretaria = secretariasState.find((s) => s.id === payload.secretariaId);
     if (!secretaria) return { ok: false, message: "Secretaria selecionada não encontrada." };
-    const next = {
-      id: createId("time"), nome: payload.nome.trim(), setor: payload.setor.trim(),
-      secretariaId: payload.secretariaId, secretariaNome: secretaria.nome,
-    };
-    setTimesState((cur) => [...cur, next]);
-    setActivityLogState((cur) => [
-      {
-        id: createId("log"), timestamp: new Date().toISOString(),
-        source: "Administração", type: "Time cadastrado",
-        category: "Usuários" as const, action: "Novo time cadastrado",
-        entityName: payload.nome.trim(), entityType: "time",
-        userName: user.name, userRole: "Administrador Geral",
-        department: payload.setor.trim(), team: payload.nome.trim(),
-        status: "success" as const, updateType: "manual" as const,
-      },
+    const res = await fetch("/api/teams", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: payload.nome.trim(),
+        sector: parseInt(payload.secretariaId),
+        level_acess: payload.levelAcess,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({})) as { message?: string };
+      return { ok: false, message: err.message ?? "Erro ao cadastrar time." };
+    }
+    const data = await res.json() as { id: string; name: string };
+    setTimesState((cur) => [
       ...cur,
+      { id: data.id, nome: data.name, secretariaId: payload.secretariaId, secretariaNome: secretaria.nome, levelAcess: payload.levelAcess },
     ]);
     return { ok: true };
   }
 
-  function removeTime(id: string): MutationResult {
+  async function removeTime(id: string): Promise<MutationResult> {
     if (!user || !allowEmployeeManagement) {
       return { ok: false, message: "Somente administradores de nível 2 podem remover times." };
     }
-    const target = timesState.find((t) => t.id === id);
-    if (!target) return { ok: false, message: "Time não encontrado." };
+    const res = await fetch(`/api/teams/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({})) as { message?: string };
+      return { ok: false, message: err.message ?? "Erro ao remover time." };
+    }
     setTimesState((cur) => cur.filter((t) => t.id !== id));
     return { ok: true };
   }

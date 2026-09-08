@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
 import { SectorsService } from './sectors.service';
 import { CreateSectorsDto } from './dto/inputs-sectors.dto';
 
@@ -18,9 +18,11 @@ export class SectorsController {
     @Query('id') id?: string,
     @Query('name') name?: string,
   ) {
-    return this.sectorsService.find({
-      id,
-      name,
-    });
+    return this.sectorsService.find({ id, name });
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.sectorsService.remove(id);
   }
 }
