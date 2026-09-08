@@ -10,6 +10,12 @@ import type { AuthSessionUser, UserAccessLevel } from "../types/auth";
 
 // ─── Funções legadas (preservadas) ───────────────────────────────────────────
 
+export function mapAccessLevel(level: number): UserAccessLevel {
+  if (level >= 3) return "admin_level_2";
+  if (level >= 2) return "admin_level_1";
+  return "employee";
+}
+
 export function isAdminAccessLevel(accessLevel: UserAccessLevel) {
   return accessLevel !== "employee";
 }

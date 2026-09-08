@@ -69,8 +69,10 @@ type StatusFilter = "all" | AccountStatus;
 type EmployeeFormState = {
   name: string;
   email: string;
-  department: string;
-  team: string;
+  cpf: string;
+  password: string;
+  secretariaId: string;
+  teamId: string;
 };
 
 type DeleteConfirmationFormState = {
@@ -87,18 +89,14 @@ function isInstitutionalEmail(value: string) {
   return value.trim().toLowerCase().endsWith("@barueri.sp.gov.br");
 }
 
-function getDefaultFormValues(
-  organization: { department: string; teams: string[] }[],
-): EmployeeFormState {
-  const firstDepartment = organization[0];
-
-  return {
-    name: "",
-    email: "",
-    department: firstDepartment?.department ?? "",
-    team: firstDepartment?.teams[0] ?? "",
-  };
-}
+const initialEmployeeForm: EmployeeFormState = {
+  name: "",
+  email: "",
+  cpf: "",
+  password: "",
+  secretariaId: "",
+  teamId: "",
+};
 
 function MobileInfoField({
   children,
@@ -263,7 +261,6 @@ export default function AdminAdministrationPage() {
     addTime,
     canManageEmployees,
     employees,
-    organization,
     removeEmployee,
     removeSecretaria,
     removeTime,
@@ -303,9 +300,9 @@ export default function AdminAdministrationPage() {
     [times],
   );
 
-  const [formValues, setFormValues] = useState<EmployeeFormState>(
-    getDefaultFormValues(organization),
-  );
+  const teamOptions = times.filter((t) => t.secretariaId === formValues.secretariaId);
+
+  const [formValues, setFormValues] = useState<EmployeeFormState>(initialEmployeeForm);
   const [formError, setFormError] = useState("");
   const [deleteConfirmationForm, setDeleteConfirmationForm] = useState(
     initialDeleteConfirmationForm,
@@ -332,16 +329,12 @@ export default function AdminAdministrationPage() {
       return true;
     });
   }, [activityLog, logCategory, logPeriod, logDepartment, logSearch]);
-  const selectedDepartment = organization.find(
-    (entry) => entry.department === formValues.department,
-  );
-  const teamOptions = selectedDepartment?.teams ?? [];
   const scopeDescription = user?.accessLevel === "admin_level_2"
     ? "Você está visualizando funcionários e logs de todas as equipes."
     : `Você está visualizando somente a equipe ${user?.team ?? ""}.`;
 
   function resetForm() {
-    setFormValues(getDefaultFormValues(organization));
+    setFormValues(initialEmployeeForm);
     setFormError("");
   }
 
@@ -360,35 +353,33 @@ export default function AdminAdministrationPage() {
     setEmployeePendingRemoval(null);
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (
       !formValues.name.trim()
       || !formValues.email.trim()
-      || !formValues.department.trim()
-      || !formValues.team.trim()
+      || !formValues.cpf.trim()
+      || !formValues.password.trim()
+      || !formValues.teamId
     ) {
-      setFormError(
-        "Preencha nome, e-mail, setor e equipe para cadastrar o funcionário.",
-      );
+      setFormError("Preencha todos os campos para cadastrar o funcionário.");
       return;
     }
 
     if (!isInstitutionalEmail(formValues.email)) {
-      setFormError(
-        "Cadastre apenas emails institucionais com o domínio @barueri.sp.gov.br.",
-      );
+      setFormError("Cadastre apenas emails institucionais com o domínio @barueri.sp.gov.br.");
       return;
     }
 
     const payload: NewEmployeePayload = {
       name: formValues.name.trim(),
       email: formValues.email.trim().toLowerCase(),
-      department: formValues.department,
-      team: formValues.team,
+      cpf: formValues.cpf.trim(),
+      password: formValues.password,
+      teamId: formValues.teamId,
     };
-    const result = addEmployee(payload);
+    const result = await addEmployee(payload);
 
     if ("message" in result) {
       setFormError(result.message);
@@ -396,18 +387,6 @@ export default function AdminAdministrationPage() {
     }
 
     closeModal();
-  }
-
-  function handleDepartmentChange(nextDepartment: string) {
-    const nextTeams = organization.find(
-      (entry) => entry.department === nextDepartment,
-    )?.teams;
-
-    setFormValues((current) => ({
-      ...current,
-      department: nextDepartment,
-      team: nextTeams?.[0] ?? "",
-    }));
   }
 
   function handleDeleteConfirmationFieldChange(
@@ -914,9 +893,9 @@ export default function AdminAdministrationPage() {
               className="h-10 appearance-none rounded-full bg-[#f1f1f4] px-4 pr-8 text-[0.85rem] font-medium text-[#6a7a88] outline-none"
             >
               <option value="all">Todas as secretarias</option>
-              {organization.map((org) => (
-                <option key={org.department} value={org.department}>
-                  {org.department}
+              {secretariasSorted.map((s) => (
+                <option key={s.id} value={s.nome}>
+                  {s.nome}
                 </option>
               ))}
             </select>
@@ -1386,16 +1365,49 @@ export default function AdminAdministrationPage() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                  Setor
+                  CPF
+                  <input
+                    type="text"
+                    value={formValues.cpf}
+                    onChange={(event) =>
+                      setFormValues((current) => ({ ...current, cpf: event.target.value }))
+                    }
+                    placeholder="000.000.000-00"
+                    className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
+                  />
+                </label>
+
+                <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
+                  Senha provisória
+                  <input
+                    type="password"
+                    value={formValues.password}
+                    onChange={(event) =>
+                      setFormValues((current) => ({ ...current, password: event.target.value }))
+                    }
+                    placeholder="Mínimo 6 caracteres"
+                    className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
+                  />
+                </label>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
+                  Secretaria
                   <select
-                    value={formValues.department}
-                    onChange={(event) => handleDepartmentChange(event.target.value)}
+                    value={formValues.secretariaId}
+                    onChange={(event) =>
+                      setFormValues((current) => ({
+                        ...current,
+                        secretariaId: event.target.value,
+                        teamId: "",
+                      }))
+                    }
                     className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
                   >
-                    {organization.map((entry) => (
-                      <option key={entry.department} value={entry.department}>
-                        {entry.department}
-                      </option>
+                    <option value="">Selecione a secretaria</option>
+                    {secretariasSorted.map((s) => (
+                      <option key={s.id} value={s.id}>{s.nome}</option>
                     ))}
                   </select>
                 </label>
@@ -1403,19 +1415,16 @@ export default function AdminAdministrationPage() {
                 <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
                   Equipe
                   <select
-                    value={formValues.team}
+                    value={formValues.teamId}
                     onChange={(event) =>
-                      setFormValues((current) => ({
-                        ...current,
-                        team: event.target.value,
-                      }))
+                      setFormValues((current) => ({ ...current, teamId: event.target.value }))
                     }
-                    className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
+                    disabled={!formValues.secretariaId}
+                    className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4] disabled:opacity-50"
                   >
-                    {teamOptions.map((team) => (
-                      <option key={team} value={team}>
-                        {team}
-                      </option>
+                    <option value="">Selecione a equipe</option>
+                    {teamOptions.map((t) => (
+                      <option key={t.id} value={t.id}>{t.nome}</option>
                     ))}
                   </select>
                 </label>

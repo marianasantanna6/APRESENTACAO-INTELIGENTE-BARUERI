@@ -63,8 +63,9 @@ export type EmployeeDirectoryEntry = {
 export type NewEmployeePayload = {
   name: string;
   email: string;
-  department: string;
-  team: string;
+  cpf: string;
+  password: string;
+  teamId: string;
 };
 
 // ─── Secretarias ─────────────────────────────────────────────────────────────

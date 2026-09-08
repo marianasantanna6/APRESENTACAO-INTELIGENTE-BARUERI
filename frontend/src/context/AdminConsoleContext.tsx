@@ -1,14 +1,12 @@
 import type { PropsWithChildren } from "react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { canManageEmployees, canViewCrossTeamData } from "../lib/accessControl";
+import { canManageEmployees, canViewCrossTeamData, mapAccessLevel } from "../lib/accessControl";
 import {
   mockActivityLog,
   mockApiIntegrations,
-  mockEmployeeDirectory,
   mockPresentations,
-  organizationDirectory,
 } from "../mocks/adminMockData";
-import type { NewEmployeePayload, NewSecretariaPayload, NewTimePayload, SecretariaEntry, TimeEntry } from "../types/admin";
+import type { EmployeeDirectoryEntry, NewEmployeePayload, NewSecretariaPayload, NewTimePayload, SecretariaEntry, TimeEntry } from "../types/admin";
 import { useAuth } from "./AuthContext";
 
 type MutationResult =
@@ -20,13 +18,12 @@ type EmployeeMutationResult = MutationResult;
 type AdminConsoleContextValue = {
   activityLog: typeof mockActivityLog;
   apiIntegrations: typeof mockApiIntegrations;
-  employees: typeof mockEmployeeDirectory;
-  organization: typeof organizationDirectory;
+  employees: EmployeeDirectoryEntry[];
   presentations: typeof mockPresentations;
   secretarias: SecretariaEntry[];
   times: TimeEntry[];
   canManageEmployees: boolean;
-  addEmployee: (payload: NewEmployeePayload) => MutationResult;
+  addEmployee: (payload: NewEmployeePayload) => Promise<MutationResult>;
   removeEmployee: (employeeId: string) => MutationResult;
   addSecretaria: (payload: NewSecretariaPayload) => Promise<MutationResult>;
   removeSecretaria: (id: string) => Promise<MutationResult>;
@@ -50,29 +47,45 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
   const { user } = useAuth();
   const [presentationsState] = useState(mockPresentations);
   const [apiIntegrations] = useState(mockApiIntegrations);
-  const [employeesState, setEmployeesState] = useState(mockEmployeeDirectory);
+  const [employeesState, setEmployeesState] = useState<EmployeeDirectoryEntry[]>([]);
   const [activityLogState, setActivityLogState] = useState(mockActivityLog);
   const [secretariasState, setSecretariasState] = useState<SecretariaEntry[]>([]);
   const [timesState, setTimesState] = useState<TimeEntry[]>([]);
 
   useEffect(() => {
-    fetch("/api/sectors")
-      .then((r) => r.json())
-      .then((data: Array<{ id: string; name: string }>) => {
-        setSecretariasState(data.map((s) => ({ id: s.id, nome: s.name })));
-      })
-      .catch(() => {});
+    type RawSector = { id: string; name: string };
+    type RawTeam = { id: string; name: string; sectorId: string; sectorName: string; level_acess: number };
+    type RawUser = { id: string; name: string; email: string; cpf: string; photo: string | null };
+    type RawUserTeam = { id: string; user: string; team: string };
 
-    fetch("/api/teams")
-      .then((r) => r.json())
-      .then((data: Array<{ id: string; name: string; sectorId: string; sectorName: string; level_acess: number }>) => {
-        setTimesState(data.map((t) => ({
+    Promise.all([
+      fetch("/api/sectors").then((r) => r.json() as Promise<RawSector[]>),
+      fetch("/api/teams").then((r) => r.json() as Promise<RawTeam[]>),
+      fetch("/api/management").then((r) => r.json() as Promise<RawUser[]>),
+      fetch("/api/users-teams").then((r) => r.json() as Promise<RawUserTeam[]>),
+    ])
+      .then(([sectors, teams, users, userTeams]) => {
+        setSecretariasState(sectors.map((s) => ({ id: s.id, nome: s.name })));
+        setTimesState(teams.map((t) => ({
           id: t.id,
           nome: t.name,
           secretariaId: t.sectorId,
           secretariaNome: t.sectorName,
           levelAcess: t.level_acess,
         })));
+        setEmployeesState(users.map((u) => {
+          const userTeam = userTeams.find((ut) => ut.user === u.id);
+          const team = userTeam ? teams.find((t) => t.id === userTeam.team) : null;
+          return {
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            department: team?.sectorName ?? "",
+            team: team?.name ?? "",
+            accessLevel: mapAccessLevel(team?.level_acess ?? 0),
+            status: "active" as const,
+          };
+        }));
       })
       .catch(() => {});
   }, []);
@@ -109,53 +122,52 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     [activityLogState, allowCrossTeamData, user],
   );
 
-  function addEmployee(payload: NewEmployeePayload): EmployeeMutationResult {
+  async function addEmployee(payload: NewEmployeePayload): Promise<EmployeeMutationResult> {
     if (!user || !allowEmployeeManagement) {
-      return {
-        ok: false,
-        message:
-          "Somente administradores de nível 2 podem cadastrar funcionários.",
-      };
+      return { ok: false, message: "Somente administradores de nível 2 podem cadastrar funcionários." };
     }
 
     if (!isInstitutionalEmail(payload.email)) {
-      return {
-        ok: false,
-        message:
-          "Cadastre apenas emails institucionais com o domínio @barueri.sp.gov.br.",
-      };
+      return { ok: false, message: "Cadastre apenas emails institucionais com o domínio @barueri.sp.gov.br." };
     }
 
-    const nextEmployee = {
-      id: createId("employee"),
-      name: payload.name,
-      email: payload.email.trim().toLowerCase(),
-      department: payload.department,
-      team: payload.team,
-      accessLevel: "employee" as const,
-      status: "active" as const,
+    const registerRes = await fetch("/api/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: payload.name.trim(),
+        email: payload.email.trim().toLowerCase(),
+        password: payload.password,
+        cpf: payload.cpf.trim(),
+      }),
+    });
+
+    if (!registerRes.ok) {
+      const err = await registerRes.json().catch(() => ({})) as { message?: string };
+      return { ok: false, message: err.message ?? "Erro ao cadastrar funcionário." };
+    }
+
+    const newUser = await registerRes.json() as { id: string; name: string; email: string };
+
+    const team = timesState.find((t) => t.id === payload.teamId);
+
+    await fetch("/api/users-teams", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user: parseInt(newUser.id), team: parseInt(payload.teamId) }),
+    });
+
+    const newEmployee: EmployeeDirectoryEntry = {
+      id: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
+      department: team?.secretariaNome ?? "",
+      team: team?.nome ?? "",
+      accessLevel: mapAccessLevel(team?.levelAcess ?? 0),
+      status: "active",
     };
 
-    setEmployeesState((current) => [nextEmployee, ...current]);
-    setActivityLogState((current) => [
-      {
-        id: createId("log"),
-        timestamp: new Date().toISOString(),
-        source: "Administração",
-        type: "Funcionário cadastrado",
-        category: "Usuários" as const,
-        action: "Novo usuário cadastrado",
-        entityName: payload.name,
-        entityType: "usuário",
-        userName: user.name,
-        userRole: "Administrador Geral",
-        department: payload.department,
-        team: payload.team,
-        status: "success" as const,
-        updateType: "manual" as const,
-      },
-      ...current,
-    ]);
+    setEmployeesState((current) => [newEmployee, ...current]);
 
     return { ok: true };
   }
@@ -290,7 +302,6 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
         activityLog,
         apiIntegrations,
         employees,
-        organization: organizationDirectory,
         presentations,
         secretarias: secretariasState,
         times: timesState,
