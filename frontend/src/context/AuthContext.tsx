@@ -5,6 +5,7 @@ import type { AuthSessionUser, MockUser } from "../types/auth";
 
 const AUTH_STORAGE_KEY = "barueri-inteligente:auth-session";
 const USERS_STORAGE_KEY = "barueri-inteligente:auth-users";
+const TOKEN_STORAGE_KEY = "barueri:token";
 
 type LoginInput = {
   identifier: string;
@@ -48,6 +49,12 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+function mapAccessLevel(level: number): UserAccessLevel {
+  if (level >= 3) return "admin_level_2";
+  if (level >= 2) return "admin_level_1";
+  return "employee";
+}
 
 function buildSessionUser(user: MockUser): AuthSessionUser {
   const { password: _password, ...sessionUser } = user;
@@ -239,37 +246,71 @@ export function AuthProvider({ children }: PropsWithChildren) {
     identifier,
     password,
   }: LoginInput): Promise<LoginResult> {
-    const matchingUser = findUserByIdentifier(users, identifier);
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ login: identifier, password }),
+      });
 
-    if (!matchingUser) {
-      return {
-        ok: false,
-        message: "Usuário não encontrado.",
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { message?: string };
+        return { ok: false, message: err.message ?? "Credenciais inválidas." };
+      }
+
+      const data = await res.json() as {
+        access_token: string;
+        user: {
+          id: string;
+          name: string;
+          email: string;
+          cpf: string;
+          photo: string | null;
+          teamId: string | null;
+          teamName: string | null;
+          sectorName: string | null;
+          accessLevel: number;
+        };
       };
-    }
 
-    if (matchingUser.status !== "active") {
-      return {
-        ok: false,
-        message: "Este usuário está marcado como inativo.",
+      try {
+        localStorage.setItem(TOKEN_STORAGE_KEY, data.access_token);
+      } catch {}
+
+      const backendUser: MockUser = {
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+        cpf: data.user.cpf,
+        username: data.user.email,
+        password: "__backend__",
+        accessLevel: mapAccessLevel(data.user.accessLevel),
+        department: data.user.sectorName ?? "",
+        team: data.user.teamName ?? "",
+        status: "active",
+        avatarDataUrl: data.user.photo ?? null,
       };
+
+      setUsers((prev) => {
+        const exists = prev.some((u) => u.id === backendUser.id);
+        return exists
+          ? prev.map((u) => (u.id === backendUser.id ? backendUser : u))
+          : [...prev, backendUser];
+      });
+
+      const sessionUser = buildSessionUser(backendUser);
+      setUser(sessionUser);
+
+      return { ok: true, user: sessionUser };
+    } catch {
+      return { ok: false, message: "Erro ao conectar com o servidor." };
     }
-
-    if (matchingUser.password !== password.trim()) {
-      return {
-        ok: false,
-        message: "Senha incorreta.",
-      };
-    }
-
-    const sessionUser = buildSessionUser(matchingUser);
-
-    setUser(sessionUser);
-
-    return { ok: true, user: sessionUser };
   }
 
   function logout() {
+    try {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+    } catch {}
     setUser(null);
   }
 
