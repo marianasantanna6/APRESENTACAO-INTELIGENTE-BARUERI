@@ -263,6 +263,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
       });
 
       if (!res.ok) {
+        // Status >= 500 significa proxy/servidor offline — tenta mock
+        if (res.status >= 500) {
+          return loginWithMock(identifier, password)
+            ?? { ok: false, message: "Servidor indisponível e usuário não encontrado nos dados locais." };
+        }
         const err = await res.json().catch(() => ({})) as { message?: string };
         return { ok: false, message: err.message ?? "Credenciais inválidas." };
       }
