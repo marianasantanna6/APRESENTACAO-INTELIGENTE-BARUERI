@@ -1,4 +1,5 @@
-import { FiLink } from "react-icons/fi";
+import { useState } from "react";
+import { FiLink, FiPlus, FiX } from "react-icons/fi";
 import type { ProjectOfficialLink } from "../../../types/project";
 import {
   AddButton,
@@ -6,18 +7,8 @@ import {
   FieldLabel,
   RemoveButton,
   SectionCard,
-  SelectInput,
-  TagInput,
   TextInput,
 } from "../EditorShared";
-
-const LINK_TYPE_OPTIONS: { value: ProjectOfficialLink["type"]; label: string }[] = [
-  { value: "portal",   label: "Portal" },
-  { value: "document", label: "Documento" },
-  { value: "report",   label: "Relatório" },
-  { value: "video",    label: "Vídeo" },
-  { value: "other",    label: "Outro" },
-];
 
 type Props = {
   links: ProjectOfficialLink[];
@@ -29,11 +20,28 @@ type Props = {
   onRemoveSource: (v: string) => void;
 };
 
+function extractDomain(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
 export function LinksSection({
   links, sources,
   onAddLink, onUpdateLink, onRemoveLink,
   onAddSource, onRemoveSource,
 }: Props) {
+  const [sourceInput, setSourceInput] = useState("");
+
+  function handleAddSource() {
+    const v = sourceInput.trim();
+    if (!v || sources.includes(v)) return;
+    onAddSource(v);
+    setSourceInput("");
+  }
+
   return (
     <SectionCard
       id="section-links"
@@ -60,7 +68,7 @@ export function LinksSection({
                   <RemoveButton onClick={() => onRemoveLink(link.id)} />
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-3">
                   <div>
                     <FieldLabel htmlFor={`link-label-${link.id}`}>Rótulo</FieldLabel>
                     <TextInput
@@ -71,15 +79,6 @@ export function LinksSection({
                     />
                   </div>
                   <div>
-                    <FieldLabel htmlFor={`link-type-${link.id}`}>Tipo</FieldLabel>
-                    <SelectInput
-                      id={`link-type-${link.id}`}
-                      value={link.type}
-                      onChange={(v) => onUpdateLink(link.id, { type: v })}
-                      options={LINK_TYPE_OPTIONS}
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
                     <FieldLabel htmlFor={`link-url-${link.id}`}>URL</FieldLabel>
                     <TextInput
                       id={`link-url-${link.id}`}
@@ -96,18 +95,56 @@ export function LinksSection({
           </div>
         </div>
 
-        {/* Fontes */}
+        {/* Fontes de dados */}
         <div>
-          <FieldLabel hint="Entidades, sistemas ou publicações que embasam os dados">
+          <FieldLabel hint="Cole a URL — o rótulo é gerado automaticamente pelo sistema">
             Fontes de Dados
           </FieldLabel>
-          <TagInput
-            tags={sources}
-            onAdd={onAddSource}
-            onRemove={onRemoveSource}
-            placeholder="Ex.: IBGE, Secretaria de Saúde…"
-            tagColor="bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0]"
-          />
+
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={sourceInput}
+              onChange={(e) => setSourceInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); handleAddSource(); }
+              }}
+              placeholder="https://…"
+              className="flex-1 rounded-xl border border-[#e5e7eb] px-4 py-2.5 text-[0.9rem] text-[#1e1e1e] placeholder:text-[#9ca3af] focus:border-[#6fa8d6] focus:outline-none focus:ring-2 focus:ring-[#6fa8d6]/20 transition"
+            />
+            <button
+              type="button"
+              onClick={handleAddSource}
+              disabled={!sourceInput.trim()}
+              className="flex items-center gap-1.5 rounded-xl bg-[#eff6ff] px-4 py-2.5 text-[0.84rem] font-semibold text-[#1d4ed8] transition hover:bg-[#dbeafe] disabled:opacity-40"
+            >
+              <FiPlus className="h-4 w-4" />
+              Adicionar
+            </button>
+          </div>
+
+          {sources.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {sources.map((url) => (
+                <div
+                  key={url}
+                  className="flex items-center gap-1.5 rounded-full border border-[#bbf7d0] bg-[#f0fdf4] px-3 py-1.5 text-[0.8rem] font-medium text-[#15803d]"
+                >
+                  <span className="max-w-[220px] truncate" title={url}>
+                    {extractDomain(url)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onRemoveSource(url)}
+                    className="ml-0.5 rounded-full opacity-60 hover:opacity-100"
+                    aria-label={`Remover ${url}`}
+                  >
+                    <FiX className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </SectionCard>
