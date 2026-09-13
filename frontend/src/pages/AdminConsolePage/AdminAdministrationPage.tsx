@@ -303,6 +303,7 @@ export default function AdminAdministrationPage() {
   const teamOptions = times.filter((t) => t.secretariaId === formValues.secretariaId);
 
   const [formValues, setFormValues] = useState<EmployeeFormState>(initialEmployeeForm);
+  const [formStep, setFormStep] = useState<1 | 2>(1);
   const [formError, setFormError] = useState("");
   const [deleteConfirmationForm, setDeleteConfirmationForm] = useState(
     initialDeleteConfirmationForm,
@@ -335,12 +336,35 @@ export default function AdminAdministrationPage() {
 
   function resetForm() {
     setFormValues(initialEmployeeForm);
+    setFormStep(1);
     setFormError("");
   }
 
   function closeModal() {
     resetForm();
     setIsModalOpen(false);
+  }
+
+  function handleStep1Next() {
+    if (
+      !formValues.name.trim()
+      || !formValues.email.trim()
+      || !formValues.cpf.trim()
+      || !formValues.password.trim()
+    ) {
+      setFormError("Preencha todos os campos antes de continuar.");
+      return;
+    }
+    if (!isInstitutionalEmail(formValues.email)) {
+      setFormError("Cadastre apenas emails institucionais com o domínio @barueri.sp.gov.br.");
+      return;
+    }
+    if (formValues.password.trim().length < 6) {
+      setFormError("A senha precisa ter pelo menos 6 caracteres.");
+      return;
+    }
+    setFormError("");
+    setFormStep(2);
   }
 
   function resetDeleteConfirmation() {
@@ -356,19 +380,8 @@ export default function AdminAdministrationPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (
-      !formValues.name.trim()
-      || !formValues.email.trim()
-      || !formValues.cpf.trim()
-      || !formValues.password.trim()
-      || !formValues.teamId
-    ) {
-      setFormError("Preencha todos os campos para cadastrar o funcionário.");
-      return;
-    }
-
-    if (!isInstitutionalEmail(formValues.email)) {
-      setFormError("Cadastre apenas emails institucionais com o domínio @barueri.sp.gov.br.");
+    if (!formValues.teamId) {
+      setFormError("Selecione a secretaria e a equipe para concluir o cadastro.");
       return;
     }
 
@@ -1306,14 +1319,18 @@ export default function AdminAdministrationPage() {
             className="w-full max-w-[540px] rounded-[26px] bg-white p-6 shadow-[0_24px_80px_rgba(20,33,51,0.24)]"
             onClick={(event) => event.stopPropagation()}
           >
+            {/* Cabeçalho + indicador de etapa */}
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <h3
                   id="create-employee-dialog-title"
                   className="text-[1.65rem] font-extrabold tracking-[-0.04em] text-[#1f1f1f]"
                 >
-                  Cadastrar funcionário
+                  {formStep === 1 ? "Cadastrar funcionário" : "Vincular à equipe"}
                 </h3>
+                <p className="mt-1 text-[0.82rem] font-medium text-[#9aa7b2]">
+                  Etapa {formStep} de 2
+                </p>
               </div>
 
               <button
@@ -1325,133 +1342,181 @@ export default function AdminAdministrationPage() {
               </button>
             </div>
 
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                  Nome
-                  <input
-                    type="text"
-                    value={formValues.name}
-                    onChange={(event) =>
-                      setFormValues((current) => ({
-                        ...current,
-                        name: event.target.value,
-                      }))
-                    }
-                    data-modal-initial-focus
-                    className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
-                  />
-                </label>
-
-                <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                  E-mail
-                  <input
-                    type="email"
-                    value={formValues.email}
-                    onChange={(event) =>
-                      setFormValues((current) => ({
-                        ...current,
-                        email: event.target.value,
-                      }))
-                    }
-                    placeholder="nome.sobrenome@barueri.sp.gov.br"
-                    className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
-                  />
-                  <span className="text-[0.76rem] font-medium text-[#9aa7b2]">
-                    Apenas emails institucionais @barueri.sp.gov.br
-                  </span>
-                </label>
+            {/* Indicador visual de progresso */}
+            <div className="mb-6 flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1675b8] text-[0.78rem] font-bold text-white">
+                {formStep === 1 ? "1" : "✓"}
               </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                  CPF
-                  <input
-                    type="text"
-                    value={formValues.cpf}
-                    onChange={(event) =>
-                      setFormValues((current) => ({ ...current, cpf: event.target.value }))
-                    }
-                    placeholder="000.000.000-00"
-                    className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
-                  />
-                </label>
-
-                <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                  Senha provisória
-                  <input
-                    type="password"
-                    value={formValues.password}
-                    onChange={(event) =>
-                      setFormValues((current) => ({ ...current, password: event.target.value }))
-                    }
-                    placeholder="Mínimo 6 caracteres"
-                    className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
-                  />
-                </label>
+              <div className={`h-1 flex-1 rounded-full transition-all ${formStep === 2 ? "bg-[#1675b8]" : "bg-[#e5e7eb]"}`} />
+              <div className={`flex h-7 w-7 items-center justify-center rounded-full text-[0.78rem] font-bold transition-all ${formStep === 2 ? "bg-[#1675b8] text-white" : "bg-[#e5e7eb] text-[#9ca3af]"}`}>
+                2
               </div>
+            </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                  Secretaria
-                  <select
-                    value={formValues.secretariaId}
-                    onChange={(event) =>
-                      setFormValues((current) => ({
-                        ...current,
-                        secretariaId: event.target.value,
-                        teamId: "",
-                      }))
-                    }
-                    className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
+            {/* ── Etapa 1: dados pessoais ── */}
+            {formStep === 1 && (
+              <div className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
+                    Nome
+                    <input
+                      type="text"
+                      value={formValues.name}
+                      onChange={(event) =>
+                        setFormValues((current) => ({ ...current, name: event.target.value }))
+                      }
+                      data-modal-initial-focus
+                      className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
+                    E-mail
+                    <input
+                      type="email"
+                      value={formValues.email}
+                      onChange={(event) =>
+                        setFormValues((current) => ({ ...current, email: event.target.value }))
+                      }
+                      placeholder="nome@barueri.sp.gov.br"
+                      className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
+                    />
+                    <span className="text-[0.76rem] font-medium text-[#9aa7b2]">
+                      Apenas @barueri.sp.gov.br
+                    </span>
+                  </label>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
+                    CPF
+                    <input
+                      type="text"
+                      value={formValues.cpf}
+                      onChange={(event) =>
+                        setFormValues((current) => ({ ...current, cpf: event.target.value }))
+                      }
+                      placeholder="000.000.000-00"
+                      className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
+                    Senha provisória
+                    <input
+                      type="password"
+                      value={formValues.password}
+                      onChange={(event) =>
+                        setFormValues((current) => ({ ...current, password: event.target.value }))
+                      }
+                      placeholder="Mínimo 6 caracteres"
+                      className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
+                    />
+                  </label>
+                </div>
+
+                {formError && (
+                  <p className="rounded-[16px] bg-[#fff5f5] px-4 py-3 text-[0.9rem] font-medium text-[#be3232]">
+                    {formError}
+                  </p>
+                )}
+
+                <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    className="h-11 w-full rounded-full border border-[#d7dde4] px-5 text-[0.92rem] font-semibold text-[#6a6a6a] transition hover:bg-[#f5f7f9] sm:w-auto"
                   >
-                    <option value="">Selecione a secretaria</option>
-                    {secretariasSorted.map((s) => (
-                      <option key={s.id} value={s.id}>{s.nome}</option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                  Equipe
-                  <select
-                    value={formValues.teamId}
-                    onChange={(event) =>
-                      setFormValues((current) => ({ ...current, teamId: event.target.value }))
-                    }
-                    disabled={!formValues.secretariaId}
-                    className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4] disabled:opacity-50"
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleStep1Next}
+                    className="h-11 w-full rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-5 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(103,156,203,0.24)] transition hover:-translate-y-0.5 sm:w-auto"
                   >
-                    <option value="">Selecione a equipe</option>
-                    {teamOptions.map((t) => (
-                      <option key={t.id} value={t.id}>{t.nome}</option>
-                    ))}
-                  </select>
-                </label>
+                    Próximo →
+                  </button>
+                </div>
               </div>
+            )}
 
-              {formError ? (
-                <p className="rounded-[16px] bg-[#fff5f5] px-4 py-3 text-[0.9rem] font-medium text-[#be3232]">
-                  {formError}
+            {/* ── Etapa 2: secretaria e equipe ── */}
+            {formStep === 2 && (
+              <form className="space-y-4" onSubmit={handleSubmit}>
+                {/* Resumo do funcionário criado */}
+                <div className="rounded-[14px] bg-[#f0f7ff] px-4 py-3">
+                  <p className="text-[0.78rem] font-bold uppercase tracking-wide text-[#4f84c4]">Funcionário</p>
+                  <p className="mt-0.5 text-[0.95rem] font-semibold text-[#1f1f1f]">{formValues.name}</p>
+                  <p className="text-[0.82rem] text-[#6b7280]">{formValues.email}</p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
+                    Secretaria
+                    <select
+                      value={formValues.secretariaId}
+                      onChange={(event) =>
+                        setFormValues((current) => ({
+                          ...current,
+                          secretariaId: event.target.value,
+                          teamId: "",
+                        }))
+                      }
+                      data-modal-initial-focus
+                      className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
+                    >
+                      <option value="">Selecione a secretaria</option>
+                      {secretariasSorted.map((s) => (
+                        <option key={s.id} value={s.id}>{s.nome}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
+                    Equipe
+                    <select
+                      value={formValues.teamId}
+                      onChange={(event) =>
+                        setFormValues((current) => ({ ...current, teamId: event.target.value }))
+                      }
+                      disabled={!formValues.secretariaId}
+                      className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4] disabled:opacity-50"
+                    >
+                      <option value="">Selecione a equipe</option>
+                      {teamOptions.map((t) => (
+                        <option key={t.id} value={t.id}>{t.nome}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                {formError && (
+                  <p className="rounded-[16px] bg-[#fff5f5] px-4 py-3 text-[0.9rem] font-medium text-[#be3232]">
+                    {formError}
+                  </p>
+                )}
+
+                <p className="rounded-[14px] bg-[#fffbeb] px-4 py-2.5 text-[0.78rem] font-medium text-[#92400e]">
+                  Cancelar agora removerá o funcionário recém-criado do sistema.
                 </p>
-              ) : null}
 
-              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="h-11 w-full rounded-full border border-[#d7dde4] px-5 text-[0.92rem] font-semibold text-[#6a6a6a] transition hover:bg-[#f5f7f9] sm:w-auto"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="h-11 w-full rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-5 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(103,156,203,0.24)] transition hover:-translate-y-0.5 sm:w-auto"
-                >
-                  Salvar funcionário
-                </button>
-              </div>
-            </form>
+                <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    className="h-11 w-full rounded-full border border-[#d7dde4] px-5 text-[0.92rem] font-semibold text-[#6a6a6a] transition hover:bg-[#f5f7f9] sm:w-auto"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="h-11 w-full rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-5 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(103,156,203,0.24)] transition hover:-translate-y-0.5 sm:w-auto"
+                  >
+                    Confirmar cadastro
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       ) : null}
