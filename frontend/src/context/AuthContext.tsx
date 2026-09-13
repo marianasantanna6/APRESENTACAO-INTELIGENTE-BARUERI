@@ -242,6 +242,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, [user]);
 
+  function loginWithMock(identifier: string, password: string): LoginResult | null {
+    const found = findUserByIdentifier(users, identifier);
+    if (!found) return null;
+    if (found.password !== password.trim()) return { ok: false, message: "Senha incorreta." };
+    const sessionUser = buildSessionUser(found);
+    setUser(sessionUser);
+    return { ok: true, user: sessionUser };
+  }
+
   async function login({
     identifier,
     password,
@@ -307,7 +316,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       return { ok: true, user: sessionUser };
     } catch {
-      return { ok: false, message: "Erro ao conectar com o servidor." };
+      // Backend indisponível — tenta autenticação local com os mocks
+      return loginWithMock(identifier, password)
+        ?? { ok: false, message: "Servidor indisponível e usuário não encontrado nos dados locais." };
     }
   }
 
