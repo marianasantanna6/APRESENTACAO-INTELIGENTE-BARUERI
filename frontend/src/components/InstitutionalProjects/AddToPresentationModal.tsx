@@ -70,7 +70,7 @@ export function AddToPresentationModal({ projectId, projectName, onClose, onSucc
       .getPresentationsByUser(user.id)
       .then((list) => {
         // Exclui as já arquivadas e as que já têm esse projeto
-        setPresentations(list.filter((p) => p.status !== "archived"));
+        setPresentations(list);
       })
       .finally(() => setLoading(false));
   }, [user]);

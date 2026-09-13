@@ -294,7 +294,7 @@ function PanelPublic({
   const [revoking, setRevoking] = useState(false);
   const [copied, setCopied]     = useState(false);
 
-  const canPublish = presentationStatus === "ready" || presentationStatus === "presented";
+  const canPublish = presentationStatus === "active";
 
   async function handleGenerate() {
     setLoading(true);

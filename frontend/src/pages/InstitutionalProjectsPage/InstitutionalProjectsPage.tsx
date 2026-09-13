@@ -8,7 +8,6 @@ import {
 } from "react-icons/fi";
 import {
   AddToPresentationModal,
-  ConfirmDeleteModal,
   EMPTY_FILTERS,
   ProjectCard,
   ProjectFiltersBar,
@@ -30,7 +29,6 @@ type Toast = { id: number; type: "success" | "error"; message: string };
 type ModalState =
   | { kind: "none" }
   | { kind: "view";              project: InstitutionalProject }
-  | { kind: "delete";            projectId: string; projectName: string }
   | { kind: "addToPresentation"; projectId: string; projectName: string };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -151,18 +149,6 @@ export default function InstitutionalProjectsPage() {
     }
   }
 
-  async function handleDelete() {
-    if (modal.kind !== "delete") return;
-    try {
-      await projectService.deleteProject(modal.projectId);
-      setProjects((prev) => prev.filter((p) => p.id !== modal.projectId));
-      const name = modal.projectName;
-      setModal({ kind: "none" });
-      toast("success", `"${name}" excluído com sucesso.`);
-    } catch {
-      toast("error", "Erro ao excluir projeto.");
-    }
-  }
 
   function handleApprove(id: string) {
     setProjects((prev) =>
@@ -225,13 +211,6 @@ export default function InstitutionalProjectsPage() {
             await projectService.updateProject(projectId, { relatedProjectIds: relatedIds });
             projectService.getProjects().then(setProjects);
           }}
-        />
-      )}
-      {modal.kind === "delete" && (
-        <ConfirmDeleteModal
-          projectName={modal.projectName}
-          onConfirm={handleDelete}
-          onCancel={() => setModal({ kind: "none" })}
         />
       )}
       {modal.kind === "addToPresentation" && (
@@ -307,7 +286,6 @@ export default function InstitutionalProjectsPage() {
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((project) => {
             const canEdit               = perms.canEditProject({ projectDepartment: project.mainDepartment });
-            const canDelete             = perms.canManageUsers();
             const canArchive            = perms.canArchiveProject();
             const canApprove            = perms.canApproveContent();
             const canAddToPresentation  = perms.canCreateProject();
@@ -316,14 +294,10 @@ export default function InstitutionalProjectsPage() {
               <ProjectCard
                 key={project.id}
                 project={project}
-                actions={{ canEdit, canArchive, canDelete, canApprove, canAddToPresentation }}
+                actions={{ canEdit, canArchive, canApprove, canAddToPresentation }}
                 onView={handleView}
                 onEdit={openEditEditor}
                 onArchive={handleArchive}
-                onDelete={(id) => {
-                  const name = projects.find((p) => p.id === id)?.name ?? "";
-                  setModal({ kind: "delete", projectId: id, projectName: name });
-                }}
                 onApprove={handleApprove}
                 onAddToPresentation={(id) => {
                   const name = projects.find((p) => p.id === id)?.name ?? "";

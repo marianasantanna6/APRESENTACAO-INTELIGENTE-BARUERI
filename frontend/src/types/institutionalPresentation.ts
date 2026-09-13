@@ -20,7 +20,7 @@ export type EventType =
   | "audiencia-publica"
   | "outro";
 
-export type PresentationStatus = "draft" | "ready" | "presented" | "archived";
+export type PresentationStatus = "draft" | "active";
 
 export type PresentationLanguage = "pt-BR" | "en-US" | "es";
 

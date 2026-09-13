@@ -5,7 +5,6 @@ import {
   FiEye,
   FiMapPin,
   FiPlusCircle,
-  FiTrash2,
 } from "react-icons/fi";
 import type { ProjectSummary } from "../../types/project";
 import { ProjectCategoryBadge } from "./ProjectCategoryBadge";
@@ -14,7 +13,6 @@ import { ProjectStatusBadge } from "./ProjectStatusBadge";
 type CardActions = {
   canEdit: boolean;
   canArchive: boolean;
-  canDelete: boolean;
   canApprove: boolean;
   canAddToPresentation?: boolean;
 };
@@ -25,7 +23,6 @@ type Props = {
   onView: (id: string) => void;
   onEdit: (id: string) => void;
   onArchive: (id: string) => void;
-  onDelete: (id: string) => void;
   onApprove: (id: string) => void;
   onAddToPresentation?: (id: string) => void;
 };
@@ -44,7 +41,6 @@ export function ProjectCard({
   onView,
   onEdit,
   onArchive,
-  onDelete,
   onApprove,
   onAddToPresentation,
 }: Props) {
@@ -137,16 +133,6 @@ export function ProjectCard({
               label="Arquivar"
               onClick={() => onArchive(project.id)}
               variant="warning"
-            />
-          )}
-
-          {/* Excluir */}
-          {actions.canDelete && (
-            <ActionButton
-              icon={<FiTrash2 className="h-3.5 w-3.5" />}
-              label="Excluir"
-              onClick={() => onDelete(project.id)}
-              variant="danger"
             />
           )}
 

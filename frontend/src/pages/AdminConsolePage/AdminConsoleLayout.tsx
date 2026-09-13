@@ -3,7 +3,6 @@ import type { IconType } from "react-icons";
 import {
   FiBarChart2,
   FiBookOpen,
-  FiDatabase,
   FiFolder,
   FiHelpCircle,
   FiLayers,
@@ -56,12 +55,6 @@ const primarySidebarDefs: SidebarItemDef[] = [
     labelKey: "nav.analytics",
     path: ROUTE_PATHS.analytics,
     icon: FiBarChart2,
-    requiresAdmin: true,
-  },
-  {
-    labelKey: "nav.dados",
-    path: ROUTE_PATHS.adminData,
-    icon: FiDatabase,
     requiresAdmin: true,
   },
   {

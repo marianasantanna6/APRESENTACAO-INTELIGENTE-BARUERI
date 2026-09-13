@@ -34,10 +34,8 @@ import { buildPresentationSearchParams } from "../../router/presentationSearchPa
 // ─── Metadados de exibição ────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<PresentationStatus, { label: string; cls: string }> = {
-  draft:     { label: "Rascunho",    cls: "bg-[#fef9c3] text-[#92400e]" },
-  ready:     { label: "Pronto",      cls: "bg-[#dbeafe] text-[#1e40af]" },
-  presented: { label: "Apresentado", cls: "bg-[#dcfce7] text-[#166534]" },
-  archived:  { label: "Arquivado",   cls: "bg-[#f1f5f9] text-[#475569]" },
+  draft:  { label: "Rascunho", cls: "bg-[#fef9c3] text-[#92400e]" },
+  active: { label: "Ativo",    cls: "bg-[#dcfce7] text-[#166534]" },
 };
 
 const EVENT_LABELS: Record<EventType, string> = {

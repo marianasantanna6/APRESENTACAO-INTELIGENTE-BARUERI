@@ -23,7 +23,7 @@ export type OrganizationDirectoryEntry = {
 
 // ─── Apresentações (resumo para listagem admin) ───────────────────────────────
 
-export type PresentationSummaryStatus = "presented" | "ready";
+export type PresentationSummaryStatus = "draft" | "active";
 
 export type AdminPresentationSummary = {
   id: string;

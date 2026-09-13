@@ -120,7 +120,7 @@ const mockPresentationService: PresentationServiceContract = {
 
   async markAsPresented(id) {
     await delay(200);
-    return mockPresentationService.updatePresentation(id, { status: "presented" });
+    return mockPresentationService.updatePresentation(id, { status: "active" });
   },
 
   async generatePublicLink(id) {
