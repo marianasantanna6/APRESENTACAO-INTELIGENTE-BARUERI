@@ -775,12 +775,9 @@ const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query)
 
                 <LinksSection
                   links={ed.draft.officialLinks}
-                  sources={ed.draft.sources}
                   onAddLink={ed.addLink}
                   onUpdateLink={ed.updateLink}
                   onRemoveLink={ed.removeLink}
-                  onAddSource={(v) => ed.addTag("sources", v)}
-                  onRemoveSource={(v) => ed.removeTag("sources", v)}
                 />
 
                 <AwardsSection

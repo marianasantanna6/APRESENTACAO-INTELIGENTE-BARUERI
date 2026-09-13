@@ -250,11 +250,13 @@ export function useProjectEditor(
   }
 
   // Links oficiais
-  function addLink() {
+  function addLink(url: string) {
+    let label = url;
+    try { label = new URL(url).hostname.replace(/^www\./, ""); } catch { /* keep url */ }
     const link: ProjectOfficialLink = {
       id: generateId("link", draft.name || "proj"),
-      label: "",
-      url: "",
+      label,
+      url,
       type: "portal",
     };
     patch({ officialLinks: [...draft.officialLinks, link] });

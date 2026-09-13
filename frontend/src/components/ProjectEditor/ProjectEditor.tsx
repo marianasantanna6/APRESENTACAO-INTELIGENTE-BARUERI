@@ -330,12 +330,9 @@ export function ProjectEditor({ initial, onClose, onSaved }: Props) {
 
             <LinksSection
               links={ed.draft.officialLinks}
-              sources={ed.draft.sources}
               onAddLink={ed.addLink}
               onUpdateLink={ed.updateLink}
               onRemoveLink={ed.removeLink}
-              onAddSource={(v) => ed.addTag("sources", v)}
-              onRemoveSource={(v) => ed.removeTag("sources", v)}
             />
 
             <AwardsSection
