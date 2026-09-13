@@ -1,4 +1,45 @@
-import { IsArray, IsDateString, IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {IsArray, IsDateString, IsInt, IsNotEmpty, IsOptional, IsString,  ValidateNested} from 'class-validator';
+import { Type } from 'class-transformer';
+
+class CreateAwardDto {
+  @IsNotEmpty()
+  @IsString()
+  institution!: string;
+
+  @IsNotEmpty()
+  @IsInt()
+  year!: number;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  link?: string;
+}
+
+class CreateIndicatorDto {
+  @IsNotEmpty()
+  @IsString()
+  label!: string;
+
+  @IsNotEmpty()
+  @IsString()
+  value!: string;
+
+  @IsOptional()
+  @IsString()
+  measure?: string;
+
+  @IsNotEmpty()
+  @IsString()
+  source!: string;
+
+  @IsNotEmpty()
+  @IsInt()
+  year!: number;
+}
 
 export class CreateProjectsDto {
   @IsNotEmpty()
@@ -8,6 +49,10 @@ export class CreateProjectsDto {
   @IsNotEmpty()
   @IsInt()
   user!: number;
+
+  @IsOptional()
+  @IsInt()
+  team?: number;
 
   @IsOptional()
   @IsInt()
@@ -22,22 +67,23 @@ export class CreateProjectsDto {
   full_description?: string;
 
   @IsNotEmpty()
-  @IsString()
-  source!: string;
+  @IsArray()
+  @IsString({ each: true })
+  source!: string[];
 
   @IsNotEmpty()
-  @IsInt()
-  main_department!: number;
+  @IsString()
+  main_department!: string;
 
   @IsOptional()
   @IsArray()
-  @IsInt({ each: true })
-  related_departments?: number[];
+  @IsString({ each: true })
+  related_departments?: string[];
 
   @IsOptional()
   @IsArray()
-  @IsInt({ each: true })
-  areas?: number[];
+  @IsString({ each: true })
+  areas?: string[];
 
   @IsOptional()
   @IsArray()
@@ -53,8 +99,9 @@ export class CreateProjectsDto {
   audience?: string;
 
   @IsOptional()
-  @IsString()
-  technologies?: string;
+  @IsArray()
+  @IsString({ each: true })
+  technologies?: string[];
 
   @IsOptional()
   @IsDateString()
@@ -62,6 +109,18 @@ export class CreateProjectsDto {
 
   @IsOptional()
   @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateAwardDto)
+  awards?: CreateAwardDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateIndicatorDto)
+  indicators?: CreateIndicatorDto[];
+
+  @IsOptional()
+  @IsArray()
   @IsString({ each: true })
-  awards?: string[];
+  keywords?: string[];
 }

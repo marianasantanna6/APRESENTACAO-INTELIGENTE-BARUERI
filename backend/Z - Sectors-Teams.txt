@@ -1,0 +1,38 @@
+Sectors:
+
+Rota POST: http://localhost:3000/sectors
+
+Body:
+{
+"name": "Arte e Cultura"
+}
+
+Rota GET: http://localhost:3000/sectors?parameter=value
+parameters: id & name
+
+Rota DELETE: http://localhost:3000/sectors/:id
+
+* O setor é removido da base de dados.
+* As equipes vinculadas ao setor são removidas antes da exclusão do setor.
+
+
+---
+
+
+Teams:
+
+Rota POST: http://localhost:3000/teams
+
+Body:
+{
+"name": "Educação em Barueri",
+"sector": 1,
+"level_acess": 1
+}
+
+Rota GET: http://localhost:3000/teams?parameter=value
+parameters: id & name
+
+Rota DELETE: http://localhost:3000/teams/:id
+
+* O time é removido da base de dados.

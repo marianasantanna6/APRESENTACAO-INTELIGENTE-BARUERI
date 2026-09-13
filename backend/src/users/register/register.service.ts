@@ -1,7 +1,7 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
-import { normalizeCpf, normalizeEmail } from '../../common/normalizer';
+import { normalizeCpf, normalizeText } from '../../common/normalizer';
 import { CreateRegisterDto } from './dto/inputs-register.dto';
 
 @Injectable()
@@ -11,12 +11,12 @@ export class RegisterService {
   ) { }
   async create(dto: CreateRegisterDto) {
     const cpf = normalizeCpf(dto.cpf);
-    const email = normalizeEmail(dto.email);
+    const email = normalizeText(dto.email);
     const existingUser = await this.prisma.users.findFirst({
       where: { OR: [{ email }, { cpf }] }
     });
     if (existingUser) {
-      throw new ConflictException( 'CPF ou email já cadastrado' );
+      throw new ConflictException('CPF ou email já cadastrado');
     }
 
     const hashedPassword = await bcrypt.hash(
@@ -35,9 +35,9 @@ export class RegisterService {
       id: user.id.toString(),
       name: user.name,
       email: user.email,
-      password: user.password,
       cpf: user.cpf,
       photo: user.photo,
+      master_admin: user.master_admin,
     };
   }
 }

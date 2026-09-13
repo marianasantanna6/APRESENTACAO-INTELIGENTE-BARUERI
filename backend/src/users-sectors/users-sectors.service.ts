@@ -40,8 +40,6 @@ export class UsersSectorsService {
         data: {
           user: BigInt(dto.user),
           sector: BigInt(dto.sector),
-          general_admin:
-            dto.general_admin ?? false,
           institute_manager:
             dto.institute_manager ?? false,
         },
@@ -51,8 +49,6 @@ export class UsersSectorsService {
       id: usersSector.id.toString(),
       user: usersSector.user.toString(),
       sector: usersSector.sector.toString(),
-      general_admin:
-        usersSector.general_admin,
       institute_manager:
         usersSector.institute_manager,
     };
@@ -60,7 +56,6 @@ export class UsersSectorsService {
   async find(filters: {
     user?: string;
     sector?: string;
-    general_admin?: string;
     institute_manager?: string;
   }) {
     const where: any = {};
@@ -70,11 +65,6 @@ export class UsersSectorsService {
 
     if (filters.sector !== undefined) {
       where.sector = BigInt(filters.sector);
-    }
-
-    if (filters.general_admin !== undefined) {
-      where.general_admin =
-        filters.general_admin === 'true';
     }
 
     if (filters.institute_manager !== undefined) {
@@ -91,8 +81,6 @@ export class UsersSectorsService {
       id: usersSector.id.toString(),
       user: usersSector.user.toString(),
       sector: usersSector.sector.toString(),
-      general_admin:
-        usersSector.general_admin,
       institute_manager:
         usersSector.institute_manager,
     }));

@@ -15,9 +15,5 @@ export class CreateUsersTeamsDto {
 
   @IsOptional()
   @IsBoolean()
-  area_editor?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
   approver?: boolean;
 }

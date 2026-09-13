@@ -1,26 +1,40 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { normalizeText } from '../common/normalizer';
 import { CreateTeamsDto } from './dto/inputs-teams.dto';
 
 @Injectable()
 export class TeamsService {
   constructor(
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
+
   async create(dto: CreateTeamsDto) {
     const sector = await this.prisma.sectors.findUnique({
       where: { id: BigInt(dto.sector) }
     });
     if (!sector) {
-      throw new NotFoundException( 'Setor não encontrado' );
+      throw new NotFoundException('Setor não encontrado');
     }
 
-    const existingTeam =
-      await this.prisma.teams.findFirst({
-        where: { name: dto.name },
+    const normalizedName = normalizeText(dto.name);
+
+    const existingTeams =
+      await this.prisma.teams.findMany({
+        where: {
+          name: {
+            contains: normalizedName,
+            mode: 'insensitive',
+          },
+        },
       });
+
+    const existingTeam = existingTeams.find(
+      (team) => normalizeText(team.name) === normalizedName
+    );
+
     if (existingTeam) {
-      throw new ConflictException( 'Time já cadastrado' );
+      throw new ConflictException('Time já cadastrado');
     }
 
     const team = await this.prisma.teams.create({
@@ -44,12 +58,16 @@ export class TeamsService {
     name?: string;
   }) {
     const where: any = {};
+
     if (filters.id !== undefined) {
       where.id = BigInt(filters.id);
     }
 
     if (filters.name !== undefined) {
-      where.name = { contains: filters.name, mode: 'insensitive' };
+      where.name = {
+        contains: normalizeText(filters.name),
+        mode: 'insensitive',
+      };
     }
 
     const teams = await this.prisma.teams.findMany({
@@ -57,6 +75,7 @@ export class TeamsService {
       orderBy: { id: 'asc' },
       include: { sectors: true },
     });
+
     return teams.map((team) => ({
       id: team.id.toString(),
       name: team.name,

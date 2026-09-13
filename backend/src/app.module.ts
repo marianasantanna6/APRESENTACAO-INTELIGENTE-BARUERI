@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
-import { AreasModule } from './areas/areas.module';
-import { DepartmentsModule } from './departments/departments.module';
 import { ProjectsModule } from './projects/projects.module';
 import { ProjectsLogsModule } from './projects-logs/projects-logs.module';
 import { SectorsModule } from './sectors/sectors.module';
@@ -12,12 +10,11 @@ import { ManagementModule } from './users/management/management.module';
 import { RegisterModule } from './users/register/register.module';
 import { UsersSectorsModule } from './users-sectors/users-sectors.module';
 import { UsersTeamsModule } from './users-teams/users-teams.module';
+import { AuthenticationModule } from './users/authentication/authentication.module';
 
 @Module({
   imports: [ ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
-    AreasModule,
-    DepartmentsModule,
     ProjectsModule,
     ProjectsLogsModule,
     SectorsModule,
@@ -26,7 +23,8 @@ import { UsersTeamsModule } from './users-teams/users-teams.module';
     ManagementModule,
     RegisterModule,
     UsersSectorsModule,
-    UsersTeamsModule
+    UsersTeamsModule,
+    AuthenticationModule
   ]
 })
 export class AppModule { }

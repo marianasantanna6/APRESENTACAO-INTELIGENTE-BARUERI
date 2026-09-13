@@ -11,9 +11,5 @@ export class CreateUsersSectorsDto {
 
   @IsOptional()
   @IsBoolean()
-  general_admin?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
   institute_manager?: boolean;
 }

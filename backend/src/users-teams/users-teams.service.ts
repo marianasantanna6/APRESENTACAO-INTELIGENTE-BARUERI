@@ -41,8 +41,6 @@ export class UsersTeamsService {
           team: BigInt(dto.team),
           area_manager:
             dto.area_manager ?? false,
-          area_editor:
-            dto.area_editor ?? false,
           approver:
             dto.approver ?? false,
         },
@@ -53,8 +51,6 @@ export class UsersTeamsService {
       team: usersTeam.team.toString(),
       area_manager:
         usersTeam.area_manager,
-      area_editor:
-        usersTeam.area_editor,
       approver:
         usersTeam.approver,
     };
@@ -64,7 +60,6 @@ export class UsersTeamsService {
     user?: string;
     team?: string;
     area_manager?: string;
-    area_editor?: string;
     approver?: string;
   }) {
     const where: any = {};
@@ -79,11 +74,6 @@ export class UsersTeamsService {
     if (filters.area_manager !== undefined) {
       where.area_manager =
         filters.area_manager === 'true';
-    }
-
-    if (filters.area_editor !== undefined) {
-      where.area_editor =
-        filters.area_editor === 'true';
     }
 
     if (filters.approver !== undefined) {
@@ -101,8 +91,6 @@ export class UsersTeamsService {
       team: usersTeam.team.toString(),
       area_manager:
         usersTeam.area_manager,
-      area_editor:
-        usersTeam.area_editor,
       approver:
         usersTeam.approver,
     }));

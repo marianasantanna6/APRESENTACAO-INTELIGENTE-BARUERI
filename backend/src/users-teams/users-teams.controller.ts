@@ -18,14 +18,12 @@ export class UsersTeamsController {
     @Query('user') user?: string,
     @Query('team') team?: string,
     @Query('area_manager') area_manager?: string,
-    @Query('area_editor') area_editor?: string,
     @Query('approver') approver?: string,
   ) {
     return this.usersTeamsService.find({
       user,
       team,
       area_manager,
-      area_editor,
       approver,
     });
   }

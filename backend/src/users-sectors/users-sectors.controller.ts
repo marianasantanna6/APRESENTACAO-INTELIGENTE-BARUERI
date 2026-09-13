@@ -17,13 +17,11 @@ export class UsersSectorsController {
   find(
     @Query('user') user?: string,
     @Query('sector') sector?: string,
-    @Query('general_admin') general_admin?: string,
     @Query('institute_manager') institute_manager?: string,
   ) {
     return this.usersSectorsService.find({
       user,
       sector,
-      general_admin,
       institute_manager,
     });
   }

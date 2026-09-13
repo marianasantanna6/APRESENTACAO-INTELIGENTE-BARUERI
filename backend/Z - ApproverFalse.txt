@@ -1,0 +1,287 @@
+Register:
+
+Rota POST: http://localhost:3000/register
+
+Body:
+{
+"name": "Usuário Comum",
+"email": "Approverfalse@gmail.com",
+"password": "false123",
+"cpf": "123.456.789-00"
+}
+
+
+---
+
+
+Login:
+
+Rota POST: http://localhost:3000/login
+
+Body:
+{
+"login": "Approverfalse@gmail.com",
+"password": "false123"
+}
+
+
+---
+
+
+Management:
+
+Rota GET: http://localhost:3000/management?parameter=value
+parameters: id & name & email
+
+
+Rota PATCH: http://localhost:3000/management/:id (1)
+
+* A senha do usuário é obrigatória para realizar qualquer alteração.
+* Os campos de alteração são opcionais.
+* A senha do usuário não é alterada por esta rota.
+
+Body:
+{
+"current_password": "false123",
+"name": "Usuário Comum - Alterado",
+"email": "Approverfalse@gmail.com",
+"cpf": "123.456.789-00",
+"master_admin": true
+}
+
+
+Rota DELETE: http://localhost:3000/management/:id (1)
+
+* A senha atual do usuário é obrigatória para excluir a conta.
+* Os projetos e logs passam a ter user=NULL.
+* As associações users-sectors e users-teams do usuário são removidas automaticamente.
+* O próprio usuário é removido da base de dados.
+
+Body:
+{
+"password": "false123"
+}
+
+
+---
+
+
+Users-sectors:
+
+Rota POST: http://localhost:3000/users-sectors
+
+Body:
+{
+"user": 1,
+"sector": 1,
+"institute_manager": false
+}
+
+Rota GET: http://localhost:3000/users-sectors?parameter=value
+parameters: user & sector & institute_manager
+
+
+---
+
+
+Users-teams:
+
+Rota POST: http://localhost:3000/users-teams
+
+Body:
+{
+"user": 1,
+"team": 1,
+"area_manager": false,
+"approver": false
+}
+
+Rota GET: http://localhost:3000/users-teams?parameter=value
+parameters: user & team & area_manager & approver
+
+
+---
+
+
+Projects:
+
+Rota POST: http://localhost:3000/projects
+
+- Autenticação: Headers:
+	- header => Authorization
+	- value => bearer *JWT Token*
+- Sem o campo family, um novo projeto é criado.
+- O novo projeto é criado com status=1 (rascunho).
+- O usuário deve estar vinculado ao team informado.
+- Usuários com approver=true no team informado não podem criar projetos.
+- A primeira versão recebe version=1.
+- O id do próprio projeto passa a ser o family.
+- A criação gera automaticamente um log com action="criou".
+
+Body Novo Projeto:
+{
+"name": "Projeto de Tecnologia",
+"user": 1,
+"team": 1,
+"short_description": "Descrição curta do projeto",
+"full_description": "Descrição completa do projeto",
+"source": ["https://barueri.sp.gov.br", "https://www.gov.br"],
+"main_department": "Secretaria de Educação",
+"related_departments": ["Secretaria de Educação"],
+"areas": ["Tecnologia"],
+"ods": [1, 2],
+"theme": "Educação e Tecnologia",
+"audience": "Alunos e Professores",
+"technologies": ["React", "NestJS", "PostgreSQL"],
+"implementation_date": "2026-09-04",
+"awards": [{
+"institution": "Prêmio de Inovação",
+"year": 2026,
+"description": "Prêmio de inovação tecnológica",
+"link": "https://exemplo.com"
+},
+{
+"institution": "Prêmio de Tecnologia",
+"year": 2026,
+"description": "Prêmio de tecnologia",
+"link": "https://exemplo.com"
+}],
+"indicators": [{
+"label": "Usuários atendidos",
+"value": "1000",
+"measure": "pessoas",
+"source": "Secretaria de Educação",
+"year": 2026
+}],
+"keywords": ["educação", "tecnologia"]
+}
+
+
+Rota PATCH: http://localhost:3000/projects/:id
+
+- Autenticação: Headers:
+	- header => Authorization
+	- value => bearer *JWT Token*
+- Apenas o usuário dono do projeto pode editar.
+- O usuário deve estar vinculado ao team do projeto.
+- Usuários com approver=true no team do projeto não podem editar.
+- Apenas projetos com status=1 (rascunho) podem ser editados.
+- O projeto mantém o mesmo id, team, family, version e status.
+- A edição atualiza last_update.
+- A edição gera automaticamente um log com action="editou".
+
+Body Editando Rascunho:
+{
+"name": "Projeto de Tecnologia - Editado",
+"user": 1,
+"team": 1,
+"short_description": "Descrição curta editada",
+"full_description": "Descrição completa editada",
+"source": ["https://barueri.sp.gov.br"],
+"main_department": "Secretaria de Educação",
+"related_departments": ["Secretaria de Educação"],
+"areas": ["Tecnologia"],
+"ods": [1, 2],
+"theme": "Educação e Tecnologia",
+"audience": "Alunos e Professores",
+"technologies": ["React", "NestJS"],
+"implementation_date": "2026-09-04",
+"awards": [{
+"institution": "Prêmio de Inovação",
+"year": 2026,
+"description": "Prêmio de inovação tecnológica",
+"link": "https://exemplo.com"
+}],
+"indicators": [{
+"label": "Usuários atendidos",
+"value": "1200",
+"measure": "pessoas",
+"source": "Secretaria de Educação",
+"year": 2026
+}],
+"keywords": ["educação", "tecnologia"]
+}
+
+
+Rota POST: http://localhost:3000/projects
+
+- Autenticação: Headers:
+	- header => Authorization
+	- value => bearer *JWT Token*
+- Quando family é informado, uma nova versão é criada dentro da mesma família.
+- A nova versão recebe version = última versão da família + 1.
+- A nova versão é criada com status=1 (rascunho).
+- O usuário responsável deve ser o mesmo usuário autenticado pelo JWT.
+- O usuário deve estar vinculado ao team da família.
+- Usuários com approver=true no team da família não podem criar uma nova versão.
+- Se a última versão da família estiver com status=1, uma nova versão não pode ser criada.
+- A criação da nova versão gera automaticamente um log com action="criou".
+
+Body Nova Versão:
+{
+"name": "Projeto de Tecnologia - Atualizado",
+"user": 1,
+"family": 1,
+"short_description": "Descrição curta do projeto - Atualizado",
+"full_description": "Descrição completa do projeto - Atualizado",
+"source": ["https://barueri.sp.gov.br", "https://www.gov.br"],
+"main_department": "Secretaria de Educação",
+"related_departments": ["Secretaria de Educação"],
+"areas": ["Tecnologia"],
+"ods": [1, 2, 3],
+"theme": "Educação e Tecnologia",
+"audience": "Alunos e Professores",
+"technologies": ["React", "NestJS", "PostgreSQL", "TypeScript"],
+"implementation_date": "2026-09-04",
+"awards": [{
+"institution": "Prêmio de Inovação",
+"year": 2026,
+"description": "Prêmio de inovação tecnológica",
+"link": "https://exemplo.com"
+},
+{
+"institution": "Prêmio de Tecnologia",
+"year": 2026,
+"description": "Prêmio de tecnologia",
+"link": "https://exemplo.com"
+},
+{
+"institution": "Prêmio Nobel da Paz",
+"year": 2026,
+"description": "Prêmio Nobel da Paz",
+"link": "https://exemplo.com"
+}],
+"indicators": [{
+"label": "Usuários atendidos",
+"value": "1500",
+"measure": "pessoas",
+"source": "Secretaria de Educação",
+"year": 2026
+}],
+"keywords": ["educação", "tecnologia", "inovação"]
+}
+
+
+Rota GET: http://localhost:3000/projects?parameter=value
+
+parameters: id & name & user & team & family & main_department & related_departments & areas & ods & theme & status & implementation-date & awards & keywords
+
+* related_departments, areas, ods, awards e keywords aceitam vários valores.
+* Em arrays, vários valores são pesquisados usando AND (todos os valores devem existir).
+* awards e keywords ignoram espaços nas extremidades e diferença entre maiúsculas/minúsculas.
+* source retorna as URLs junto com um nome obtido dinamicamente a partir da própria fonte.
+* team representa o id do time responsável pelo projeto.
+
+
+---
+
+
+Projects-logs:
+
+Rota GET: http://localhost:3000/projects-logs
+
+* Retorna os logs dos projetos.
+* Os logs são criados automaticamente pelo ProjectsService durante as operações dos projetos.
+* O campo moment é preenchido automaticamente pelo banco.
+*** rejeição de projeto não gera log.
+
