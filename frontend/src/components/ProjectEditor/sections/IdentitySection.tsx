@@ -1,5 +1,4 @@
 import { FiFileText } from "react-icons/fi";
-import type { ProjectStatus } from "../../../types/project";
 import {
   CompletionBadge,
   FieldLabel,
@@ -8,32 +7,22 @@ import {
   TextInput,
 } from "../EditorShared";
 
-const STATUS_OPTIONS: { value: ProjectStatus; label: string; color: string; bg: string }[] = [
-  { value: "draft",    label: "Rascunho",  color: "text-[#92400e]", bg: "bg-[#fffbeb] border-[#fde68a]" },
-  { value: "active",   label: "Ativo",     color: "text-[#166534]", bg: "bg-[#f0fdf4] border-[#a7f3d0]" },
-  { value: "archived", label: "Arquivado", color: "text-[#475569]", bg: "bg-[#f1f5f9] border-[#cbd5e1]" },
-];
-
 type Props = {
   name: string;
   shortDescription: string;
   fullDescription: string;
-  status: ProjectStatus;
   implementationDate: string;
   errors: Partial<Record<string, string>>;
   onChange: (field: string, value: string) => void;
-  onStatusChange: (s: ProjectStatus) => void;
 };
 
 export function IdentitySection({
   name,
   shortDescription,
   fullDescription,
-  status,
   implementationDate,
   errors,
   onChange,
-  onStatusChange,
 }: Props) {
   const filled = [name, shortDescription, fullDescription].filter(Boolean).length;
 
@@ -42,39 +31,11 @@ export function IdentitySection({
       id="section-identity"
       icon={<FiFileText className="h-4 w-4" />}
       title="Identidade do Projeto"
-      subtitle="Título, descrição e status"
+      subtitle="Título e descrição"
       badge={<CompletionBadge count={filled} required={filled < 2} />}
       defaultOpen
     >
       <div className="space-y-5">
-        {/* Status — selector visual em topo */}
-        <div>
-          <FieldLabel required>Status do projeto</FieldLabel>
-          <div className="flex flex-wrap gap-2">
-            {STATUS_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => onStatusChange(opt.value)}
-                className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-[0.84rem] font-semibold transition ${
-                  status === opt.value
-                    ? `${opt.bg} ${opt.color} shadow-sm`
-                    : "border-[#e5e7eb] bg-white text-[#6b7280] hover:border-[#d1d5db]"
-                }`}
-              >
-                <span
-                  className={`h-2 w-2 rounded-full ${
-                    opt.value === "active" ? "bg-[#22c55e]"
-                    : opt.value === "draft" ? "bg-[#f59e0b]"
-                    : "bg-[#94a3b8]"
-                  }`}
-                />
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Título */}
         <div>
           <FieldLabel htmlFor="proj-name" required hint="Máximo 80 caracteres">

@@ -56,13 +56,12 @@ type Props = {
   relatedDepartments: string[];
   technologies: string[];
   keywords: string[];
-  targetAudience: string[];
   errors: Partial<Record<string, string>>;
   onToggleCategory: (c: ProjectCategory) => void;
   onAreaChange: (a: GovernmentArea) => void;
   onFieldChange: (f: string, v: string) => void;
-  onAddTag: (f: "technologies" | "keywords" | "targetAudience" | "relatedDepartments", v: string) => void;
-  onRemoveTag: (f: "technologies" | "keywords" | "targetAudience" | "relatedDepartments", v: string) => void;
+  onAddTag: (f: "technologies" | "keywords" | "relatedDepartments", v: string) => void;
+  onRemoveTag: (f: "technologies" | "keywords" | "relatedDepartments", v: string) => void;
 };
 
 export function ClassificationSection({
@@ -72,7 +71,6 @@ export function ClassificationSection({
   relatedDepartments,
   technologies,
   keywords,
-  targetAudience,
   errors,
   onToggleCategory,
   onAreaChange,
@@ -189,19 +187,6 @@ export function ClassificationSection({
           />
         </div>
 
-        {/* Público-alvo */}
-        <div>
-          <FieldLabel hint="A quem o projeto se destina">
-            Público-alvo
-          </FieldLabel>
-          <TagInput
-            tags={targetAudience}
-            onAdd={(v) => onAddTag("targetAudience", v)}
-            onRemove={(v) => onRemoveTag("targetAudience", v)}
-            placeholder="Ex.: Cidadãos, Gestores, Servidores…"
-            tagColor="bg-[#fff7ed] text-[#c2410c] border-[#fed7aa]"
-          />
-        </div>
       </div>
     </SectionCard>
   );

@@ -79,10 +79,6 @@ import { buildPresentationSearchParams } from "../../router/presentationSearchPa
 
 // ─── Dados estáticos ─────────────────────────────────────────────────────────
 
-const AVAILABLE_YEARS = [
-  "Todos",
-  ...Array.from({ length: 2026 - 1950 + 1 }, (_, i) => String(2026 - i)),
-];
 
 const EVENT_TYPE_OPTIONS: { value: EventType; label: string }[] = [
   { value: "congresso",         label: "Congresso" },
@@ -191,8 +187,7 @@ function CreatePresentationPage() {
   const [eventType, setEventType]   = useState<EventType | "">("");
   const [audience, setAudience]     = useState("");
   const [language, setLanguage]     = useState<PresentationLanguage>("pt-BR");
-  const [selectedYear, setYear]     = useState(DEFAULT_PRESENTATION_FILTERS.year);
-  const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query);
+const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query);
 
   // Categoria primária = primeira da lista; secundárias = restantes
   const primaryCategory = (ed.draft.categories[0] ?? "Todos") as string;
@@ -452,7 +447,7 @@ function CreatePresentationPage() {
       const params = buildPresentationSearchParams({
         query:    search.trim() || DEFAULT_PRESENTATION_FILTERS.query,
         category: primaryCategory,
-        year:     selectedYear,
+        year:     DEFAULT_PRESENTATION_FILTERS.year,
       });
       params.set("pid", presentation.id);
       navigate(`${ROUTE_PATHS.generatedPresentation}?${params.toString()}`);
@@ -587,23 +582,8 @@ function CreatePresentationPage() {
                 </div>
               </div>
 
-              {/* Ano de referência + CTA principal */}
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-[0.84rem] font-medium text-[#6b7280]">Ano de referência:</span>
-                  <div className="relative">
-                    <select
-                      value={selectedYear}
-                      onChange={(e: ChangeEvent<HTMLSelectElement>) => setYear(e.target.value)}
-                      className="appearance-none rounded-xl border border-[#e2e8f0] bg-white py-2 pl-3 pr-8 text-[0.84rem] font-medium text-[#1e1e1e] outline-none focus:border-[#1675b8]"
-                    >
-                      {AVAILABLE_YEARS.map((y) => (
-                        <option key={y} value={y}>{y}</option>
-                      ))}
-                    </select>
-                    <FaChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 text-[#8a9ab0]" />
-                  </div>
-                </div>
+              {/* CTA principal */}
+              <div className="flex justify-end">
                 <button
                   type="button"
                   onClick={goToStep2}
@@ -749,11 +729,9 @@ function CreatePresentationPage() {
                   name={ed.draft.name}
                   shortDescription={ed.draft.shortDescription}
                   fullDescription={ed.draft.fullDescription}
-                  status={ed.draft.status}
                   implementationDate={ed.draft.implementationDate}
                   errors={ed.errors}
                   onChange={(field, value) => ed.patch({ [field]: value } as never)}
-                  onStatusChange={ed.setStatus}
                 />
 
                 <ClassificationSection
@@ -763,7 +741,6 @@ function CreatePresentationPage() {
                   relatedDepartments={ed.draft.relatedDepartments}
                   technologies={ed.draft.technologies}
                   keywords={ed.draft.keywords}
-                  targetAudience={ed.draft.targetAudience}
                   errors={ed.errors}
                   onToggleCategory={ed.toggleCategory}
                   onAreaChange={ed.setGovernmentArea}

@@ -284,11 +284,9 @@ export function ProjectEditor({ initial, onClose, onSaved }: Props) {
               name={ed.draft.name}
               shortDescription={ed.draft.shortDescription}
               fullDescription={ed.draft.fullDescription}
-              status={ed.draft.status}
               implementationDate={ed.draft.implementationDate}
               errors={ed.errors}
               onChange={(field, value) => ed.patch({ [field]: value } as never)}
-              onStatusChange={ed.setStatus}
             />
 
             <ClassificationSection
@@ -298,7 +296,6 @@ export function ProjectEditor({ initial, onClose, onSaved }: Props) {
               relatedDepartments={ed.draft.relatedDepartments}
               technologies={ed.draft.technologies}
               keywords={ed.draft.keywords}
-              targetAudience={ed.draft.targetAudience}
               errors={ed.errors}
               onToggleCategory={ed.toggleCategory}
               onAreaChange={ed.setGovernmentArea}
