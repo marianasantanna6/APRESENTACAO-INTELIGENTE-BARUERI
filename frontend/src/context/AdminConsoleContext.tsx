@@ -24,7 +24,7 @@ type AdminConsoleContextValue = {
   times: TimeEntry[];
   canManageEmployees: boolean;
   addEmployee: (payload: NewEmployeePayload) => Promise<MutationResult>;
-  removeEmployee: (employeeId: string) => MutationResult;
+  removeEmployee: (employeeId: string, adminPassword?: string) => Promise<MutationResult>;
   addSecretaria: (payload: NewSecretariaPayload) => Promise<MutationResult>;
   removeSecretaria: (id: string) => Promise<MutationResult>;
   addTime: (payload: NewTimePayload) => Promise<MutationResult>;
@@ -172,7 +172,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     return { ok: true };
   }
 
-  function removeEmployee(employeeId: string): EmployeeMutationResult {
+  async function removeEmployee(employeeId: string, adminPassword?: string): Promise<EmployeeMutationResult> {
     if (!user || !allowEmployeeManagement) {
       return {
         ok: false,
@@ -190,6 +190,19 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
         ok: false,
         message: "Funcionário não encontrado para remoção.",
       };
+    }
+
+    if (adminPassword) {
+      const res = await fetch(`/api/management/${employeeId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: adminPassword }),
+      }).catch(() => null);
+
+      if (res && !res.ok) {
+        const err = await res.json().catch(() => ({})) as { message?: string };
+        return { ok: false, message: err.message ?? "Erro ao remover funcionário." };
+      }
     }
 
     setEmployeesState((current) =>

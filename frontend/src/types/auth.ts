@@ -16,6 +16,8 @@ export type MockUser = {
   team: string;
   status: AccountStatus;
   avatarDataUrl?: string | null;
+  master_admin?: boolean;
+  approver?: boolean;
 };
 
 export type AuthSessionUser = Omit<MockUser, "password">;

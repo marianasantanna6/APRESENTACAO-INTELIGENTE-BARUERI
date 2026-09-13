@@ -270,6 +270,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
           teamName: string | null;
           sectorName: string | null;
           accessLevel: number;
+          master_admin: boolean;
+          approver: boolean;
         };
       };
 
@@ -289,6 +291,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
         team: data.user.teamName ?? "",
         status: "active",
         avatarDataUrl: data.user.photo ?? null,
+        master_admin: data.user.master_admin ?? false,
+        approver: data.user.approver ?? false,
       };
 
       setUsers((prev) => {

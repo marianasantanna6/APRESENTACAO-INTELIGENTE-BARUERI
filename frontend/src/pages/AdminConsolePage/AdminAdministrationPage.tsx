@@ -405,7 +405,7 @@ export default function AdminAdministrationPage() {
     setEmployeePendingRemoval(employee);
   }
 
-  function handleRemoveEmployee(event: FormEvent<HTMLFormElement>) {
+  async function handleRemoveEmployee(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!employeePendingRemoval) {
@@ -432,7 +432,7 @@ export default function AdminAdministrationPage() {
       return;
     }
 
-    const result = removeEmployee(employeePendingRemoval.id);
+    const result = await removeEmployee(employeePendingRemoval.id, deleteConfirmationForm.password);
 
     if ("message" in result) {
       setDeleteConfirmationError(result.message);
