@@ -68,14 +68,14 @@ export type NewEmployeePayload = {
   teamId: string;
 };
 
-// ─── Secretarias ─────────────────────────────────────────────────────────────
+// ─── Setores ─────────────────────────────────────────────────────────────────
 
-export type SecretariaEntry = {
+export type SetorEntry = {
   id: string;
   nome: string;
 };
 
-export type NewSecretariaPayload = {
+export type NewSetorPayload = {
   nome: string;
 };
 

@@ -7,7 +7,7 @@
  */
 
 import type { ChangeEvent, CSSProperties } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   FaChevronDown,
   FaSearch,
@@ -54,6 +54,7 @@ import { LinksSection } from "../../components/ProjectEditor/sections/LinksSecti
 import { MediaSection } from "../../components/ProjectEditor/sections/MediaSection";
 import { OdsSection } from "../../components/ProjectEditor/sections/OdsSection";
 import { useProjectEditor } from "../../components/ProjectEditor/useProjectEditor";
+import { AdminConsoleContext } from "../../context/AdminConsoleContext";
 import { useAuth } from "../../context";
 import { canCreatePresentations } from "../../lib/accessControl";
 import { getPresentationsRouteForUser } from "../../lib/authRouting";
@@ -170,6 +171,8 @@ function CreatePresentationPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { logout, user } = useAuth();
+  const adminConsole = useContext(AdminConsoleContext);
+  const sectorOptions = (adminConsole?.setores ?? []).map((s) => ({ value: s.id, label: s.nome }));
   const canCreate = canCreatePresentations(user);
 
   // ── Etapa atual ──
@@ -747,6 +750,7 @@ const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query)
                   onFieldChange={(f, v) => ed.patch({ [f]: v } as never)}
                   onAddTag={ed.addTag}
                   onRemoveTag={ed.removeTag}
+                  sectorOptions={sectorOptions.length > 0 ? sectorOptions : undefined}
                 />
 
                 <IndicatorsSection

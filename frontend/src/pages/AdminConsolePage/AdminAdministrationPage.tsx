@@ -15,9 +15,9 @@ import type {
   ActivityLogStatus,
   EmployeeDirectoryEntry,
   NewEmployeePayload,
-  NewSecretariaPayload,
+  NewSetorPayload,
   NewTimePayload,
-  SecretariaEntry,
+  SetorEntry,
   TimeEntry,
 } from "../../types/admin";
 import type { AccountStatus } from "../../types/auth";
@@ -71,7 +71,7 @@ type EmployeeFormState = {
   email: string;
   cpf: string;
   password: string;
-  secretariaId: string;
+  setorId: string;
   teamId: string;
 };
 
@@ -94,7 +94,7 @@ const initialEmployeeForm: EmployeeFormState = {
   email: "",
   cpf: "",
   password: "",
-  secretariaId: "",
+  setorId: "",
   teamId: "",
 };
 
@@ -257,14 +257,14 @@ export default function AdminAdministrationPage() {
   const {
     activityLog,
     addEmployee,
-    addSecretaria,
+    addSetor,
     addTime,
     canManageEmployees,
     employees,
     removeEmployee,
-    removeSecretaria,
+    removeSetor,
     removeTime,
-    secretarias,
+    setores,
     times,
   } = useAdminConsole();
   const { user, verifyCurrentUser } = useAuth();
@@ -278,29 +278,29 @@ export default function AdminAdministrationPage() {
   const [logSearch, setLogSearch] = useState("");
   const [employeePendingRemoval, setEmployeePendingRemoval] =
     useState<EmployeeDirectoryEntry | null>(null);
-  // ── Estado: Secretarias ────────────────────────────────────────────────────
-  const [isSecretariaModalOpen, setIsSecretariaModalOpen] = useState(false);
-  const [secretariaForm, setSecretariaForm] = useState<NewSecretariaPayload>({ nome: "" });
-  const [secretariaFormError, setSecretariaFormError] = useState("");
-  const [secretariaPendingRemoval, setSecretariaPendingRemoval] = useState<SecretariaEntry | null>(null);
+  // ── Estado: Setores ────────────────────────────────────────────────────────
+  const [isSetorModalOpen, setIsSetorModalOpen] = useState(false);
+  const [setorForm, setSetorForm] = useState<NewSetorPayload>({ nome: "" });
+  const [setorFormError, setSetorFormError] = useState("");
+  const [setorPendingRemoval, setSetorPendingRemoval] = useState<SetorEntry | null>(null);
 
   // ── Estado: Times ──────────────────────────────────────────────────────────
   const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
-  const [timeForm, setTimeForm] = useState<NewTimePayload>({ nome: "", secretariaId: secretarias[0]?.id ?? "", levelAcess: 1 });
+  const [timeForm, setTimeForm] = useState<NewTimePayload>({ nome: "", secretariaId: setores[0]?.id ?? "", levelAcess: 1 });
   const [timeFormError, setTimeFormError] = useState("");
   const [timePendingRemoval, setTimePendingRemoval] = useState<TimeEntry | null>(null);
 
   // ── Ordenação alfabética ───────────────────────────────────────────────────
-  const secretariasSorted = useMemo(
-    () => [...secretarias].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
-    [secretarias],
+  const setoresSorted = useMemo(
+    () => [...setores].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
+    [setores],
   );
   const timesSorted = useMemo(
     () => [...times].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
     [times],
   );
 
-  const teamOptions = times.filter((t) => t.secretariaId === formValues.secretariaId);
+  const teamOptions = times.filter((t) => t.secretariaId === formValues.setorId);
 
   const [formValues, setFormValues] = useState<EmployeeFormState>(initialEmployeeForm);
   const [formStep, setFormStep] = useState<1 | 2>(1);
@@ -381,7 +381,7 @@ export default function AdminAdministrationPage() {
     event.preventDefault();
 
     if (!formValues.teamId) {
-      setFormError("Selecione a secretaria e a equipe para concluir o cadastro.");
+      setFormError("Selecione o setor e a equipe para concluir o cadastro.");
       return;
     }
 
@@ -455,20 +455,20 @@ export default function AdminAdministrationPage() {
     closeDeleteConfirmationModal();
   }
 
-  // ── Handlers: Secretarias ─────────────────────────────────────────────────
-  async function handleSubmitSecretaria(event: FormEvent<HTMLFormElement>) {
+  // ── Handlers: Setores ─────────────────────────────────────────────────────
+  async function handleSubmitSetor(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSecretariaFormError("");
-    const result = await addSecretaria(secretariaForm);
-    if ("message" in result) { setSecretariaFormError(result.message); return; }
-    setIsSecretariaModalOpen(false);
-    setSecretariaForm({ nome: "" });
+    setSetorFormError("");
+    const result = await addSetor(setorForm);
+    if ("message" in result) { setSetorFormError(result.message); return; }
+    setIsSetorModalOpen(false);
+    setSetorForm({ nome: "" });
   }
 
-  async function handleConfirmRemoveSecretaria() {
-    if (!secretariaPendingRemoval) return;
-    await removeSecretaria(secretariaPendingRemoval.id);
-    setSecretariaPendingRemoval(null);
+  async function handleConfirmRemoveSetor() {
+    if (!setorPendingRemoval) return;
+    await removeSetor(setorPendingRemoval.id);
+    setSetorPendingRemoval(null);
   }
 
   // ── Handlers: Times ───────────────────────────────────────────────────────
@@ -478,7 +478,7 @@ export default function AdminAdministrationPage() {
     const result = await addTime(timeForm);
     if ("message" in result) { setTimeFormError(result.message); return; }
     setIsTimeModalOpen(false);
-    setTimeForm({ nome: "", secretariaId: secretarias[0]?.id ?? "", levelAcess: 1 });
+    setTimeForm({ nome: "", secretariaId: setores[0]?.id ?? "", levelAcess: 1 });
   }
 
   async function handleConfirmRemoveTime() {
@@ -497,14 +497,14 @@ export default function AdminAdministrationPage() {
     onClose: closeDeleteConfirmationModal,
     initialFocusSelector: "[data-modal-initial-focus]",
   });
-  const secretariaModalRef = useModalAccessibility({
-    isOpen: isSecretariaModalOpen,
-    onClose: () => { setIsSecretariaModalOpen(false); setSecretariaFormError(""); },
+  const setorModalRef = useModalAccessibility({
+    isOpen: isSetorModalOpen,
+    onClose: () => { setIsSetorModalOpen(false); setSetorFormError(""); },
     initialFocusSelector: "[data-modal-initial-focus]",
   });
-  const deleteSecretariaModalRef = useModalAccessibility({
-    isOpen: secretariaPendingRemoval !== null,
-    onClose: () => setSecretariaPendingRemoval(null),
+  const deleteSetorModalRef = useModalAccessibility({
+    isOpen: setorPendingRemoval !== null,
+    onClose: () => setSetorPendingRemoval(null),
     initialFocusSelector: "[data-delete-confirm-focus]",
   });
   const timeModalRef = useModalAccessibility({
@@ -649,33 +649,33 @@ export default function AdminAdministrationPage() {
         )}
       </AdminPanel>
 
-      {/* ── Painel Secretarias (somente admin_level_2) ─────────────────────── */}
+      {/* ── Painel Setores (somente admin_level_2) ─────────────────────────── */}
       {canManageEmployees ? (
         <AdminPanel className="space-y-5 px-5 py-5 sm:px-7">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <h2 className="text-[1.6rem] font-bold tracking-[-0.03em] text-[#262626]">
-                Secretarias
+                Setores
               </h2>
               <p className="mt-1 text-[0.9rem] font-medium text-[#8f8f8f]">
-                Registro das secretarias e setores da organização.
+                Registro dos setores e secretarias da organização.
               </p>
             </div>
             <button
               type="button"
-              onClick={() => { setSecretariaFormError(""); setIsSecretariaModalOpen(true); }}
+              onClick={() => { setSetorFormError(""); setIsSetorModalOpen(true); }}
               className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-4 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(103,156,203,0.24)] transition hover:-translate-y-0.5 self-start"
             >
               <FiPlus className="h-4.5 w-4.5" />
-              Nova secretaria
+              Novo setor
             </button>
           </div>
 
-          {secretariasSorted.length ? (
+          {setoresSorted.length ? (
             <>
               {/* Mobile */}
               <div className="space-y-3 md:hidden">
-                {secretariasSorted.map((sec) => (
+                {setoresSorted.map((sec) => (
                   <article key={sec.id} className="rounded-[22px] border border-[#e4ebf2] bg-white/88 p-4 shadow-[0_16px_40px_-28px_rgba(20,33,51,0.28)]">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
@@ -688,7 +688,7 @@ export default function AdminAdministrationPage() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => setSecretariaPendingRemoval(sec)}
+                        onClick={() => setSetorPendingRemoval(sec)}
                         aria-label={`Remover ${sec.nome}`}
                         className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
                       >
@@ -709,7 +709,7 @@ export default function AdminAdministrationPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {secretariasSorted.map((sec) => (
+                      {setoresSorted.map((sec) => (
                         <tr key={sec.id} className="text-[0.95rem] font-medium text-[#7a7a7a]">
                           <td className="rounded-l-[18px] bg-white/72 px-5 py-2.5">
                             <div className="flex items-center gap-3">
@@ -722,7 +722,7 @@ export default function AdminAdministrationPage() {
                           <td className="rounded-r-[18px] bg-white/72 px-5 py-2.5 text-right">
                             <button
                               type="button"
-                              onClick={() => setSecretariaPendingRemoval(sec)}
+                              onClick={() => setSetorPendingRemoval(sec)}
                               aria-label={`Remover ${sec.nome}`}
                               className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
                             >
@@ -738,8 +738,8 @@ export default function AdminAdministrationPage() {
             </>
           ) : (
             <EmptyMobileState
-              title="Nenhuma secretaria cadastrada"
-              description="Clique em Nova secretaria para começar o registro."
+              title="Nenhum setor cadastrado"
+              description="Clique em Novo setor para começar o registro."
             />
           )}
         </AdminPanel>
@@ -754,13 +754,13 @@ export default function AdminAdministrationPage() {
                 Times
               </h2>
               <p className="mt-1 text-[0.9rem] font-medium text-[#8f8f8f]">
-                Equipes de trabalho vinculadas às secretarias.
+                Equipes de trabalho vinculadas aos setores.
               </p>
             </div>
             <button
               type="button"
               onClick={() => { setTimeFormError(""); setIsTimeModalOpen(true); }}
-              disabled={secretarias.length === 0}
+              disabled={setores.length === 0}
               className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-4 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(103,156,203,0.24)] transition hover:-translate-y-0.5 self-start disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FiPlus className="h-4.5 w-4.5" />
@@ -788,7 +788,7 @@ export default function AdminAdministrationPage() {
                       </button>
                     </div>
                     <div className="mt-3">
-                      <MobileInfoField label="Secretaria responsável">{time.secretariaNome}</MobileInfoField>
+                      <MobileInfoField label="Setor responsável">{time.secretariaNome}</MobileInfoField>
                     </div>
                   </article>
                 ))}
@@ -800,7 +800,7 @@ export default function AdminAdministrationPage() {
                     <thead>
                       <tr className="text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-[#b1b1b1]">
                         <th className="w-[45%] pb-2 pr-4">Nome do Time</th>
-                        <th className="w-[45%] pb-2 px-4">Secretaria Responsável</th>
+                        <th className="w-[45%] pb-2 px-4">Setor Responsável</th>
                         <th className="pb-1">Ações</th>
                       </tr>
                     </thead>
@@ -829,7 +829,7 @@ export default function AdminAdministrationPage() {
           ) : (
             <EmptyMobileState
               title="Nenhum time cadastrado"
-              description={secretarias.length === 0 ? "Cadastre uma secretaria antes de criar times." : "Clique em Novo time para começar."}
+              description={setores.length === 0 ? "Cadastre um setor antes de criar times." : "Clique em Novo time para começar."}
             />
           )}
         </AdminPanel>
@@ -875,7 +875,7 @@ export default function AdminAdministrationPage() {
           ))}
         </div>
 
-        {/* Filtros — busca + período + secretaria */}
+        {/* Filtros — busca + período + setor */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <FiSearch className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9aa5b0]" />
@@ -905,8 +905,8 @@ export default function AdminAdministrationPage() {
               onChange={(e) => setLogDepartment(e.target.value)}
               className="h-10 appearance-none rounded-full bg-[#f1f1f4] px-4 pr-8 text-[0.85rem] font-medium text-[#6a7a88] outline-none"
             >
-              <option value="all">Todas as secretarias</option>
-              {secretariasSorted.map((s) => (
+              <option value="all">Todos os setores</option>
+              {setoresSorted.map((s) => (
                 <option key={s.id} value={s.nome}>
                   {s.nome}
                 </option>
@@ -941,7 +941,7 @@ export default function AdminAdministrationPage() {
                       <th className="w-[14%] pb-2 px-4">Categoria</th>
                       <th className="w-[28%] pb-2 px-4">Ação / Entidade</th>
                       <th className="w-[18%] pb-2 px-4">Responsável</th>
-                      <th className="w-[16%] pb-2 px-4">Secretaria</th>
+                      <th className="w-[16%] pb-2 px-4">Setor</th>
                       <th className="pb-1">Status</th>
                     </tr>
                   </thead>
@@ -1005,7 +1005,7 @@ export default function AdminAdministrationPage() {
                             )}
                           </td>
 
-                          {/* Secretaria */}
+                          {/* Setor */}
                           <td className="bg-white/72 px-4 py-3">
                             <p className="text-[#9b9b9b]">{entry.department}</p>
                             <p className="mt-0.5 text-[0.75rem] text-[#c1c1c1]">{entry.team}</p>
@@ -1042,14 +1042,14 @@ export default function AdminAdministrationPage() {
         )}
       </AdminPanel>
 
-      {/* ── Modal Confirmação Exclusão Secretaria ────────────────────────── */}
-      {secretariaPendingRemoval ? (
+      {/* ── Modal Confirmação Exclusão Setor ────────────────────────────── */}
+      {setorPendingRemoval ? (
         <div
           className="fixed inset-0 z-40 flex items-end justify-center overflow-y-auto bg-[#142133]/40 px-4 py-4 backdrop-blur-[3px] sm:items-center sm:py-6"
-          onClick={() => setSecretariaPendingRemoval(null)}
+          onClick={() => setSetorPendingRemoval(null)}
         >
           <div
-            ref={deleteSecretariaModalRef}
+            ref={deleteSetorModalRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="del-sec-title"
@@ -1059,11 +1059,11 @@ export default function AdminAdministrationPage() {
           >
             <div className="mb-4 flex items-start justify-between gap-4">
               <h3 id="del-sec-title" className="text-[1.5rem] font-extrabold tracking-[-0.04em] text-[#1f1f1f]">
-                Remover secretaria?
+                Remover setor?
               </h3>
               <button
                 type="button"
-                onClick={() => setSecretariaPendingRemoval(null)}
+                onClick={() => setSetorPendingRemoval(null)}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#f2f4f7] text-[#7a7a7a] transition hover:bg-[#e6ecf3]"
                 aria-label="Fechar"
               >
@@ -1072,16 +1072,16 @@ export default function AdminAdministrationPage() {
             </div>
 
             <div className="mb-5 rounded-[18px] border border-[#f0dcdc] bg-[#fff7f7] px-4 py-3">
-              <p className="text-[1rem] font-semibold text-[#5d3a3a]">{secretariaPendingRemoval.nome}</p>
+              <p className="text-[1rem] font-semibold text-[#5d3a3a]">{setorPendingRemoval.nome}</p>
               <p className="mt-2 text-[0.8rem] text-[#c45b5b]">
-                Todos os times vinculados a esta secretaria também serão removidos.
+                Todos os times vinculados a este setor também serão removidos.
               </p>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
-                onClick={() => setSecretariaPendingRemoval(null)}
+                onClick={() => setSetorPendingRemoval(null)}
                 className="h-11 w-full rounded-full border border-[#d7dde4] px-5 text-[0.92rem] font-semibold text-[#6a6a6a] transition hover:bg-[#f5f7f9] sm:w-auto"
               >
                 Cancelar
@@ -1089,7 +1089,7 @@ export default function AdminAdministrationPage() {
               <button
                 type="button"
                 data-delete-confirm-focus
-                onClick={handleConfirmRemoveSecretaria}
+                onClick={handleConfirmRemoveSetor}
                 className="h-11 w-full rounded-full bg-[#d86b6b] px-5 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(216,107,107,0.24)] transition hover:-translate-y-0.5 hover:bg-[#ca5a5a] sm:w-auto"
               >
                 Sim, remover
@@ -1154,53 +1154,53 @@ export default function AdminAdministrationPage() {
         </div>
       ) : null}
 
-      {/* ── Modal Nova Secretaria ─────────────────────────────────────────── */}
-      {isSecretariaModalOpen ? (
+      {/* ── Modal Novo Setor ─────────────────────────────────────────────── */}
+      {isSetorModalOpen ? (
         <div
           className="fixed inset-0 z-40 flex items-end justify-center overflow-y-auto bg-[#142133]/40 px-4 py-4 backdrop-blur-[3px] sm:items-center sm:py-6"
-          onClick={() => { setIsSecretariaModalOpen(false); setSecretariaFormError(""); }}
+          onClick={() => { setIsSetorModalOpen(false); setSetorFormError(""); }}
         >
           <div
-            ref={secretariaModalRef}
+            ref={setorModalRef}
             role="dialog"
             aria-modal="true"
-            aria-labelledby="secretaria-dialog-title"
+            aria-labelledby="setor-dialog-title"
             tabIndex={-1}
             className="w-full max-w-[480px] rounded-[26px] bg-white p-6 shadow-[0_24px_80px_rgba(20,33,51,0.24)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-5 flex items-start justify-between gap-4">
-              <h3 id="secretaria-dialog-title" className="text-[1.65rem] font-extrabold tracking-[-0.04em] text-[#1f1f1f]">
-                Nova secretaria
+              <h3 id="setor-dialog-title" className="text-[1.65rem] font-extrabold tracking-[-0.04em] text-[#1f1f1f]">
+                Novo setor
               </h3>
               <button
                 type="button"
-                onClick={() => { setIsSecretariaModalOpen(false); setSecretariaFormError(""); }}
+                onClick={() => { setIsSetorModalOpen(false); setSetorFormError(""); }}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#f2f4f7] text-[#7a7a7a] transition hover:bg-[#e6ecf3]"
                 aria-label="Fechar"
               >
                 <FiX className="h-5 w-5" />
               </button>
             </div>
-            <form className="space-y-4" onSubmit={handleSubmitSecretaria}>
+            <form className="space-y-4" onSubmit={handleSubmitSetor}>
               <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                Nome da secretaria
+                Nome do setor
                 <input
                   type="text"
-                  value={secretariaForm.nome}
-                  onChange={(e) => setSecretariaForm((c) => ({ ...c, nome: e.target.value }))}
+                  value={setorForm.nome}
+                  onChange={(e) => setSetorForm((c) => ({ ...c, nome: e.target.value }))}
                   data-modal-initial-focus
                   placeholder="Ex.: Secretaria de Educação"
                   className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
                 />
               </label>
-              {secretariaFormError ? (
-                <p className="rounded-[16px] bg-[#fff5f5] px-4 py-3 text-[0.9rem] font-medium text-[#be3232]">{secretariaFormError}</p>
+              {setorFormError ? (
+                <p className="rounded-[16px] bg-[#fff5f5] px-4 py-3 text-[0.9rem] font-medium text-[#be3232]">{setorFormError}</p>
               ) : null}
               <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
-                  onClick={() => { setIsSecretariaModalOpen(false); setSecretariaFormError(""); }}
+                  onClick={() => { setIsSetorModalOpen(false); setSetorFormError(""); }}
                   className="h-11 w-full rounded-full border border-[#d7dde4] px-5 text-[0.92rem] font-semibold text-[#6a6a6a] transition hover:bg-[#f5f7f9] sm:w-auto"
                 >
                   Cancelar
@@ -1209,7 +1209,7 @@ export default function AdminAdministrationPage() {
                   type="submit"
                   className="h-11 w-full rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-5 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(103,156,203,0.24)] transition hover:-translate-y-0.5 sm:w-auto"
                 >
-                  Salvar secretaria
+                  Salvar setor
                 </button>
               </div>
             </form>
@@ -1270,13 +1270,13 @@ export default function AdminAdministrationPage() {
                 </select>
               </label>
               <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                Secretaria responsável
+                Setor responsável
                 <select
                   value={timeForm.secretariaId}
                   onChange={(e) => setTimeForm((c) => ({ ...c, secretariaId: e.target.value }))}
                   className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
                 >
-                  {secretarias.map((sec) => (
+                  {setores.map((sec) => (
                     <option key={sec.id} value={sec.id}>{sec.nome}</option>
                   ))}
                 </select>
@@ -1440,7 +1440,7 @@ export default function AdminAdministrationPage() {
               </div>
             )}
 
-            {/* ── Etapa 2: secretaria e equipe ── */}
+            {/* ── Etapa 2: setor e equipe ── */}
             {formStep === 2 && (
               <form className="space-y-4" onSubmit={handleSubmit}>
                 {/* Resumo do funcionário criado */}
@@ -1452,21 +1452,21 @@ export default function AdminAdministrationPage() {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                    Secretaria
+                    Setor
                     <select
-                      value={formValues.secretariaId}
+                      value={formValues.setorId}
                       onChange={(event) =>
                         setFormValues((current) => ({
                           ...current,
-                          secretariaId: event.target.value,
+                          setorId: event.target.value,
                           teamId: "",
                         }))
                       }
                       data-modal-initial-focus
                       className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
                     >
-                      <option value="">Selecione a secretaria</option>
-                      {secretariasSorted.map((s) => (
+                      <option value="">Selecione o setor</option>
+                      {setoresSorted.map((s) => (
                         <option key={s.id} value={s.id}>{s.nome}</option>
                       ))}
                     </select>
@@ -1479,7 +1479,7 @@ export default function AdminAdministrationPage() {
                       onChange={(event) =>
                         setFormValues((current) => ({ ...current, teamId: event.target.value }))
                       }
-                      disabled={!formValues.secretariaId}
+                      disabled={!formValues.setorId}
                       className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4] disabled:opacity-50"
                     >
                       <option value="">Selecione a equipe</option>

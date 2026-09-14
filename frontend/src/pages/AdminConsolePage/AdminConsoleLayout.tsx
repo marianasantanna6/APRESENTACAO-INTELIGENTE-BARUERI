@@ -15,7 +15,6 @@ import { useTranslation } from "react-i18next";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import AuthenticatedHeader from "../../components/AuthenticatedHeader";
 import {
-  AdminConsoleProvider,
   useAuth,
   useSystemPreferences,
 } from "../../context";
@@ -301,9 +300,5 @@ function AdminConsoleLayoutContent() {
 }
 
 export default function AdminConsoleLayout() {
-  return (
-    <AdminConsoleProvider>
-      <AdminConsoleLayoutContent />
-    </AdminConsoleProvider>
-  );
+  return <AdminConsoleLayoutContent />;
 }

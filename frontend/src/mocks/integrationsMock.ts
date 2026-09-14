@@ -642,11 +642,11 @@ export const organizationMock: OrganizationDirectoryEntry[] = [
   { department: "Recursos Humanos", teams: ["Gestão de Pessoas"] },
 ];
 
-// ─── Secretarias ──────────────────────────────────────────────────────────────
+// ─── Setores ──────────────────────────────────────────────────────────────────
 
-import type { SecretariaEntry, TimeEntry } from "../types/admin";
+import type { SetorEntry, TimeEntry } from "../types/admin";
 
-export const secretariasMock: SecretariaEntry[] = [
+export const secretariasMock: SetorEntry[] = [
   { id: "sec-1", nome: "Secretaria de Planejamento e Urbanismo", setor: "Planejamento" },
   { id: "sec-2", nome: "Secretaria de Finanças e Orçamento", setor: "Financeiro" },
   { id: "sec-3", nome: "Secretaria de Recursos Humanos", setor: "Recursos Humanos" },

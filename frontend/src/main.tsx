@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import {
+  AdminConsoleProvider,
   applySystemPreferencesToDocument,
   AuthProvider,
   I18nSyncProvider,
@@ -27,7 +28,9 @@ createRoot(rootElement).render(
       <SystemPreferencesProvider>
         <I18nSyncProvider>
           <AuthProvider>
-            <App />
+            <AdminConsoleProvider>
+              <App />
+            </AdminConsoleProvider>
           </AuthProvider>
         </I18nSyncProvider>
       </SystemPreferencesProvider>

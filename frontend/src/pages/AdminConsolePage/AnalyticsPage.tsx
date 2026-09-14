@@ -65,7 +65,7 @@ function KpiCard({
       </div>
       <div className="min-w-0">
         <p className="truncate text-[0.72rem] font-bold uppercase tracking-wider text-[#9ca3af]">{label}</p>
-        <p className="mt-0.5 text-[1.5rem] font-extrabold leading-none tracking-[-0.03em] text-[#1e1e1e]">
+        <p className="mt-0.5 truncate text-[1.5rem] font-extrabold leading-none tracking-[-0.03em] text-[#1e1e1e]">
           {value}
         </p>
         {sub && <p className="mt-0.5 text-[0.74rem] text-[#9ca3af]">{sub}</p>}

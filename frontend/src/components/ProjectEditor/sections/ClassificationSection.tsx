@@ -1,4 +1,5 @@
-import { FiTag } from "react-icons/fi";
+import { useState } from "react";
+import { FiTag, FiX } from "react-icons/fi";
 import type { GovernmentArea, ProjectCategory } from "../../../types/project";
 import {
   CompletionBadge,
@@ -62,6 +63,8 @@ type Props = {
   onFieldChange: (f: string, v: string) => void;
   onAddTag: (f: "technologies" | "keywords" | "relatedDepartments", v: string) => void;
   onRemoveTag: (f: "technologies" | "keywords" | "relatedDepartments", v: string) => void;
+  /** Quando fornecido, Setor Principal e Setores Relacionados usam select ao invés de texto livre */
+  sectorOptions?: { value: string; label: string }[];
 };
 
 export function ClassificationSection({
@@ -77,6 +80,7 @@ export function ClassificationSection({
   onFieldChange,
   onAddTag,
   onRemoveTag,
+  sectorOptions,
 }: Props) {
   return (
     <SectionCard
@@ -129,33 +133,56 @@ export function ClassificationSection({
           />
         </div>
 
-        {/* Secretaria principal */}
+        {/* Setor principal */}
         <div>
-          <FieldLabel htmlFor="proj-dept" required hint="Secretaria ou departamento responsável pelo projeto">
-            Secretaria Principal
+          <FieldLabel htmlFor="proj-dept" required hint="Setor ou departamento responsável pelo projeto">
+            Setor Principal
           </FieldLabel>
-          <input
-            id="proj-dept"
-            type="text"
-            value={mainDepartment}
-            onChange={(e) => onFieldChange("mainDepartment", e.target.value)}
-            placeholder="Ex.: Gabinete de Dados"
-            className="w-full rounded-xl border border-[#e5e7eb] px-4 py-2.5 text-[0.9rem] text-[#1e1e1e] placeholder:text-[#9ca3af] focus:border-[#6fa8d6] focus:outline-none focus:ring-2 focus:ring-[#6fa8d6]/20 transition"
-          />
+          {sectorOptions ? (
+            <select
+              id="proj-dept"
+              value={mainDepartment}
+              onChange={(e) => onFieldChange("mainDepartment", e.target.value)}
+              className="w-full rounded-xl border border-[#e5e7eb] px-4 py-2.5 text-[0.9rem] text-[#1e1e1e] focus:border-[#6fa8d6] focus:outline-none focus:ring-2 focus:ring-[#6fa8d6]/20 transition"
+            >
+              <option value="">Selecione o setor…</option>
+              {sectorOptions.map((opt) => (
+                <option key={opt.value} value={opt.label}>{opt.label}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              id="proj-dept"
+              type="text"
+              value={mainDepartment}
+              onChange={(e) => onFieldChange("mainDepartment", e.target.value)}
+              placeholder="Ex.: Gabinete de Dados"
+              className="w-full rounded-xl border border-[#e5e7eb] px-4 py-2.5 text-[0.9rem] text-[#1e1e1e] placeholder:text-[#9ca3af] focus:border-[#6fa8d6] focus:outline-none focus:ring-2 focus:ring-[#6fa8d6]/20 transition"
+            />
+          )}
         </div>
 
-        {/* Secretarias relacionadas */}
+        {/* Setores relacionados */}
         <div>
-          <FieldLabel hint="Secretarias parceiras ou envolvidas indiretamente">
-            Secretarias Relacionadas
+          <FieldLabel hint="Setores parceiros ou envolvidos indiretamente">
+            Setores Relacionados
           </FieldLabel>
-          <TagInput
-            tags={relatedDepartments}
-            onAdd={(v) => onAddTag("relatedDepartments", v)}
-            onRemove={(v) => onRemoveTag("relatedDepartments", v)}
-            placeholder="Adicionar secretaria parceira…"
-            tagColor="bg-[#ecfdf5] text-[#065f46] border-[#a7f3d0]"
-          />
+          {sectorOptions ? (
+            <SectorMultiSelect
+              selected={relatedDepartments}
+              options={sectorOptions}
+              onAdd={(v) => onAddTag("relatedDepartments", v)}
+              onRemove={(v) => onRemoveTag("relatedDepartments", v)}
+            />
+          ) : (
+            <TagInput
+              tags={relatedDepartments}
+              onAdd={(v) => onAddTag("relatedDepartments", v)}
+              onRemove={(v) => onRemoveTag("relatedDepartments", v)}
+              placeholder="Adicionar setor parceiro…"
+              tagColor="bg-[#ecfdf5] text-[#065f46] border-[#a7f3d0]"
+            />
+          )}
         </div>
 
         {/* Tecnologias */}
@@ -189,5 +216,73 @@ export function ClassificationSection({
 
       </div>
     </SectionCard>
+  );
+}
+
+// ─── SectorMultiSelect ────────────────────────────────────────────────────────
+
+function SectorMultiSelect({
+  selected,
+  options,
+  onAdd,
+  onRemove,
+}: {
+  selected: string[];
+  options: { value: string; label: string }[];
+  onAdd: (label: string) => void;
+  onRemove: (label: string) => void;
+}) {
+  const [pick, setPick] = useState("");
+  const available = options.filter((o) => !selected.includes(o.label));
+
+  function handleAdd() {
+    if (!pick) return;
+    onAdd(pick);
+    setPick("");
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <select
+          value={pick}
+          onChange={(e) => setPick(e.target.value)}
+          className="flex-1 rounded-xl border border-[#e5e7eb] px-4 py-2.5 text-[0.9rem] text-[#1e1e1e] focus:border-[#6fa8d6] focus:outline-none focus:ring-2 focus:ring-[#6fa8d6]/20 transition"
+        >
+          <option value="">Selecione um setor…</option>
+          {available.map((opt) => (
+            <option key={opt.value} value={opt.label}>{opt.label}</option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={!pick}
+          className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-2.5 text-[0.88rem] font-semibold text-[#1675b8] transition hover:bg-[#eff6ff] disabled:opacity-40"
+        >
+          Adicionar
+        </button>
+      </div>
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {selected.map((label) => (
+            <span
+              key={label}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#a7f3d0] bg-[#ecfdf5] px-3 py-1 text-[0.8rem] font-semibold text-[#065f46]"
+            >
+              {label}
+              <button
+                type="button"
+                onClick={() => onRemove(label)}
+                aria-label={`Remover ${label}`}
+                className="text-[#065f46] opacity-60 hover:opacity-100"
+              >
+                <FiX className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

@@ -6,7 +6,7 @@
  * Auto-save ativado 2 s após qualquer mudança.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import {
   FiAlertCircle,
   FiAward,
@@ -22,6 +22,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import type { InstitutionalProject } from "../../types/project";
+import { AdminConsoleContext } from "../../context/AdminConsoleContext";
 import { useAuth } from "../../context/AuthContext";
 import { AwardsSection } from "./sections/AwardsSection";
 import { ClassificationSection } from "./sections/ClassificationSection";
@@ -55,6 +56,8 @@ type Props = {
 
 export function ProjectEditor({ initial, onClose, onSaved }: Props) {
   const { user } = useAuth();
+  const adminConsole = useContext(AdminConsoleContext);
+  const sectorOptions = (adminConsole?.setores ?? []).map((s) => ({ value: s.id, label: s.nome }));
   const userId = user?.id ?? "unknown";
   const department = user?.department ?? "";
 
@@ -302,6 +305,7 @@ export function ProjectEditor({ initial, onClose, onSaved }: Props) {
               onFieldChange={(f, v) => ed.patch({ [f]: v } as never)}
               onAddTag={ed.addTag}
               onRemoveTag={ed.removeTag}
+              sectorOptions={sectorOptions.length > 0 ? sectorOptions : undefined}
             />
 
             <IndicatorsSection

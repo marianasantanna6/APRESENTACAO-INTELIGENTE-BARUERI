@@ -6,7 +6,7 @@ import {
   mockApiIntegrations,
   mockPresentations,
 } from "../mocks/adminMockData";
-import type { EmployeeDirectoryEntry, NewEmployeePayload, NewSecretariaPayload, NewTimePayload, SecretariaEntry, TimeEntry } from "../types/admin";
+import type { EmployeeDirectoryEntry, NewEmployeePayload, NewSetorPayload, NewTimePayload, SetorEntry, TimeEntry } from "../types/admin";
 import { useAuth } from "./AuthContext";
 
 type MutationResult =
@@ -20,18 +20,18 @@ type AdminConsoleContextValue = {
   apiIntegrations: typeof mockApiIntegrations;
   employees: EmployeeDirectoryEntry[];
   presentations: typeof mockPresentations;
-  secretarias: SecretariaEntry[];
+  setores: SetorEntry[];
   times: TimeEntry[];
   canManageEmployees: boolean;
   addEmployee: (payload: NewEmployeePayload) => Promise<MutationResult>;
   removeEmployee: (employeeId: string, adminPassword?: string) => Promise<MutationResult>;
-  addSecretaria: (payload: NewSecretariaPayload) => Promise<MutationResult>;
-  removeSecretaria: (id: string) => Promise<MutationResult>;
+  addSetor: (payload: NewSetorPayload) => Promise<MutationResult>;
+  removeSetor: (id: string) => Promise<MutationResult>;
   addTime: (payload: NewTimePayload) => Promise<MutationResult>;
   removeTime: (id: string) => Promise<MutationResult>;
 };
 
-const AdminConsoleContext = createContext<AdminConsoleContextValue | undefined>(
+export const AdminConsoleContext = createContext<AdminConsoleContextValue | undefined>(
   undefined,
 );
 
@@ -49,7 +49,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
   const [apiIntegrations] = useState(mockApiIntegrations);
   const [employeesState, setEmployeesState] = useState<EmployeeDirectoryEntry[]>([]);
   const [activityLogState, setActivityLogState] = useState(mockActivityLog);
-  const [secretariasState, setSecretariasState] = useState<SecretariaEntry[]>([]);
+  const [setoresState, setSetoresState] = useState<SetorEntry[]>([]);
   const [timesState, setTimesState] = useState<TimeEntry[]>([]);
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
       fetch("/api/users-teams").then((r) => r.json() as Promise<RawUserTeam[]>),
     ])
       .then(([sectors, teams, users, userTeams]) => {
-        setSecretariasState(sectors.map((s) => ({ id: s.id, nome: s.name })));
+        setSetoresState(sectors.map((s) => ({ id: s.id, nome: s.name })));
         setTimesState(teams.map((t) => ({
           id: t.id,
           nome: t.name,
@@ -231,12 +231,12 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     return { ok: true };
   }
 
-  async function addSecretaria(payload: NewSecretariaPayload): Promise<MutationResult> {
+  async function addSetor(payload: NewSetorPayload): Promise<MutationResult> {
     if (!user || !allowEmployeeManagement) {
-      return { ok: false, message: "Somente administradores de nível 2 podem cadastrar secretarias." };
+      return { ok: false, message: "Somente administradores de nível 2 podem cadastrar setores." };
     }
     if (!payload.nome.trim()) {
-      return { ok: false, message: "Preencha o nome da secretaria." };
+      return { ok: false, message: "Preencha o nome do setor." };
     }
     const res = await fetch("/api/sectors", {
       method: "POST",
@@ -245,23 +245,23 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({})) as { message?: string };
-      return { ok: false, message: err.message ?? "Erro ao cadastrar secretaria." };
+      return { ok: false, message: err.message ?? "Erro ao cadastrar setor." };
     }
     const data = await res.json() as { id: string; name: string };
-    setSecretariasState((cur) => [...cur, { id: data.id, nome: data.name }]);
+    setSetoresState((cur) => [...cur, { id: data.id, nome: data.name }]);
     return { ok: true };
   }
 
-  async function removeSecretaria(id: string): Promise<MutationResult> {
+  async function removeSetor(id: string): Promise<MutationResult> {
     if (!user || !allowEmployeeManagement) {
-      return { ok: false, message: "Somente administradores de nível 2 podem remover secretarias." };
+      return { ok: false, message: "Somente administradores de nível 2 podem remover setores." };
     }
     const res = await fetch(`/api/sectors/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const err = await res.json().catch(() => ({})) as { message?: string };
-      return { ok: false, message: err.message ?? "Erro ao remover secretaria." };
+      return { ok: false, message: err.message ?? "Erro ao remover setor." };
     }
-    setSecretariasState((cur) => cur.filter((s) => s.id !== id));
+    setSetoresState((cur) => cur.filter((s) => s.id !== id));
     setTimesState((cur) => cur.filter((t) => t.secretariaId !== id));
     return { ok: true };
   }
@@ -273,7 +273,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     if (!payload.nome.trim() || !payload.secretariaId) {
       return { ok: false, message: "Preencha nome e secretaria responsável." };
     }
-    const secretaria = secretariasState.find((s) => s.id === payload.secretariaId);
+    const secretaria = setoresState.find((s) => s.id === payload.secretariaId);
     if (!secretaria) return { ok: false, message: "Secretaria selecionada não encontrada." };
     const res = await fetch("/api/teams", {
       method: "POST",
@@ -316,13 +316,13 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
         apiIntegrations,
         employees,
         presentations,
-        secretarias: secretariasState,
+        setores: setoresState,
         times: timesState,
         canManageEmployees: allowEmployeeManagement,
         addEmployee,
         removeEmployee,
-        addSecretaria,
-        removeSecretaria,
+        addSetor,
+        removeSetor,
         addTime,
         removeTime,
       }}
