@@ -760,6 +760,7 @@ const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query)
                   onAddTag={ed.addTag}
                   onRemoveTag={ed.removeTag}
                   sectorOptions={sectorOptions.length > 0 ? sectorOptions : undefined}
+                  hideCategories
                 />
 
                 <IndicatorsSection

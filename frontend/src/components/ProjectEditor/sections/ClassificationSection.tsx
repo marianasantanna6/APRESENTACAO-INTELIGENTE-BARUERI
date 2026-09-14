@@ -65,6 +65,8 @@ type Props = {
   onRemoveTag: (f: "technologies" | "keywords" | "relatedDepartments", v: string) => void;
   /** Quando fornecido, Setor Principal e Setores Relacionados usam select ao invés de texto livre */
   sectorOptions?: { value: string; label: string }[];
+  /** Oculta o bloco de categorias temáticas (quando já existe seletor no topo do wizard) */
+  hideCategories?: boolean;
 };
 
 export function ClassificationSection({
@@ -81,6 +83,7 @@ export function ClassificationSection({
   onAddTag,
   onRemoveTag,
   sectorOptions,
+  hideCategories = false,
 }: Props) {
   return (
     <SectionCard
@@ -92,6 +95,7 @@ export function ClassificationSection({
     >
       <div className="space-y-6">
         {/* Categorias — toggle visual */}
+        {!hideCategories && (
         <div>
           <FieldLabel required>Categorias Temáticas</FieldLabel>
           <p className="mb-3 text-[0.76rem] text-[#9ca3af]">
@@ -122,6 +126,7 @@ export function ClassificationSection({
             <p className="mt-2 text-[0.76rem] font-medium text-[#b91c1c]">{errors.categories}</p>
           )}
         </div>
+        )}
 
         {/* Área governamental */}
         <div>
