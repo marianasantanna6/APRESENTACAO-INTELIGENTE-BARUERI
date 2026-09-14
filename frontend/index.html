@@ -5,9 +5,86 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Apresentação Inteligente | Barueri</title>
+
+    <!-- Google Translate widget styles -->
+    <style>
+      /* Remove a barra azul que o Google injeta no topo da página */
+      .goog-te-banner-frame,
+      #goog-gt-tt,
+      .goog-te-balloon-frame {
+        display: none !important;
+      }
+      body {
+        top: 0 !important;
+      }
+
+      /* Botão flutuante de tradução */
+      #gt-wrapper {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9999;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 6px 10px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-family: system-ui, sans-serif;
+        font-size: 13px;
+        color: #374151;
+      }
+      #gt-wrapper::before {
+        content: "🌐";
+        font-size: 15px;
+      }
+
+      /* Esconde elementos extras injetados pelo Google */
+      .goog-te-gadget img { display: none; }
+      .goog-te-gadget > span { display: none; }
+      .goog-te-gadget {
+        font-size: 0 !important;
+      }
+
+      /* Estiliza o próprio select do Google */
+      .goog-te-combo {
+        border: none;
+        background: transparent;
+        font-size: 13px;
+        color: #374151;
+        cursor: pointer;
+        outline: none;
+        padding: 2px 4px;
+        font-family: system-ui, sans-serif;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Widget de idioma do Google Translate -->
+    <div id="gt-wrapper">
+      <div id="google_translate_element"></div>
+    </div>
+
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Inicialização do Google Translate -->
+    <script>
+      function googleTranslateElementInit() {
+        new google.translate.TranslateElement(
+          {
+            pageLanguage: 'pt',
+            includedLanguages: 'en,es,fr,de,it,ja,zh-CN,ar',
+            layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+            autoDisplay: false,
+          },
+          'google_translate_element'
+        );
+      }
+    </script>
+    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
   </body>
 </html>
