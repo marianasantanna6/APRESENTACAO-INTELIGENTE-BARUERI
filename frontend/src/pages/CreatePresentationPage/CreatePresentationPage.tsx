@@ -361,6 +361,16 @@ const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query)
       document.getElementById("section-classification-top")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
+    if (!ed.draft.name.trim()) {
+      setStep1Error("O título do projeto é obrigatório.");
+      document.getElementById("section-identity")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    if (!ed.draft.shortDescription.trim()) {
+      setStep1Error("A descrição curta do projeto é obrigatória.");
+      document.getElementById("section-identity")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     setStep1Error("");
     setModuleConfigs([]);
     setStep(2);
@@ -561,7 +571,7 @@ const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query)
               </div>
 
               {/* Categorias temáticas */}
-              <div id="section-classification-top" className={`rounded-2xl border bg-white p-5 shadow-[0_2px_8px_rgba(20,33,51,0.05)] transition ${step1Error ? "border-[#fca5a5] ring-2 ring-[#fca5a5]/30" : "border-[#e8e9f0]"}`}>
+              <div id="section-classification-top" className={`rounded-2xl border bg-white p-5 shadow-[0_2px_8px_rgba(20,33,51,0.05)] transition ${step1Error && ed.draft.categories.length === 0 ? "border-[#fca5a5] ring-2 ring-[#fca5a5]/30" : "border-[#e8e9f0]"}`}>
                 <div className="mb-3 flex items-center justify-between">
                   <p className="text-[0.72rem] font-bold uppercase tracking-widest text-[#9ca3af]">Categorias Temáticas</p>
                   {ed.draft.categories.length > 0 && (
@@ -595,23 +605,6 @@ const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query)
                 </div>
               </div>
 
-              {/* CTA principal */}
-              <div className="flex flex-col items-end gap-2">
-                {step1Error && (
-                  <p className="flex items-center gap-2 text-[0.84rem] font-medium text-[#b91c1c]">
-                    <FiAlertCircle className="h-4 w-4 shrink-0" />
-                    {step1Error}
-                  </p>
-                )}
-                <button
-                  type="button"
-                  onClick={goToStep2}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(90deg,#1675b8_0%,#1255a0_100%)] px-8 py-3 text-[0.94rem] font-bold text-white shadow-[0_10px_28px_-10px_rgba(22,117,184,0.55)] transition hover:-translate-y-0.5"
-                >
-                  Selecionar Projetos
-                  <FiArrowRight className="h-4 w-4" />
-                </button>
-              </div>
             </div>
 
             {/* Divisor — Detalhes opcionais */}
