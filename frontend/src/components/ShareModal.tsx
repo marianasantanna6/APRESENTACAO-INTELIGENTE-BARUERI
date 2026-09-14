@@ -1,12 +1,3 @@
-/**
- * ShareModal — Fase 15: Compartilhamento de Apresentações
- *
- * Três modos:
- *   Administrativo → acesso restrito ao sistema (login + RBAC)
- *   Apresentador   → token temporário para uso em evento
- *   Público        → link/QR aberto (apenas apresentações publicadas)
- */
-
 import { useEffect, useState } from "react";
 import {
   FiAlertTriangle,
@@ -21,10 +12,8 @@ import {
   FiLock,
   FiPlay,
   FiRefreshCw,
-  FiShield,
   FiToggleLeft,
   FiToggleRight,
-  FiUsers,
   FiX,
   FiXCircle,
 } from "react-icons/fi";
@@ -61,52 +50,6 @@ type ShareModalProps = {
   userId: string;
   onClose: () => void;
 };
-
-// ─── Painel: Administrativo ───────────────────────────────────────────────────
-
-function PanelAdmin() {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-start gap-3 rounded-xl border border-[#dbeafe] bg-[#eff6ff] px-4 py-4">
-        <FiShield className="mt-0.5 h-5 w-5 shrink-0 text-[#1d4ed8]" />
-        <div>
-          <p className="text-[0.86rem] font-bold text-[#1d4ed8]">Acesso restrito ao sistema</p>
-          <p className="mt-0.5 text-[0.8rem] leading-5 text-[#1e40af]">
-            Este conteúdo está disponível apenas para membros da equipe autenticados
-            na plataforma com as permissões adequadas.
-          </p>
-        </div>
-      </div>
-
-      <div>
-        <p className="mb-2.5 text-[0.78rem] font-bold uppercase tracking-wider text-[#9ca3af]">
-          Perfis com acesso
-        </p>
-        <div className="space-y-2">
-          {[
-            { role: "Administrador",  desc: "Acesso total — leitura, edição e publicação",    color: "text-[#991b1b] bg-[#fef2f2]" },
-            { role: "Gestor",         desc: "Leitura completa e aprovação de conteúdo",        color: "text-[#92400e] bg-[#fffbeb]" },
-            { role: "Analista",       desc: "Leitura e criação de apresentações próprias",     color: "text-[#166534] bg-[#f0fdf4]" },
-            { role: "Comunicador",    desc: "Leitura e criação de apresentações próprias",     color: "text-[#1e40af] bg-[#eff6ff]" },
-            { role: "Colaborador",    desc: "Leitura de apresentações publicadas",             color: "text-[#374151] bg-[#f3f4f6]" },
-          ].map((item) => (
-            <div key={item.role} className={`flex items-center gap-3 rounded-lg px-3 py-2 ${item.color}`}>
-              <FiUsers className="h-3.5 w-3.5 shrink-0" />
-              <div className="min-w-0">
-                <span className="text-[0.8rem] font-bold">{item.role}</span>
-                <span className="ml-2 text-[0.74rem] opacity-80">{item.desc}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <p className="text-[0.74rem] text-[#9ca3af]">
-        Para gerenciar permissões, acesse <strong className="text-[#374151]">Configurações → Administração → Usuários</strong>.
-      </p>
-    </div>
-  );
-}
 
 // ─── Painel: Apresentador ─────────────────────────────────────────────────────
 
@@ -444,16 +387,15 @@ function PanelPublic({
 
 // ─── Modal principal ──────────────────────────────────────────────────────────
 
-type Tab = "admin" | "presenter" | "public";
+type Tab = "presenter" | "public";
 
 const TABS: { id: Tab; label: string; icon: React.ComponentType<{ className?: string }>; color: string }[] = [
-  { id: "admin",     label: "Administrativo", icon: FiShield,  color: "text-[#1d4ed8]" },
   { id: "presenter", label: "Apresentador",   icon: FiPlay,    color: "text-[#7c3aed]" },
   { id: "public",    label: "Público",        icon: FiGlobe,   color: "text-[#15803d]" },
 ];
 
 export function ShareModal({ presentationId, presentationTitle, presentationStatus, userId, onClose }: ShareModalProps) {
-  const [activeTab, setActiveTab]     = useState<Tab>("admin");
+  const [activeTab, setActiveTab]     = useState<Tab>("presenter");
   const [config, setConfig]           = useState<ShareConfig | null>(null);
   const [loadingConfig, setLoading]   = useState(true);
 
@@ -534,7 +476,6 @@ export function ShareModal({ presentationId, presentationTitle, presentationStat
             </div>
           ) : (
             <>
-              {activeTab === "admin" && <PanelAdmin />}
               {activeTab === "presenter" && (
                 <PanelPresenter
                   presentationId={presentationId}

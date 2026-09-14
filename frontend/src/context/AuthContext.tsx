@@ -293,6 +293,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
         localStorage.setItem(TOKEN_STORAGE_KEY, data.access_token);
       } catch {}
 
+      // master_admin do backend → usa o perfil mock da Marina para demo
+      if (data.user.master_admin) {
+        const marinaMock = readStoredUsers().find((u) => u.id === "admin-marina");
+        if (marinaMock) {
+          const sessionUser = buildSessionUser({ ...marinaMock, master_admin: true });
+          setUser(sessionUser);
+          return { ok: true, user: sessionUser };
+        }
+      }
+
       const backendUser: MockUser = {
         id: data.user.id,
         name: data.user.name,

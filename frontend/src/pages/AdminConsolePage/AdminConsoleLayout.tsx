@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { IconType } from "react-icons";
 import {
   FiBarChart2,
@@ -12,12 +12,13 @@ import {
   FiX,
 } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, Navigate, Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import AuthenticatedHeader from "../../components/AuthenticatedHeader";
 import {
   useAuth,
   useSystemPreferences,
 } from "../../context";
+import { useAdminConsole } from "../../context/AdminConsoleContext";
 import {
   canAccessAdminModules,
   canCreatePresentations,
@@ -42,7 +43,7 @@ const primarySidebarDefs: SidebarItemDef[] = [
     labelKey: "nav.projetosInstitucionais",
     path: ROUTE_PATHS.institutionalProjects,
     icon: FiLayers,
-    requiresAdmin: false,
+    requiresAdmin: true,
   },
   {
     labelKey: "nav.templates",
@@ -191,6 +192,148 @@ function MobileSidebar({
   );
 }
 
+// ─── Filtro de Setor/Time (Master Admin) ─────────────────────────────────────
+
+function MasterAdminFilterBar() {
+  const { setores, times } = useAdminConsole();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedSector = searchParams.get("setor") ?? "";
+  const selectedTeam = searchParams.get("time") ?? "";
+
+  const filteredTeams = useMemo(
+    () => (selectedSector ? times.filter((t) => t.secretariaId === selectedSector) : times),
+    [times, selectedSector],
+  );
+
+  function handleSector(val: string) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (val) next.set("setor", val); else next.delete("setor");
+      next.delete("time");
+      return next;
+    }, { replace: true });
+  }
+
+  function handleTeam(val: string) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (val) next.set("time", val); else next.delete("time");
+      return next;
+    }, { replace: true });
+  }
+
+  if (setores.length === 0 && times.length === 0) return null;
+
+  return (
+    <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-[#bfdbfe] bg-[#eff6ff] px-5 py-3">
+      <span className="text-[0.78rem] font-bold uppercase tracking-wider text-[#1d4ed8]">
+        Filtrar por
+      </span>
+      <select
+        value={selectedSector}
+        onChange={(e) => handleSector(e.target.value)}
+        className="rounded-xl border border-[#bfdbfe] bg-white px-3 py-1.5 text-[0.88rem] text-[#1e1e1e] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/30"
+      >
+        <option value="">Todos os Setores</option>
+        {setores.map((s) => (
+          <option key={s.id} value={s.id}>{s.nome}</option>
+        ))}
+      </select>
+      <select
+        value={selectedTeam}
+        onChange={(e) => handleTeam(e.target.value)}
+        className="rounded-xl border border-[#bfdbfe] bg-white px-3 py-1.5 text-[0.88rem] text-[#1e1e1e] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/30"
+      >
+        <option value="">Todos os Times</option>
+        {filteredTeams.map((t) => (
+          <option key={t.id} value={t.id}>{t.nome}</option>
+        ))}
+      </select>
+      {(selectedSector || selectedTeam) && (
+        <button
+          type="button"
+          onClick={() => setSearchParams({}, { replace: true })}
+          className="text-[0.82rem] font-semibold text-[#1d4ed8] underline"
+        >
+          Limpar filtros
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Nav central do approver (reutilizada do TeamsPage) ──────────────────────
+
+const approverNavPillClass =
+  "flex h-10 items-center justify-center rounded-[50px] border border-transparent px-3 text-[1rem] font-semibold whitespace-nowrap !text-white transition-all hover:-translate-y-0.5 hover:border-[#1675b8] hover:bg-[rgba(22,117,184,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] focus:outline-none focus:ring-4 focus:ring-white/25 lg:h-11 lg:px-3.5 lg:text-[1.05rem]";
+const approverActivePillClass = "border-[#1675b8] bg-[rgba(22,117,184,0.5)] shadow-[0_4px_12px_rgba(0,0,0,0.12)]";
+
+function ApproverCenterNav({ isSettings }: { isSettings: boolean }) {
+  return (
+    <>
+      <NavLink
+        to={ROUTE_PATHS.teams}
+        className={`${approverNavPillClass} ${!isSettings ? approverActivePillClass : ""}`}
+      >
+        Times
+      </NavLink>
+      <div aria-hidden="true" className="h-6 w-0.5 bg-white/30" />
+      <NavLink
+        to={ROUTE_PATHS.settings}
+        className={`${approverNavPillClass} ${isSettings ? approverActivePillClass : ""}`}
+      >
+        <FiSettings className="mr-1.5 inline-block h-4 w-4" />
+        Configurações
+      </NavLink>
+    </>
+  );
+}
+
+// ─── Layout mínimo para approver (configurações / minha-conta) ───────────────
+
+function ApproverMinimalLayout() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { logout, user } = useAuth();
+  const { t } = useTranslation();
+  const isSettings = location.pathname === ROUTE_PATHS.settings;
+
+  function handleLogout() {
+    logout();
+    navigate(ROUTE_PATHS.login);
+  }
+
+  return (
+    <div
+      data-surface="console-shell"
+      className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.92)_0%,rgba(239,240,250,0.96)_46%,rgba(226,227,247,0.96)_100%)] text-[#1e1e1e]"
+    >
+      <AuthenticatedHeader
+        canCreate={false}
+        customCenterNav={<ApproverCenterNav isSettings={isSettings} />}
+        logoTo={ROUTE_PATHS.teams}
+        onLogout={handleLogout}
+        presentationsTo={ROUTE_PATHS.teams}
+        showDesktopLogo
+        showMobileLogo
+        user={user}
+      />
+
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="min-h-[calc(100vh-89px)] min-w-0 flex-1 px-4 pb-10 pt-6 sm:px-6 lg:px-8 lg:pt-8"
+      >
+        <Outlet />
+        <div className="mt-8 flex items-center justify-end gap-2 text-[0.92rem] font-medium text-[#8a8a8a]">
+          <FiHelpCircle className="h-4 w-4" />
+          {t("landing.help")}
+        </div>
+      </main>
+    </div>
+  );
+}
+
 function AdminConsoleLayoutContent() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -200,6 +343,15 @@ function AdminConsoleLayoutContent() {
   const canSeeAdminModules = canAccessAdminModules(user);
   const canSeeCreateFlow = canCreatePresentations(user);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Approvers can only access their profile and settings — render minimal layout
+  if (user?.approver) {
+    const allowedForApprover = [ROUTE_PATHS.myAccount, ROUTE_PATHS.settings];
+    if (!allowedForApprover.includes(location.pathname)) {
+      return <Navigate to={ROUTE_PATHS.teams} replace />;
+    }
+    return <ApproverMinimalLayout />;
+  }
 
   const activeHeaderItem =
     location.pathname === ROUTE_PATHS.myAccount
@@ -259,6 +411,7 @@ function AdminConsoleLayoutContent() {
           tabIndex={-1}
           className="min-h-[calc(100vh-89px)] min-w-0 flex-1 px-4 pb-10 pt-6 sm:px-6 lg:px-8 lg:pt-8"
         >
+          {user?.master_admin && <MasterAdminFilterBar />}
           <div className="mb-5 flex items-center justify-between gap-3 md:hidden">
             <button
               type="button"

@@ -21,15 +21,21 @@ export function isAdminAccessLevel(accessLevel: UserAccessLevel) {
 }
 
 export function canCreatePresentations(user: AuthSessionUser | null) {
-  return Boolean(user);
+  if (!user) return false;
+  if (user.approver) return false;
+  return true;
 }
 
 export function canAccessAdminModules(user: AuthSessionUser | null) {
-  return Boolean(user && isAdminAccessLevel(user.accessLevel));
+  if (!user) return false;
+  if (user.master_admin) return true;
+  return isAdminAccessLevel(user.accessLevel);
 }
 
 export function canManageEmployees(user: AuthSessionUser | null) {
-  return user?.accessLevel === "admin_level_2";
+  if (!user) return false;
+  if (user.master_admin) return true;
+  return user.accessLevel === "admin_level_2";
 }
 
 export function canViewCrossTeamData(user: AuthSessionUser | null) {

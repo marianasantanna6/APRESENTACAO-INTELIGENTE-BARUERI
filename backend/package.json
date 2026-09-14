@@ -8,8 +8,12 @@
   "engines": {
   "node": "24.19.0"
   },
+  "prisma": {
+    "seed": "ts-node -r dotenv/config prisma/seed.ts"
+  },
   "scripts": {
     "build": "nest build",
+    "seed": "npx prisma db seed",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

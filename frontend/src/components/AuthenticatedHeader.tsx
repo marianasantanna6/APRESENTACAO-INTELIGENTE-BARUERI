@@ -11,6 +11,7 @@ type HeaderActiveItem = "create" | "presentations";
 type AuthenticatedHeaderProps = {
   activeItem?: HeaderActiveItem;
   canCreate: boolean;
+  customCenterNav?: React.ReactNode;
   logoTo: string;
   onLogout?: () => void;
   presentationsTo: string;
@@ -47,6 +48,7 @@ function getLogoVisibilityClass(
 export default function AuthenticatedHeader({
   activeItem,
   canCreate,
+  customCenterNav,
   logoTo,
   onLogout,
   presentationsTo,
@@ -87,32 +89,36 @@ export default function AuthenticatedHeader({
           aria-label="Área logada"
           className="hidden items-center justify-center gap-2.5 justify-self-center text-[15px] font-semibold text-white md:flex lg:gap-3 lg:text-[16px]"
         >
-          {canCreate ? (
+          {customCenterNav ?? (
             <>
-              <Link
-                to={ROUTE_PATHS.createPresentation}
-                aria-current={activeItem === "create" ? "page" : undefined}
-                data-header-link="pill"
-                className={`${navPillClass} w-[112px] lg:w-[118px] ${activeItem === "create" ? activeNavPillClass : ""}`}
-              >
-                Criar
-              </Link>
-              <div
-                aria-hidden="true"
-                data-header-divider
-                className="h-6 w-0.5 bg-white/30"
-              />
-            </>
-          ) : null}
+              {canCreate ? (
+                <>
+                  <Link
+                    to={ROUTE_PATHS.createPresentation}
+                    aria-current={activeItem === "create" ? "page" : undefined}
+                    data-header-link="pill"
+                    className={`${navPillClass} w-[112px] lg:w-[118px] ${activeItem === "create" ? activeNavPillClass : ""}`}
+                  >
+                    Criar
+                  </Link>
+                  <div
+                    aria-hidden="true"
+                    data-header-divider
+                    className="h-6 w-0.5 bg-white/30"
+                  />
+                </>
+              ) : null}
 
-          <Link
-            to={presentationsTo}
-            aria-current={activeItem === "presentations" ? "page" : undefined}
-            data-header-link="pill"
-            className={`${navPillClass} ${activeItem === "presentations" ? activeNavPillClass : ""}`}
-          >
-            Minhas apresentações
-          </Link>
+              <Link
+                to={presentationsTo}
+                aria-current={activeItem === "presentations" ? "page" : undefined}
+                data-header-link="pill"
+                className={`${navPillClass} ${activeItem === "presentations" ? activeNavPillClass : ""}`}
+              >
+                Minhas apresentações
+              </Link>
+            </>
+          )}
         </nav>
 
         <div className="flex min-w-0 items-center justify-self-end gap-2 sm:gap-3">

@@ -1,9 +1,8 @@
 /**
  * Mock canônico: Usuários
  *
- * Combina os usuários de autenticação (MockUser) com a nova entidade
- * PlatformUser. Os services importam daqui. Contextos de auth e admin
- * mantêm seus próprios imports dos arquivos legados por compatibilidade.
+ * Apenas usuários que NÃO existem no backend real.
+ * Usuários reais (funcionários, approvers) autenticam direto pelo backend.
  */
 
 import type { MockUser } from "../types/auth";
@@ -13,6 +12,8 @@ import type { PlatformUser } from "../types/user";
 
 export const authUsersMock: MockUser[] = [
   {
+    // Perfil de demo para o master_admin do backend.
+    // Quando o backend retorna master_admin=true, o AuthContext redireciona para este perfil.
     id: "admin-marina",
     name: "Marina Justus",
     cpf: "12345678909",
@@ -25,76 +26,7 @@ export const authUsersMock: MockUser[] = [
     team: "Plataforma Analítica",
     status: "active",
     avatarDataUrl: null,
-  },
-  {
-    id: "gestor-rafael",
-    name: "Rafael Mendonça",
-    cpf: "32165498700",
-    email: "rafael.mendonca@barueri.sp.gov.br",
-    username: "gestor.institucional",
-    password: "barueri123",
-    accessLevel: "admin_level_2",
-    role: "gestor-institucional",
-    department: "Gabinete de Dados",
-    team: "Gestão Estratégica",
-    status: "active",
-    avatarDataUrl: null,
-  },
-  {
-    id: "admin-joao",
-    name: "João Lemes",
-    cpf: "98765432100",
-    email: "joao.lemes@barueri.sp.gov.br",
-    username: "admin.nivel1",
-    password: "barueri123",
-    accessLevel: "admin_level_1",
-    role: "gestor-secretaria",
-    department: "Planejamento",
-    team: "Planejamento Territorial",
-    status: "active",
-    avatarDataUrl: null,
-  },
-  {
-    id: "employee-bianca",
-    name: "Bianca Souza",
-    cpf: "45678912387",
-    email: "bianca.souza@barueri.sp.gov.br",
-    username: "editor.demo",
-    password: "barueri123",
-    accessLevel: "employee",
-    role: "editor",
-    department: "Planejamento",
-    team: "Planejamento Territorial",
-    status: "active",
-    avatarDataUrl: null,
-  },
-  {
-    id: "employee-carlos",
-    name: "Carlos Francisco",
-    cpf: "65412398700",
-    email: "carlos.francisco@barueri.sp.gov.br",
-    username: "revisor.demo",
-    password: "barueri123",
-    accessLevel: "employee",
-    role: "revisor",
-    department: "Recursos Humanos",
-    team: "Gestão de Pessoas",
-    status: "active",
-    avatarDataUrl: null,
-  },
-  {
-    id: "employee-amanda",
-    name: "Amanda Araújo",
-    cpf: "78945612300",
-    email: "amanda.araujo@barueri.sp.gov.br",
-    username: "apresentador.demo",
-    password: "barueri123",
-    accessLevel: "employee",
-    role: "apresentador",
-    department: "Planejamento",
-    team: "Comunicação Institucional",
-    status: "active",
-    avatarDataUrl: null,
+    master_admin: true,
   },
 ];
 
@@ -120,77 +52,5 @@ export const platformUsersMock: PlatformUser[] = [
     avatar: null,
     lastAccess: "2026-06-30T10:00:00",
     createdAt: "2024-01-15T08:00:00",
-  },
-  {
-    id: "admin-joao",
-    name: "João Lemes",
-    email: "joao.lemes@barueri.sp.gov.br",
-    role: "gestor-secretaria",
-    department: "Planejamento",
-    position: "Gestor de Planejamento Territorial",
-    status: "active",
-    permissions: [
-      "view:projects", "create:projects", "edit:projects",
-      "view:presentations", "create:presentations", "edit:presentations",
-      "delete:presentations", "share:presentations", "present:presentations",
-      "view:templates",
-      "view:analytics",
-    ],
-    avatar: null,
-    lastAccess: "2026-06-29T14:30:00",
-    createdAt: "2024-01-15T08:00:00",
-  },
-  {
-    id: "employee-bianca",
-    name: "Bianca Souza",
-    email: "bianca.souza@barueri.sp.gov.br",
-    role: "editor",
-    department: "Planejamento",
-    position: "Analista de Planejamento",
-    status: "active",
-    permissions: [
-      "view:projects", "create:projects", "edit:projects",
-      "view:presentations", "create:presentations", "edit:presentations",
-      "share:presentations", "present:presentations",
-      "view:templates",
-    ],
-    avatar: null,
-    lastAccess: "2026-06-28T09:15:00",
-    createdAt: "2024-02-01T10:00:00",
-  },
-  {
-    id: "employee-amanda",
-    name: "Amanda Araújo",
-    email: "amanda.araujo@barueri.sp.gov.br",
-    role: "apresentador",
-    department: "Planejamento",
-    position: "Assistente Administrativo",
-    status: "active",
-    permissions: [
-      "view:projects",
-      "view:presentations", "present:presentations",
-      "view:templates",
-    ],
-    avatar: null,
-    lastAccess: "2026-06-20T11:00:00",
-    createdAt: "2024-03-10T09:00:00",
-  },
-  {
-    id: "employee-carlos",
-    name: "Carlos Francisco",
-    email: "carlos.francisco@barueri.sp.gov.br",
-    role: "revisor",
-    department: "Recursos Humanos",
-    position: "Analista de RH",
-    status: "active",
-    permissions: [
-      "view:projects",
-      "view:presentations", "present:presentations",
-      "view:templates",
-      "view:analytics",
-    ],
-    avatar: null,
-    lastAccess: "2026-06-15T16:00:00",
-    createdAt: "2024-04-05T08:00:00",
   },
 ];

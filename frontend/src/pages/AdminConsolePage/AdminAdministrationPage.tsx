@@ -300,10 +300,10 @@ export default function AdminAdministrationPage() {
     [times],
   );
 
-  const teamOptions = times.filter((t) => t.secretariaId === formValues.setorId);
-
   const [formValues, setFormValues] = useState<EmployeeFormState>(initialEmployeeForm);
   const [formStep, setFormStep] = useState<1 | 2>(1);
+
+  const teamOptions = times.filter((t) => t.secretariaId === formValues.setorId);
   const [formError, setFormError] = useState("");
   const [deleteConfirmationForm, setDeleteConfirmationForm] = useState(
     initialDeleteConfirmationForm,
@@ -661,14 +661,16 @@ export default function AdminAdministrationPage() {
                 Registro dos setores e secretarias da organização.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => { setSetorFormError(""); setIsSetorModalOpen(true); }}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-4 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(103,156,203,0.24)] transition hover:-translate-y-0.5 self-start"
-            >
-              <FiPlus className="h-4.5 w-4.5" />
-              Novo setor
-            </button>
+            {user?.master_admin && (
+              <button
+                type="button"
+                onClick={() => { setSetorFormError(""); setIsSetorModalOpen(true); }}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-4 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(103,156,203,0.24)] transition hover:-translate-y-0.5 self-start"
+              >
+                <FiPlus className="h-4.5 w-4.5" />
+                Novo setor
+              </button>
+            )}
           </div>
 
           {setoresSorted.length ? (
@@ -757,15 +759,17 @@ export default function AdminAdministrationPage() {
                 Equipes de trabalho vinculadas aos setores.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => { setTimeFormError(""); setIsTimeModalOpen(true); }}
-              disabled={setores.length === 0}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-4 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(103,156,203,0.24)] transition hover:-translate-y-0.5 self-start disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <FiPlus className="h-4.5 w-4.5" />
-              Novo time
-            </button>
+            {user?.master_admin && (
+              <button
+                type="button"
+                onClick={() => { setTimeFormError(""); setIsTimeModalOpen(true); }}
+                disabled={setores.length === 0}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-4 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(103,156,203,0.24)] transition hover:-translate-y-0.5 self-start disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <FiPlus className="h-4.5 w-4.5" />
+                Novo time
+              </button>
+            )}
           </div>
 
           {timesSorted.length ? (
@@ -1256,18 +1260,6 @@ export default function AdminAdministrationPage() {
                   placeholder="Ex.: Planejamento Estratégico"
                   className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
                 />
-              </label>
-              <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                Nível de acesso
-                <select
-                  value={timeForm.levelAcess}
-                  onChange={(e) => setTimeForm((c) => ({ ...c, levelAcess: parseInt(e.target.value) }))}
-                  className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
-                >
-                  <option value={1}>Funcionário</option>
-                  <option value={2}>Administrador Nível 1</option>
-                  <option value={3}>Administrador Nível 2</option>
-                </select>
               </label>
               <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
                 Setor responsável

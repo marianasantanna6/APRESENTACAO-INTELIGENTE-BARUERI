@@ -14,8 +14,10 @@ import CreatePresentationPage from "../pages/CreatePresentationPage";
 import GeneratedPresentationPage from "../pages/GeneratedPresentationPage";
 import LandingPage from "../pages/LandingPage";
 import LoginPage from "../pages/LoginPage";
+import TeamsPage from "../pages/TeamsPage/TeamsPage";
 import {
   AdminRoute,
+  ApproverRoute,
   CreatePresentationRoute,
   ProtectedRoute,
 } from "./ProtectedRoute";
@@ -84,6 +86,9 @@ export function AppRouter() {
           path={ROUTE_PATHS.generatedPresentation}
           element={<GeneratedPresentationPage />}
         />
+      </Route>
+      <Route element={<ApproverRoute />}>
+        <Route path={ROUTE_PATHS.teams} element={<TeamsPage />} />
       </Route>
       <Route path="*" element={<Navigate to={ROUTE_PATHS.home} replace />} />
     </Routes>

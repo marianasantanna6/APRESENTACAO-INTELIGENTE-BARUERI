@@ -19,6 +19,7 @@ export const ROUTE_PATHS = {
   createPresentation: "/criar",
   generatedPresentation: "/criar/resultado",
   analytics: "/analytics",
+  teams: "/times",
 } as const;
 
 export type AppRoutePath = (typeof ROUTE_PATHS)[keyof typeof ROUTE_PATHS];
