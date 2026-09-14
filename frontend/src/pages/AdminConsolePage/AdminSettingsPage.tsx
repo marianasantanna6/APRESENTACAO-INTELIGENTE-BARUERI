@@ -21,8 +21,6 @@ import { useTranslation } from "react-i18next";
 import { AdminPanel } from "../../components/AdminConsole";
 import { useSystemPreferences } from "../../context";
 import { useModalAccessibility, useTheme } from "../../hooks";
-import type { UILanguage } from "../../types/i18n";
-import { UI_LANGUAGE_LABELS } from "../../types/i18n";
 
 type DocumentKey = "terms" | "privacy" | null;
 
@@ -253,7 +251,6 @@ function DocumentModal({
   );
 }
 
-const UI_LANGUAGES: UILanguage[] = ["pt-BR", "en-US", "es"];
 
 export default function AdminSettingsPage() {
   const { t } = useTranslation();
@@ -346,17 +343,6 @@ export default function AdminSettingsPage() {
     );
   }
 
-  function handleLanguageSelection(lang: UILanguage) {
-    if (preferences.uiLanguage === lang) {
-      return;
-    }
-
-    updatePreference("uiLanguage", lang);
-    showToast(
-      "success",
-      t("settings.idiomaAtualizado", { idioma: UI_LANGUAGE_LABELS[lang] }),
-    );
-  }
 
   async function handleSaveSettings() {
     setIsSaving(true);
@@ -467,36 +453,19 @@ export default function AdminSettingsPage() {
           {/* ─── Idioma ───────────────────────────────────────────────── */}
           <SettingsCard
             title={t("settings.idioma")}
-            description={t("settings.idiomaDesc")}
+            description="Tradução automática para mais de 130 idiomas"
             icon={FiGlobe}
           >
-            <div className={`space-y-3 rounded-[20px] p-4 ${subtlePanelClass}`}>
-              <div
-                className="inline-flex w-full flex-col gap-2 rounded-[18px] bg-white/88 p-2 sm:flex-row"
-                role="group"
-                aria-label={t("settings.idioma")}
-              >
-                {UI_LANGUAGES.map((lang) => (
-                  <button
-                    key={lang}
-                    type="button"
-                    aria-pressed={preferences.uiLanguage === lang}
-                    onClick={() => handleLanguageSelection(lang)}
-                    className={`inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-[14px] px-3 text-[0.88rem] font-semibold transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#7fb4db]/25 ${
-                      preferences.uiLanguage === lang
-                        ? "bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] text-white shadow-[0_10px_24px_rgba(103,156,203,0.24)]"
-                        : "text-[#587185] hover:bg-[#edf5fb]"
-                    }`}
-                  >
-                    <FiGlobe className="h-4 w-4" aria-hidden="true" />
-                    {UI_LANGUAGE_LABELS[lang]}
-                  </button>
-                ))}
+            <div className={`flex items-start gap-4 rounded-[20px] p-4 ${subtlePanelClass}`}>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#1675b8,#1255a0)]">
+                <FiGlobe className="h-5 w-5 text-white" />
               </div>
-
-              <p className="text-[0.84rem] font-medium leading-6 text-[#8c98a3]">
-                {t("settings.idiomaDesc")}
-              </p>
+              <div>
+                <p className="text-[0.88rem] font-semibold text-[#1e1e1e]">Google Translate</p>
+                <p className="mt-1 text-[0.82rem] leading-5 text-[#8c98a3]">
+                  Use o seletor de idioma <span className="font-semibold text-[#374151]">🌐</span> fixo no canto inferior direito da tela para traduzir toda a plataforma automaticamente em mais de 130 idiomas.
+                </p>
+              </div>
             </div>
           </SettingsCard>
 
