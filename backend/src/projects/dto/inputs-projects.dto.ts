@@ -48,15 +48,15 @@ export class CreateProjectsDto {
 
   @IsNotEmpty()
   @IsInt()
+  team!: number;
+
+  @IsNotEmpty()
+  @IsInt()
   user!: number;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsInt()
-  team?: number;
-
-  @IsOptional()
-  @IsInt()
-  family?: number;
+  family!: number;
 
   @IsOptional()
   @IsString()
@@ -75,20 +75,17 @@ export class CreateProjectsDto {
   @IsString()
   main_department!: string;
 
-  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  related_departments?: string[];
+  related_departments!: string[];
 
-  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  areas?: string[];
+  areas!: string[];
 
-  @IsOptional()
   @IsArray()
   @IsInt({ each: true })
-  ods?: number[];
+  ods!: number[];
 
   @IsOptional()
   @IsString()
@@ -98,10 +95,9 @@ export class CreateProjectsDto {
   @IsString()
   audience?: string;
 
-  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  technologies?: string[];
+  technologies!: string[];
 
   @IsOptional()
   @IsDateString()
@@ -119,8 +115,7 @@ export class CreateProjectsDto {
   @Type(() => CreateIndicatorDto)
   indicators?: CreateIndicatorDto[];
 
-  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  keywords?: string[];
+  keywords!: string[];
 }

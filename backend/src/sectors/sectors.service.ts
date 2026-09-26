@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { normalizeText } from '../common/normalizer';
 import { CreateSectorsDto } from './dto/inputs-sectors.dto';
@@ -9,7 +9,21 @@ export class SectorsService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async create(dto: CreateSectorsDto) {
+  async create(dto: CreateSectorsDto, actorId: string) {
+    const actor = await this.prisma.users.findUnique({
+      where: { id: BigInt(actorId) },
+    });
+
+    if (!actor) {
+      throw new NotFoundException('Usuário autenticado não encontrado');
+    }
+
+    if (!actor.head_manager) {
+      throw new ForbiddenException(
+        'Apenas head-manager pode criar setores',
+      );
+    }
+
     const normalizedName = normalizeText(dto.name);
 
     const existingSectors =
@@ -72,9 +86,10 @@ export class SectorsService {
   }
 
   async remove(id: string) {
-    // FK onDelete: NoAction — apagar times antes de apagar o setor
-    await this.prisma.teams.deleteMany({ where: { sector: BigInt(id) } });
-    await this.prisma.sectors.delete({ where: { id: BigInt(id) } });
+    await this.prisma.sectors.delete({
+      where: { id: BigInt(id) },
+    });
+
     return { ok: true };
   }
 }

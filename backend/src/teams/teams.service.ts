@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { normalizeText } from '../common/normalizer';
 import { CreateTeamsDto } from './dto/inputs-teams.dto';
@@ -9,12 +9,36 @@ export class TeamsService {
     private readonly prisma: PrismaService,
   ) { }
 
-  async create(dto: CreateTeamsDto) {
+  async create(dto: CreateTeamsDto, actorId: string) {
+    const actor = await this.prisma.users.findUnique({
+      where: { id: BigInt(actorId) },
+    });
+
+    if (!actor) {
+      throw new NotFoundException('Usuário autenticado não encontrado');
+    }
+
     const sector = await this.prisma.sectors.findUnique({
       where: { id: BigInt(dto.sector) }
     });
     if (!sector) {
       throw new NotFoundException('Setor não encontrado');
+    }
+
+    if (!actor.head_manager) {
+      const actorRole = await this.prisma.users_role.findFirst({
+        where: {
+          user: BigInt(actorId),
+          sector: BigInt(dto.sector),
+          sector_manager: true,
+        },
+      });
+
+      if (!actorRole) {
+        throw new ForbiddenException(
+          'Apenas head-manager ou sector-manager do setor pode criar times',
+        );
+      }
     }
 
     const normalizedName = normalizeText(dto.name);
@@ -41,14 +65,12 @@ export class TeamsService {
       data: {
         name: dto.name,
         sector: BigInt(dto.sector),
-        level_acess: dto.level_acess,
       },
     });
     return {
       id: team.id.toString(),
       name: team.name,
       sector: team.sector.toString(),
-      level_acess: team.level_acess,
       status: team.status,
     };
   }
@@ -81,7 +103,6 @@ export class TeamsService {
       name: team.name,
       sectorId: team.sector.toString(),
       sectorName: team.sectors.name,
-      level_acess: team.level_acess,
       status: team.status,
     }));
   }

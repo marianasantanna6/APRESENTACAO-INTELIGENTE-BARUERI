@@ -96,14 +96,8 @@ export class ProjectsService {
       let family: bigint;
       let version: bigint;
 
-      /* NOVO PROJETO. O Front não enviou family. */
-      if (dto.family === undefined) {
-        if (dto.team === undefined) {
-          throw new ForbiddenException(
-            'O time é obrigatório para criar um novo projeto',
-          );
-        }
-
+      /* NOVO PROJETO. O Front enviou family=0. */
+      if (dto.family === 0) {
         const teamId = BigInt(dto.team);
 
         const team = await tx.teams.findUnique({
@@ -114,20 +108,20 @@ export class ProjectsService {
           throw new NotFoundException('Time não encontrado');
         }
 
-        const userTeam = await tx.users_teams.findFirst({
+        const userRole = await tx.users_role.findFirst({
           where: {
             user: authenticatedUserId,
             team: teamId,
           },
         });
 
-        if (!userTeam) {
+        if (!userRole) {
           throw new ForbiddenException(
             'Usuário não está vinculado a este time',
           );
         }
 
-        if (userTeam.approver) {
+        if (userRole.team_approver) {
           throw new ForbiddenException(
             'Usuário aprovador não pode criar projetos neste time',
           );
@@ -136,6 +130,8 @@ export class ProjectsService {
         version = 1n;
 
         /* Primeiro criamos o projeto. O banco gera o ID automaticamente. */
+        const moment = new Date();
+
         const project = await tx.projects.create({
           data: {
             name: dto.name,
@@ -147,20 +143,21 @@ export class ProjectsService {
             full_description: dto.full_description,
             source: dto.source,
             main_department: dto.main_department,
-            related_departments: dto.related_departments ?? [],
-            areas: dto.areas ?? [],
-            ods: dto.ods ?? [],
+            related_departments: dto.related_departments,
+            areas: dto.areas,
+            ods: dto.ods,
             theme: dto.theme,
             audience: dto.audience,
-            technologies: dto.technologies ?? [],
+            technologies: dto.technologies,
 
             implementation_date:
               dto.implementation_date !== undefined
                 ? new Date(dto.implementation_date)
                 : null,
 
-            keywords: dto.keywords ?? [],
+            keywords: dto.keywords,
             status: 1,
+            last_update: moment,
 
             ...(dto.awards !== undefined
               ? {
@@ -213,14 +210,15 @@ export class ProjectsService {
             user: authenticatedUserId,
             action: 'criou',
             project: updatedProject.id,
+            moment,
           },
         });
 
         return {
           id: updatedProject.id.toString(),
           name: updatedProject.name,
-          user: updatedProject.user?.toString() ?? null,
-          team: updatedProject.team?.toString() ?? null,
+          user: updatedProject.user.toString(),
+          team: updatedProject.team.toString(),
           version: updatedProject.version.toString(),
           family: updatedProject.family.toString(),
           short_description: updatedProject.short_description,
@@ -264,26 +262,20 @@ export class ProjectsService {
         );
       }
 
-      if (lastProject.team === null) {
-        throw new ForbiddenException(
-          'O projeto original não possui um time responsável',
-        );
-      }
-
-      const userTeam = await tx.users_teams.findFirst({
+      const userRole = await tx.users_role.findFirst({
         where: {
           user: authenticatedUserId,
           team: lastProject.team,
         },
       });
 
-      if (!userTeam) {
+      if (!userRole) {
         throw new ForbiddenException(
           'Usuário não está vinculado ao time do projeto',
         );
       }
 
-      if (userTeam.approver) {
+      if (userRole.team_approver) {
         throw new ForbiddenException(
           'Usuário aprovador não pode criar projetos neste time',
         );
@@ -292,6 +284,8 @@ export class ProjectsService {
       version = lastProject.version + 1n;
 
       /* Criamos uma NOVA linha. Não alteramos o projeto anterior. */
+      const moment = new Date();
+
       const newProject = await tx.projects.create({
         data: {
           name: dto.name,
@@ -303,20 +297,21 @@ export class ProjectsService {
           full_description: dto.full_description,
           source: dto.source,
           main_department: dto.main_department,
-          related_departments: dto.related_departments ?? [],
-          areas: dto.areas ?? [],
-          ods: dto.ods ?? [],
+          related_departments: dto.related_departments,
+          areas: dto.areas,
+          ods: dto.ods,
           theme: dto.theme,
           audience: dto.audience,
-          technologies: dto.technologies ?? [],
+          technologies: dto.technologies,
 
           implementation_date:
             dto.implementation_date !== undefined
               ? new Date(dto.implementation_date)
               : null,
 
-          keywords: dto.keywords ?? [],
+          keywords: dto.keywords,
           status: 1,
+          last_update: moment,
 
           ...(dto.awards !== undefined
             ? {
@@ -356,14 +351,15 @@ export class ProjectsService {
           user: authenticatedUserId,
           action: 'criou',
           project: newProject.id,
+          moment,
         },
       });
 
       return {
         id: newProject.id.toString(),
         name: newProject.name,
-        user: newProject.user?.toString() ?? null,
-        team: newProject.team?.toString() ?? null,
+        user: newProject.user.toString(),
+        team: newProject.team.toString(),
         version: newProject.version.toString(),
         family: newProject.family.toString(),
         short_description: newProject.short_description,
@@ -398,30 +394,24 @@ export class ProjectsService {
       throw new NotFoundException('Projeto não encontrado');
     }
 
-    if (project.user === null || project.user !== BigInt(userId)) {
+    if (project.user !== BigInt(userId)) {
       throw new ForbiddenException('Usuário não pode editar este projeto');
     }
 
-    if (project.team === null) {
-      throw new ForbiddenException(
-        'O projeto não possui um time responsável',
-      );
-    }
-
-    const userTeam = await this.prisma.users_teams.findFirst({
+    const userRole = await this.prisma.users_role.findFirst({
       where: {
         user: BigInt(userId),
         team: project.team,
       },
     });
 
-    if (!userTeam) {
+    if (!userRole) {
       throw new ForbiddenException(
         'Usuário não está vinculado a este time',
       );
     }
 
-    if (userTeam.approver) {
+    if (userRole.team_approver) {
       throw new ForbiddenException(
         'Usuário aprovador não pode editar projetos neste time',
       );
@@ -433,27 +423,35 @@ export class ProjectsService {
       );
     }
 
+    if (BigInt(dto.user) !== BigInt(userId)) {
+      throw new ForbiddenException(
+        'O usuário responsável deve ser o usuário autenticado',
+      );
+    }
+
     const updatedProject = await this.prisma.$transaction(async (tx) => {
+      const moment = new Date();
+
       const projectData: any = {
         name: dto.name,
         short_description: dto.short_description,
         full_description: dto.full_description,
         source: dto.source,
         main_department: dto.main_department,
-        related_departments: dto.related_departments ?? [],
-        areas: dto.areas ?? [],
-        ods: dto.ods ?? [],
+        related_departments: dto.related_departments,
+        areas: dto.areas,
+        ods: dto.ods,
         theme: dto.theme,
         audience: dto.audience,
-        technologies: dto.technologies ?? [],
+        technologies: dto.technologies,
 
         implementation_date:
           dto.implementation_date !== undefined
             ? new Date(dto.implementation_date)
             : null,
 
-        keywords: dto.keywords ?? [],
-        last_update: new Date(),
+        keywords: dto.keywords,
+        last_update: moment,
       };
 
       const updated = await tx.projects.update({
@@ -503,6 +501,7 @@ export class ProjectsService {
           user: BigInt(userId),
           action: 'editou',
           project: project.id,
+          moment,
         },
       });
 
@@ -518,8 +517,8 @@ export class ProjectsService {
     return {
       id: updatedProject!.id.toString(),
       name: updatedProject!.name,
-      user: updatedProject!.user?.toString() ?? null,
-      team: updatedProject!.team?.toString() ?? null,
+      user: updatedProject!.user.toString(),
+      team: updatedProject!.team.toString(),
       version: updatedProject!.version.toString(),
       family: updatedProject!.family.toString(),
       short_description: updatedProject!.short_description,
@@ -553,17 +552,11 @@ export class ProjectsService {
       throw new NotFoundException('Projeto não encontrado');
     }
 
-    if (project.team === null) {
-      throw new ForbiddenException(
-        'O projeto não possui um time responsável',
-      );
-    }
-
-    const approver = await this.prisma.users_teams.findFirst({
+    const approver = await this.prisma.users_role.findFirst({
       where: {
         user: BigInt(userId),
         team: project.team,
-        approver: true,
+        team_approver: true,
       },
     });
 
@@ -580,11 +573,13 @@ export class ProjectsService {
     }
 
     const updatedProject = await this.prisma.$transaction(async (tx) => {
+      const moment = new Date();
+
       const updated = await tx.projects.update({
         where: { id: project.id },
         data: {
           status: 2,
-          last_update: new Date(),
+          last_update: moment,
         },
         include: {
           awards: true,
@@ -597,6 +592,7 @@ export class ProjectsService {
           user: BigInt(userId),
           action: 'aprovou',
           project: project.id,
+          moment,
         },
       });
 
@@ -606,8 +602,8 @@ export class ProjectsService {
     return {
       id: updatedProject.id.toString(),
       name: updatedProject.name,
-      user: updatedProject.user?.toString() ?? null,
-      team: updatedProject.team?.toString() ?? null,
+      user: updatedProject.user.toString(),
+      team: updatedProject.team.toString(),
       version: updatedProject.version.toString(),
       family: updatedProject.family.toString(),
       short_description: updatedProject.short_description,
@@ -641,17 +637,11 @@ export class ProjectsService {
       throw new NotFoundException('Projeto não encontrado');
     }
 
-    if (project.team === null) {
-      throw new ForbiddenException(
-        'O projeto não possui um time responsável',
-      );
-    }
-
-    const approver = await this.prisma.users_teams.findFirst({
+    const approver = await this.prisma.users_role.findFirst({
       where: {
         user: BigInt(userId),
         team: project.team,
-        approver: true,
+        team_approver: true,
       },
     });
 
@@ -668,11 +658,13 @@ export class ProjectsService {
     }
 
     const updatedProject = await this.prisma.$transaction(async (tx) => {
+      const moment = new Date();
+
       const updated = await tx.projects.update({
         where: { id: project.id },
         data: {
           status: 3,
-          last_update: new Date(),
+          last_update: moment,
         },
         include: {
           awards: true,
@@ -685,6 +677,7 @@ export class ProjectsService {
           user: BigInt(userId),
           action: 'inativou',
           project: project.id,
+          moment,
         },
       });
 
@@ -694,8 +687,8 @@ export class ProjectsService {
     return {
       id: updatedProject.id.toString(),
       name: updatedProject.name,
-      user: updatedProject.user?.toString() ?? null,
-      team: updatedProject.team?.toString() ?? null,
+      user: updatedProject.user.toString(),
+      team: updatedProject.team.toString(),
       version: updatedProject.version.toString(),
       family: updatedProject.family.toString(),
       short_description: updatedProject.short_description,
@@ -729,17 +722,11 @@ export class ProjectsService {
       throw new NotFoundException('Projeto não encontrado');
     }
 
-    if (project.team === null) {
-      throw new ForbiddenException(
-        'O projeto não possui um time responsável',
-      );
-    }
-
-    const approver = await this.prisma.users_teams.findFirst({
+    const approver = await this.prisma.users_role.findFirst({
       where: {
         user: BigInt(userId),
         team: project.team,
-        approver: true,
+        team_approver: true,
       },
     });
 
@@ -766,6 +753,7 @@ export class ProjectsService {
     id?: string;
     name?: string;
     user?: string;
+    team?: string;
     family?: string;
     main_department?: string;
     related_departments?: string;
@@ -792,6 +780,10 @@ export class ProjectsService {
 
     if (filters.user !== undefined) {
       where.user = BigInt(filters.user);
+    }
+
+    if (filters.team !== undefined) {
+      where.team = BigInt(filters.team);
     }
 
     if (filters.family !== undefined) {
@@ -879,8 +871,8 @@ export class ProjectsService {
       projects.map(async (project) => ({
         id: project.id.toString(),
         name: project.name,
-        user: project.user?.toString() ?? null,
-        team: project.team?.toString() ?? null,
+        user: project.user.toString(),
+        team: project.team.toString(),
         version: project.version.toString(),
         family: project.family.toString(),
         short_description: project.short_description,

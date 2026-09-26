@@ -56,10 +56,12 @@ export class ProjectsController {
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard)
   find(
     @Query('id') id?: string,
     @Query('name') name?: string,
     @Query('user') user?: string,
+    @Query('team') team?: string,
     @Query('family') family?: string,
     @Query('main_department') main_department?: string,
     @Query('related_departments') related_departments?: string,
@@ -75,6 +77,7 @@ export class ProjectsController {
       id,
       name,
       user,
+      team,
       family,
       main_department,
       related_departments,

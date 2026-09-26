@@ -23,13 +23,10 @@ export class LoginService {
         ],
       },
       include: {
-        users_teams: {
+        users_role: {
           include: {
-            teams: {
-              include: {
-                sectors: true,
-              },
-            },
+            teams: true,
+            sectors: true,
           },
         },
       },
@@ -37,6 +34,10 @@ export class LoginService {
 
     if (!user) {
       throw new UnauthorizedException('Email ou CPF inválidos');
+    }
+
+    if (!user.status) {
+      throw new UnauthorizedException('Usuário desativado');
     }
 
     const passwordValid = await bcrypt.compare(password, user.password);
@@ -52,19 +53,23 @@ export class LoginService {
 
     const token = await this.jwtService.signAsync(payload);
 
-    const teams = user.users_teams.map((userTeam) => ({
-      id: userTeam.teams.id.toString(),
-      name: userTeam.teams.name,
-      sectorId: userTeam.teams.sector.toString(),
-      sectorName: userTeam.teams.sectors.name,
-      accessLevel: userTeam.teams.level_acess,
-      areaManager: userTeam.area_manager,
-      approver: userTeam.approver,
-    }));
+    const teams = user.users_role
+      .filter((userRole) => userRole.team !== null && userRole.teams !== null)
+      .map((userRole) => ({
+        id: userRole.teams!.id.toString(),
+        name: userRole.teams!.name,
+        sectorId: userRole.sector.toString(),
+        sectorName: userRole.sectors.name,
+        areaManager: userRole.team_manager,
+        approver: userRole.team_approver,
+      }));
 
-    const primaryTeamEntry = user.users_teams[0] ?? null;
-    const primaryTeam = primaryTeamEntry?.teams ?? null;
-    const primarySector = primaryTeam?.sectors ?? null;
+    const primaryRole = user.users_role.find(
+      (userRole) => userRole.team !== null && userRole.teams !== null
+    ) ?? user.users_role[0] ?? null;
+
+    const primaryTeam = primaryRole?.teams ?? null;
+    const primarySector = primaryRole?.sectors ?? null;
 
     return {
       access_token: token,
@@ -80,14 +85,13 @@ export class LoginService {
         teamName: primaryTeam?.name ?? null,
         sectorId: primarySector?.id?.toString() ?? null,
         sectorName: primarySector?.name ?? null,
-        accessLevel: primaryTeam?.level_acess ?? 0,
-        areaManager: primaryTeamEntry?.area_manager ?? false,
-        approver: primaryTeamEntry?.approver ?? false,
+        areaManager: primaryRole?.team_manager ?? false,
+        approver: primaryRole?.team_approver ?? false,
 
         // Lista completa dos vínculos do usuário com os times.
         teams,
 
-        master_admin: user.master_admin,
+        head_manager: user.head_manager,
       },
     };
   }

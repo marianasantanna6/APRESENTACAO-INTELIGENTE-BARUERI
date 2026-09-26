@@ -1,7 +1,9 @@
-import { Body, Controller, Delete, Get, Param, Patch, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Query, Req, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../authentication/jwt-auth.guard';
 import { ManagementService } from './management.service';
 
 @Controller('management')
+@UseGuards(JwtAuthGuard)
 export class ManagementController {
   constructor(
     private readonly managementService: ManagementService,
@@ -32,9 +34,8 @@ export class ManagementController {
       current_password: string;
       name?: string;
       email?: string;
-      cpf?: string;
       photo?: string | null;
-      master_admin?: boolean;
+      head_manager?: boolean;
     },
   ) {
     return this.managementService.update(id, data);
@@ -44,7 +45,8 @@ export class ManagementController {
   remove(
     @Param('id') id: string,
     @Body('password') password: string,
+    @Req() req: any,
   ) {
-    return this.managementService.remove(id, password);
+    return this.managementService.remove(id, password, req.user.id);
   }
 }

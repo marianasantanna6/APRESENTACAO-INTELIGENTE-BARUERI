@@ -8,10 +8,4 @@ export class CreateTeamsDto {
   @IsNotEmpty()
   @IsInt()
   sector!: number;
-
-  @IsNotEmpty()
-  @IsInt()
-  @Min(1)
-  @Max(3)
-  level_acess!: number;
 }

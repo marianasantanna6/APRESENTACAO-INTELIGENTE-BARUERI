@@ -1,19 +1,27 @@
 import { IsBoolean, IsInt, IsNotEmpty, IsOptional } from 'class-validator';
 
-export class CreateUsersTeamsDto {
+export class CreateUsersRoleDto {
   @IsNotEmpty()
   @IsInt()
   user!: number;
 
   @IsNotEmpty()
   @IsInt()
-  team!: number;
+  sector!: number;
+
+  @IsOptional()
+  @IsInt()
+  team?: number;
 
   @IsOptional()
   @IsBoolean()
-  area_manager?: boolean;
+  sector_manager?: boolean;
 
   @IsOptional()
   @IsBoolean()
-  approver?: boolean;
+  team_manager?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  team_approver?: boolean;
 }

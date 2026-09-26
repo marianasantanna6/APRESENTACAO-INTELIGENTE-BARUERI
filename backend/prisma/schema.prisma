@@ -35,9 +35,12 @@ model indicators {
 model projects {
   id                  BigInt          @id(map: "project_pkey") @default(autoincrement())
   name                String
-  user                BigInt?
+  team                BigInt
+  user                BigInt
   version             BigInt
   family              BigInt
+  status              Int             @default(1) @db.SmallInt
+  last_update         DateTime        @default(now()) @map("last-update") @db.Timestamptz(6)
   short_description   String?         @map("short-description")
   full_description    String?         @map("full-description")
   source              String[]
@@ -49,14 +52,11 @@ model projects {
   audience            String?
   technologies        String[]
   implementation_date DateTime?       @map("implementation-date") @db.Date
-  last_update         DateTime        @default(now()) @map("last-update") @db.Timestamptz(6)
   keywords            String[]
-  status              Int             @default(1) @db.SmallInt
-  team                BigInt?
   awards              awards[]
   indicators          indicators[]
-  teams               teams?          @relation(fields: [team], references: [id])
-  users               users?          @relation(fields: [user], references: [id], map: "project_user_fkey")
+  teams               teams           @relation(fields: [team], references: [id], onDelete: Cascade)
+  users               users           @relation(fields: [user], references: [id], onUpdate: Restrict, map: "project_user_fkey")
   projects_logs       projects_logs[]
 }
 
@@ -64,12 +64,12 @@ model projects {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model projects_logs {
   id       BigInt   @id(map: "log-analytics_pkey") @default(autoincrement())
-  user     BigInt?
+  user     BigInt
   action   String
   project  BigInt
   moment   DateTime @default(now()) @db.Timestamptz(6)
   projects projects @relation(fields: [project], references: [id], onDelete: Cascade, map: "project-logs_project_fkey")
-  users    users?   @relation(fields: [user], references: [id], map: "log-analytics_user_fkey")
+  users    users    @relation(fields: [user], references: [id], onUpdate: Restrict, map: "log-analytics_user_fkey")
 
   @@map("projects-logs")
 }
@@ -77,23 +77,22 @@ model projects_logs {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model sectors {
-  id            BigInt          @id(map: "sector_pkey") @default(autoincrement())
-  name          String
-  teams         teams[]
-  users_sectors users_sectors[]
+  id         BigInt       @id(map: "sector_pkey") @default(autoincrement())
+  name       String       @unique
+  teams      teams[]
+  users_role users_role[]
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model teams {
-  id          BigInt        @id(map: "team_pkey") @default(autoincrement())
-  name        String
-  sector      BigInt
-  level_acess Int           @map("level-acess") @db.SmallInt
-  status      Boolean       @default(true)
-  projects    projects[]
-  sectors     sectors       @relation(fields: [sector], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "team_sector_fkey")
-  users_teams users_teams[]
+  id         BigInt       @id(map: "team_pkey") @default(autoincrement())
+  name       String
+  sector     BigInt
+  status     Boolean      @default(true)
+  projects   projects[]
+  sectors    sectors      @relation(fields: [sector], references: [id], onDelete: Cascade, map: "team_sector_fkey")
+  users_role users_role[]
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -101,16 +100,16 @@ model teams {
 model users {
   id            BigInt          @id(map: "user_pkey") @default(autoincrement())
   name          String
-  email         String
+  email         String          @unique
   password      String
-  cpf           String          @db.VarChar
+  cpf           String          @unique @db.VarChar
   photo         String?
-  master_admin  Boolean         @default(false) @map("master-admin")
+  head_manager  Boolean         @default(false) @map("head-manager")
+  status        Boolean         @default(true)
   projects      projects[]
   projects_logs projects_logs[]
   users_logs    users_logs[]
-  users_sectors users_sectors[]
-  users_teams   users_teams[]
+  users_role    users_role[]
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -122,34 +121,24 @@ model users_logs {
   language String?
   start    DateTime? @db.Timestamptz(6)
   end      DateTime? @default(now()) @db.Timestamptz(6)
-  users    users?    @relation(fields: [user], references: [id], map: "analytics_user_fkey")
+  users    users?    @relation(fields: [user], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "analytics_user_fkey")
 
   @@map("users-logs")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model users_sectors {
-  id                BigInt  @id(map: "user-sector_pkey") @default(autoincrement())
-  user              BigInt
-  sector            BigInt
-  institute_manager Boolean @default(false) @map("institute-manager")
-  sectors           sectors @relation(fields: [sector], references: [id], onDelete: Cascade, map: "user-sector_sector_fkey")
-  users             users   @relation(fields: [user], references: [id], onDelete: Cascade, map: "user-sector_user_fkey")
+model users_role {
+  id             BigInt  @id(map: "user-sector_pkey") @default(autoincrement())
+  user           BigInt
+  sector         BigInt
+  sector_manager Boolean @default(false) @map("sector-manager")
+  team           BigInt?
+  team_manager   Boolean @default(false) @map("team-manager")
+  team_approver  Boolean @default(false) @map("team-approver")
+  sectors        sectors @relation(fields: [sector], references: [id], onDelete: Cascade, map: "user-sector_sector_fkey")
+  teams          teams?  @relation(fields: [team], references: [id])
+  users          users   @relation(fields: [user], references: [id], onDelete: Cascade, map: "users-sectors_user_fkey")
 
-  @@map("users-sectors")
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model users_teams {
-  id           BigInt  @id(map: "user-team_pkey") @default(autoincrement())
-  user         BigInt
-  team         BigInt
-  area_manager Boolean @default(false) @map("area-manager")
-  approver     Boolean @default(false)
-  teams        teams   @relation(fields: [team], references: [id], onDelete: Cascade, map: "user-team_team_fkey")
-  users        users   @relation(fields: [user], references: [id], onDelete: Cascade, map: "user-team_user_fkey")
-
-  @@map("users-teams")
+  @@map("users-role")
 }

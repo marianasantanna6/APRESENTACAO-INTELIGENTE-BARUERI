@@ -8,8 +8,7 @@ import { TeamsModule } from './teams/teams.module';
 import { LoginModule } from './users/login/login.module';
 import { ManagementModule } from './users/management/management.module';
 import { RegisterModule } from './users/register/register.module';
-import { UsersSectorsModule } from './users-sectors/users-sectors.module';
-import { UsersTeamsModule } from './users-teams/users-teams.module';
+import { UsersRoleModule } from './users-role/users-role.module';
 import { AuthenticationModule } from './users/authentication/authentication.module';
 
 @Module({
@@ -22,8 +21,7 @@ import { AuthenticationModule } from './users/authentication/authentication.modu
     LoginModule,
     ManagementModule,
     RegisterModule,
-    UsersSectorsModule,
-    UsersTeamsModule,
+    UsersRoleModule,
     AuthenticationModule
   ]
 })

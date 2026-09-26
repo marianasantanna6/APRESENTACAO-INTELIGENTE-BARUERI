@@ -14,7 +14,7 @@ export class ProjectsLogsService {
 
     return logs.map((log) => ({
       id: log.id.toString(),
-      user: log.user?.toString() ?? null,
+      user: log.user.toString(),
       action: log.action,
       project: log.project.toString(),
       moment: log.moment,

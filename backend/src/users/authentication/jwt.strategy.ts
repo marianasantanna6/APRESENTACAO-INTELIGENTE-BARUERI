@@ -28,10 +28,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user) {
       throw new UnauthorizedException('Usuário não encontrado');
     }
+
+    if (!user.status) {
+      throw new UnauthorizedException('Usuário desativado');
+    }
+
     return {
       id: user.id.toString(),
       email: user.email,
-      master_admin: user.master_admin,
+      head_manager: user.head_manager,
     };
   }
 }

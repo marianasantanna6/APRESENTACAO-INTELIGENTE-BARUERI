@@ -1,15 +1,14 @@
 import { Injectable, ConflictException, ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
-import { normalizeCpf, normalizeText } from '../../common/normalizer';
+import { normalizeText } from '../../common/normalizer';
 
 type UpdateManagementInput = {
   current_password: string;
   name?: string;
   email?: string;
-  cpf?: string;
   photo?: string | null;
-  master_admin?: boolean;
+  head_manager?: boolean;
 };
 
 @Injectable()
@@ -30,7 +29,8 @@ export class ManagementService {
       password: user.password,
       cpf: user.cpf,
       photo: user.photo,
-      master_admin: user.master_admin,
+      head_manager: user.head_manager,
+      status: user.status,
     }));
   }
 
@@ -50,7 +50,8 @@ export class ManagementService {
       password: user.password,
       cpf: user.cpf,
       photo: user.photo,
-      master_admin: user.master_admin,
+      head_manager: user.head_manager,
+      status: user.status,
     };
   }
 
@@ -72,7 +73,8 @@ export class ManagementService {
       password: user.password,
       cpf: user.cpf,
       photo: user.photo,
-      master_admin: user.master_admin,
+      head_manager: user.head_manager,
+      status: user.status,
     };
   }
 
@@ -88,7 +90,8 @@ export class ManagementService {
       password: user.password,
       cpf: user.cpf,
       photo: user.photo,
-      master_admin: user.master_admin,
+      head_manager: user.head_manager,
+      status: user.status,
     }));
   }
 
@@ -117,22 +120,10 @@ export class ManagementService {
         ? normalizeText(data.email)
         : undefined;
 
-    const normalizedCpf =
-      data.cpf !== undefined
-        ? normalizeCpf(data.cpf)
-        : undefined;
-
-    if (normalizedEmail !== undefined || normalizedCpf !== undefined) {
+    if (normalizedEmail !== undefined) {
       const existingUser = await this.prisma.users.findFirst({
         where: {
-          OR: [
-            ...(normalizedEmail !== undefined
-              ? [{ email: normalizedEmail }]
-              : []),
-            ...(normalizedCpf !== undefined
-              ? [{ cpf: normalizedCpf }]
-              : []),
-          ],
+          email: normalizedEmail,
           NOT: {
             id: userId,
           },
@@ -140,7 +131,7 @@ export class ManagementService {
       });
 
       if (existingUser) {
-        throw new ConflictException('CPF ou email já cadastrado');
+        throw new ConflictException('Email já cadastrado');
       }
     }
 
@@ -154,16 +145,12 @@ export class ManagementService {
       updateData.email = normalizedEmail;
     }
 
-    if (normalizedCpf !== undefined) {
-      updateData.cpf = normalizedCpf;
-    }
-
     if (data.photo !== undefined) {
       updateData.photo = data.photo;
     }
 
-    if (data.master_admin !== undefined) {
-      updateData.master_admin = data.master_admin;
+    if (data.head_manager !== undefined) {
+      updateData.head_manager = data.head_manager;
     }
 
     const updatedUser = await this.prisma.users.update({
@@ -178,11 +165,35 @@ export class ManagementService {
       password: updatedUser.password,
       cpf: updatedUser.cpf,
       photo: updatedUser.photo,
-      master_admin: updatedUser.master_admin,
+      head_manager: updatedUser.head_manager,
+      status: updatedUser.status,
     };
   }
 
-  async remove(id: string, password: string) {
+  async remove(id: string, password: string, actorId: string) {
+    const actor = await this.prisma.users.findUnique({
+      where: { id: BigInt(actorId) },
+    });
+
+    if (!actor) {
+      throw new NotFoundException('Usuário autenticado não encontrado');
+    }
+
+    if (!actor.head_manager) {
+      throw new ForbiddenException(
+        'Apenas head-manager pode desativar usuários',
+      );
+    }
+
+    const passwordValid = await bcrypt.compare(
+      password,
+      actor.password,
+    );
+
+    if (!passwordValid) {
+      throw new UnauthorizedException('Senha inválida');
+    }
+
     const userId = BigInt(id);
 
     const user = await this.prisma.users.findUnique({
@@ -193,17 +204,11 @@ export class ManagementService {
       throw new NotFoundException('Usuário não encontrado');
     }
 
-    const passwordValid = await bcrypt.compare(
-      password,
-      user.password,
-    );
-
-    if (!passwordValid) {
-      throw new UnauthorizedException('Senha inválida');
-    }
-
-    await this.prisma.users.delete({
+    await this.prisma.users.update({
       where: { id: userId },
+      data: {
+        status: false,
+      },
     });
 
     return { ok: true };

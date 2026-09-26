@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { normalizeCpf, normalizeText } from '../../common/normalizer';
@@ -9,7 +9,21 @@ export class RegisterService {
   constructor(
     private readonly prisma: PrismaService,
   ) { }
-  async create(dto: CreateRegisterDto) {
+  async create(dto: CreateRegisterDto, actorId: string) {
+    const actor = await this.prisma.users.findUnique({
+      where: { id: BigInt(actorId) },
+    });
+
+    if (!actor) {
+      throw new NotFoundException('Usuário autenticado não encontrado');
+    }
+
+    if (!actor.head_manager) {
+      throw new ForbiddenException(
+        'Apenas head-manager pode criar usuários',
+      );
+    }
+
     const cpf = normalizeCpf(dto.cpf);
     const email = normalizeText(dto.email);
     const existingUser = await this.prisma.users.findFirst({
@@ -37,7 +51,8 @@ export class RegisterService {
       email: user.email,
       cpf: user.cpf,
       photo: user.photo,
-      master_admin: user.master_admin,
+      head_manager: user.head_manager,
+      status: user.status,
     };
   }
 }
