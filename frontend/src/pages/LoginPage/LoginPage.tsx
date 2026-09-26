@@ -1,12 +1,9 @@
 import type { CSSProperties, ChangeEvent, FormEvent } from "react";
 import { useEffect, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import loginLogo from "../../assets/images/create-logo.png";
 import { useAuth } from "../../context";
-import {
-  canAccessPathForUser,
-  getDefaultRouteForUser,
-} from "../../lib/authRouting";
+import { getDefaultRouteForUser } from "../../lib/authRouting";
 import { ROUTE_PATHS } from "../../router/paths";
 
 type BackgroundShape = {
@@ -59,7 +56,6 @@ const defaultValues: FormValues = {
 };
 
 function LoginPage() {
-  const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, login, user } = useAuth();
   const [formValues, setFormValues] = useState<FormValues>(defaultValues);
@@ -69,14 +65,6 @@ function LoginPage() {
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
-      return;
-    }
-
-    const stateFromLocation = location.state as { from?: string } | null;
-    const requestedPath = stateFromLocation?.from;
-
-    if (requestedPath && canAccessPathForUser(user, requestedPath)) {
-      navigate(requestedPath, { replace: true });
       return;
     }
 
