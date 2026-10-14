@@ -1,3 +1,4 @@
+
 import { Injectable, ConflictException, ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -95,7 +96,21 @@ export class ManagementService {
     }));
   }
 
-  async update(id: string, data: UpdateManagementInput) {
+  async update(
+    id: string,
+    data: UpdateManagementInput,
+    actorId: string,
+  ) {
+    const actor = await this.prisma.users.findUnique({
+      where: { id: BigInt(actorId) },
+    });
+
+    if (!actor) {
+      throw new NotFoundException(
+        'Usuário autenticado não encontrado',
+      );
+    }
+
     const userId = BigInt(id);
 
     const user = await this.prisma.users.findUnique({
@@ -106,9 +121,21 @@ export class ManagementService {
       throw new NotFoundException('Usuário não encontrado');
     }
 
+    const changingHeadManager = data.head_manager !== undefined;
+
+    if (changingHeadManager && !actor.head_manager) {
+      throw new ForbiddenException(
+        'Apenas head-manager pode atribuir ou remover head-manager',
+      );
+    }
+
+    const passwordToValidate = changingHeadManager
+      ? actor.password
+      : user.password;
+
     const passwordValid = await bcrypt.compare(
       data.current_password,
-      user.password,
+      passwordToValidate,
     );
 
     if (!passwordValid) {

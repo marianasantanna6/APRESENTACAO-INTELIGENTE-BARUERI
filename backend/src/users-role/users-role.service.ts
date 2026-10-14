@@ -1,3 +1,4 @@
+
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUsersRoleDto } from './dto/inputs-create-users-role.dto';
@@ -358,50 +359,127 @@ export class UsersRoleService {
     return { ok: true };
   }
 
-  async find(filters: {
-    user?: string;
-    sector?: string;
-    team?: string;
-    sector_manager?: string;
-    team_manager?: string;
-    team_approver?: string;
-  }) {
-    const where: any = {};
+  async find(
+    filters: {
+      user?: string;
+      sector?: string;
+      team?: string;
+      sector_manager?: string;
+      team_manager?: string;
+      team_approver?: string;
+    },
+    actorId: string,
+  ) {
+    const actor = await this.prisma.users.findUnique({
+      where: { id: BigInt(actorId) },
+    });
+
+    if (!actor) {
+      throw new NotFoundException(
+        'Usuário autenticado não encontrado',
+      );
+    }
+
+    const filtersWhere: any = {};
 
     if (filters.user !== undefined) {
-      where.user = BigInt(filters.user);
+      filtersWhere.user = BigInt(filters.user);
     }
 
     if (filters.sector !== undefined) {
-      where.sector = BigInt(filters.sector);
+      filtersWhere.sector = BigInt(filters.sector);
     }
 
     if (filters.team !== undefined) {
       if (filters.team === 'null') {
-        where.team = null;
+        filtersWhere.team = null;
       } else {
-        where.team = BigInt(filters.team);
+        filtersWhere.team = BigInt(filters.team);
       }
     }
 
     if (filters.sector_manager !== undefined) {
-      where.sector_manager =
+      filtersWhere.sector_manager =
         filters.sector_manager === 'true';
     }
 
     if (filters.team_manager !== undefined) {
-      where.team_manager =
+      filtersWhere.team_manager =
         filters.team_manager === 'true';
     }
 
     if (filters.team_approver !== undefined) {
-      where.team_approver =
+      filtersWhere.team_approver =
         filters.team_approver === 'true';
+    }
+
+    let where = filtersWhere;
+
+    if (!actor.head_manager) {
+      const actorRoles = await this.prisma.users_role.findMany({
+        where: {
+          user: BigInt(actorId),
+          OR: [
+            { sector_manager: true },
+            { team_manager: true },
+          ],
+        },
+        select: {
+          sector: true,
+          team: true,
+          sector_manager: true,
+          team_manager: true,
+        },
+      });
+
+      const sectorIds = [
+        ...new Set(
+          actorRoles
+            .filter((role) => role.sector_manager)
+            .map((role) => role.sector),
+        ),
+      ];
+
+      const teamIds = [
+        ...new Set(
+          actorRoles
+            .filter((role) => role.team_manager && role.team !== null)
+            .map((role) => role.team!),
+        ),
+      ];
+
+      const scopeConditions: any[] = [];
+
+      if (sectorIds.length > 0) {
+        scopeConditions.push({
+          sector: { in: sectorIds },
+        });
+      }
+
+      if (teamIds.length > 0) {
+        scopeConditions.push({
+          team: { in: teamIds },
+        });
+      }
+
+      if (scopeConditions.length === 0) {
+        throw new ForbiddenException(
+          'Apenas head-manager, sector-manager ou team-manager pode consultar vínculos',
+        );
+      }
+
+      where = {
+        AND: [
+          filtersWhere,
+          { OR: scopeConditions },
+        ],
+      };
     }
 
     const usersRole =
       await this.prisma.users_role.findMany({
-        where, orderBy: { id: 'asc' },
+        where,
+        orderBy: { id: 'asc' },
       });
 
     return usersRole.map((userRole) => ({

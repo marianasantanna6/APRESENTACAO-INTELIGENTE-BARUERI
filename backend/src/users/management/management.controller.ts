@@ -37,8 +37,13 @@ export class ManagementController {
       photo?: string | null;
       head_manager?: boolean;
     },
+    @Req() req: any,
   ) {
-    return this.managementService.update(id, data);
+    return this.managementService.update(
+      id,
+      data,
+      req.user.id,
+    );
   }
 
   @Delete(':id')
