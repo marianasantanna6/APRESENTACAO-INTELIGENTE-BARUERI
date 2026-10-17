@@ -1,4 +1,9 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { normalizeText } from '../common/normalizer';
 import { CreateProjectsDto } from './dto/inputs-projects.dto';
@@ -25,7 +30,7 @@ export class ProjectsService {
       const html = await response.text();
 
       const siteNameMatch = html.match(
-        /<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']+)["']/i
+        /<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']+)["']/i,
       );
 
       if (siteNameMatch?.[1]) {
@@ -33,7 +38,7 @@ export class ProjectsService {
       }
 
       const titleMatch = html.match(
-        /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i
+        /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i,
       );
 
       if (titleMatch?.[1]) {
@@ -41,7 +46,7 @@ export class ProjectsService {
       }
 
       const htmlTitleMatch = html.match(
-        /<title[^>]*>([^<]+)<\/title>/i
+        /<title[^>]*>([^<]+)<\/title>/i,
       );
 
       if (htmlTitleMatch?.[1]) {
@@ -62,7 +67,7 @@ export class ProjectsService {
       sources.map(async (url) => ({
         url,
         name: await this.getSourceName(url),
-      }))
+      })),
     );
   }
 
@@ -96,7 +101,7 @@ export class ProjectsService {
       let family: bigint;
       let version: bigint;
 
-      /* NOVO PROJETO. O Front enviou family=0. */
+      // NOVO PROJETO
       if (dto.family === 0) {
         const teamId = BigInt(dto.team);
 
@@ -129,7 +134,6 @@ export class ProjectsService {
 
         version = 1n;
 
-        /* Primeiro criamos o projeto. O banco gera o ID automaticamente. */
         const moment = new Date();
 
         const project = await tx.projects.create({
@@ -161,29 +165,29 @@ export class ProjectsService {
 
             ...(dto.awards !== undefined
               ? {
-                awards: {
-                  create: dto.awards.map((award) => ({
-                    institution: award.institution,
-                    year: award.year,
-                    description: award.description,
-                    link: award.link,
-                  })),
-                },
-              }
+                  awards: {
+                    create: dto.awards.map((award) => ({
+                      institution: award.institution,
+                      year: award.year,
+                      description: award.description,
+                      link: award.link,
+                    })),
+                  },
+                }
               : {}),
 
             ...(dto.indicators !== undefined
               ? {
-                indicators: {
-                  create: dto.indicators.map((indicator) => ({
-                    label: indicator.label,
-                    value: indicator.value,
-                    measure: indicator.measure,
-                    source: indicator.source,
-                    year: indicator.year,
-                  })),
-                },
-              }
+                  indicators: {
+                    create: dto.indicators.map((indicator) => ({
+                      label: indicator.label,
+                      value: indicator.value,
+                      measure: indicator.measure,
+                      source: indicator.source,
+                      year: indicator.year,
+                    })),
+                  },
+                }
               : {}),
           },
           include: {
@@ -192,10 +196,9 @@ export class ProjectsService {
           },
         });
 
-        /* O próprio ID gerado passa a ser a referência da família. */
+        // O próprio ID do projeto passa a identificar sua família.
         family = project.id;
 
-        /* Agora que temos o ID, preenchemos family. */
         const updatedProject = await tx.projects.update({
           where: { id: project.id },
           data: { family },
@@ -231,10 +234,7 @@ export class ProjectsService {
           theme: updatedProject.theme,
           audience: updatedProject.audience,
           technologies: updatedProject.technologies,
-
-          implementation_date:
-            updatedProject.implementation_date,
-
+          implementation_date: updatedProject.implementation_date,
           last_update: updatedProject.last_update,
           keywords: updatedProject.keywords,
           status: updatedProject.status,
@@ -243,10 +243,9 @@ export class ProjectsService {
         };
       }
 
-      /* NOVA VERSÃO. O Front enviou family. */
+      // NOVA VERSÃO
       family = BigInt(dto.family);
 
-      /* Procuramos a última versão dessa família. */
       const lastProject = await tx.projects.findFirst({
         where: { family },
         orderBy: { version: 'desc' },
@@ -283,7 +282,6 @@ export class ProjectsService {
 
       version = lastProject.version + 1n;
 
-      /* Criamos uma NOVA linha. Não alteramos o projeto anterior. */
       const moment = new Date();
 
       const newProject = await tx.projects.create({
@@ -315,29 +313,29 @@ export class ProjectsService {
 
           ...(dto.awards !== undefined
             ? {
-              awards: {
-                create: dto.awards.map((award) => ({
-                  institution: award.institution,
-                  year: award.year,
-                  description: award.description,
-                  link: award.link,
-                })),
-              },
-            }
+                awards: {
+                  create: dto.awards.map((award) => ({
+                    institution: award.institution,
+                    year: award.year,
+                    description: award.description,
+                    link: award.link,
+                  })),
+                },
+              }
             : {}),
 
           ...(dto.indicators !== undefined
             ? {
-              indicators: {
-                create: dto.indicators.map((indicator) => ({
-                  label: indicator.label,
-                  value: indicator.value,
-                  measure: indicator.measure,
-                  source: indicator.source,
-                  year: indicator.year,
-                })),
-              },
-            }
+                indicators: {
+                  create: dto.indicators.map((indicator) => ({
+                    label: indicator.label,
+                    value: indicator.value,
+                    measure: indicator.measure,
+                    source: indicator.source,
+                    year: indicator.year,
+                  })),
+                },
+              }
             : {}),
         },
         include: {
@@ -372,10 +370,7 @@ export class ProjectsService {
         theme: newProject.theme,
         audience: newProject.audience,
         technologies: newProject.technologies,
-
-        implementation_date:
-          newProject.implementation_date,
-
+        implementation_date: newProject.implementation_date,
         last_update: newProject.last_update,
         keywords: newProject.keywords,
         status: newProject.status,
@@ -454,7 +449,7 @@ export class ProjectsService {
         last_update: moment,
       };
 
-      const updated = await tx.projects.update({
+      await tx.projects.update({
         where: { id: project.id },
         data: projectData,
       });
@@ -531,10 +526,7 @@ export class ProjectsService {
       theme: updatedProject!.theme,
       audience: updatedProject!.audience,
       technologies: updatedProject!.technologies,
-
-      implementation_date:
-        updatedProject!.implementation_date,
-
+      implementation_date: updatedProject!.implementation_date,
       last_update: updatedProject!.last_update,
       keywords: updatedProject!.keywords,
       status: updatedProject!.status,
@@ -616,10 +608,7 @@ export class ProjectsService {
       theme: updatedProject.theme,
       audience: updatedProject.audience,
       technologies: updatedProject.technologies,
-
-      implementation_date:
-        updatedProject.implementation_date,
-
+      implementation_date: updatedProject.implementation_date,
       last_update: updatedProject.last_update,
       keywords: updatedProject.keywords,
       status: updatedProject.status,
@@ -701,10 +690,7 @@ export class ProjectsService {
       theme: updatedProject.theme,
       audience: updatedProject.audience,
       technologies: updatedProject.technologies,
-
-      implementation_date:
-        updatedProject.implementation_date,
-
+      implementation_date: updatedProject.implementation_date,
       last_update: updatedProject.last_update,
       keywords: updatedProject.keywords,
       status: updatedProject.status,
@@ -749,22 +735,36 @@ export class ProjectsService {
     return { ok: true };
   }
 
-  async find(filters: {
-    id?: string;
-    name?: string;
-    user?: string;
-    team?: string;
-    family?: string;
-    main_department?: string;
-    related_departments?: string;
-    areas?: string;
-    ods?: string;
-    theme?: string;
-    awards?: string;
-    keywords?: string;
-    status?: string;
-    implementation_date?: string;
-  }) {
+  async find(
+    filters: {
+      id?: string;
+      name?: string;
+      user?: string;
+      team?: string;
+      family?: string;
+      main_department?: string;
+      related_departments?: string;
+      areas?: string;
+      ods?: string;
+      theme?: string;
+      awards?: string;
+      keywords?: string;
+      status?: string;
+      implementation_date?: string;
+    },
+    userId: string,
+  ) {
+    const authenticatedUserId = BigInt(userId);
+
+    const authenticatedUser = await this.prisma.users.findUnique({
+      where: { id: authenticatedUserId },
+      select: { head_manager: true },
+    });
+
+    if (!authenticatedUser) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+
     const where: any = {};
 
     if (filters.id !== undefined) {
@@ -824,7 +824,94 @@ export class ProjectsService {
       if (filters.implementation_date === 'null') {
         where.implementation_date = null;
       } else {
-        where.implementation_date = new Date(filters.implementation_date);
+        where.implementation_date = new Date(
+          filters.implementation_date,
+        );
+      }
+    }
+
+    // O head-manager pode consultar todos os projetos.
+    if (!authenticatedUser.head_manager) {
+      const managerRoles = await this.prisma.users_role.findMany({
+        where: {
+          user: authenticatedUserId,
+          OR: [
+            { sector_manager: true },
+            { team_manager: true },
+          ],
+        },
+        select: {
+          sector: true,
+          team: true,
+          sector_manager: true,
+          team_manager: true,
+        },
+      });
+
+      if (managerRoles.length > 0) {
+        // Setores gerenciados pelo usuário.
+        const sectorIds = Array.from(
+          new Set(
+            managerRoles.flatMap((role) =>
+              role.sector_manager && role.sector !== null
+                ? [role.sector]
+                : [],
+            ),
+          ),
+        );
+
+        // Times gerenciados diretamente pelo usuário.
+        const managedTeamIds = Array.from(
+          new Set(
+            managerRoles.flatMap((role) =>
+              role.team_manager && role.team !== null
+                ? [role.team]
+                : [],
+            ),
+          ),
+        );
+
+        // Todos os times pertencentes aos setores gerenciados.
+        const teamsFromSectors =
+          sectorIds.length > 0
+            ? await this.prisma.teams.findMany({
+                where: {
+                  sector: {
+                    in: sectorIds,
+                  },
+                },
+                select: {
+                  id: true,
+                },
+              })
+            : [];
+
+        // Junta os times dos setores e os times gerenciados diretamente.
+        const allowedTeamIds = Array.from(
+          new Set([
+            ...managedTeamIds,
+            ...teamsFromSectors.map((team) => team.id),
+          ]),
+        );
+
+        // O usuário gerente só consulta projetos dentro do seu escopo.
+        where.AND = [
+          ...(where.AND ?? []),
+          {
+            team: {
+              in: allowedTeamIds,
+            },
+          },
+        ];
+      } else {
+        // Usuários sem função gerencial só consultam projetos próprios.
+        // A restrição continua válida mesmo que a URL informe outro user.
+        where.AND = [
+          ...(where.AND ?? []),
+          {
+            user: authenticatedUserId,
+          },
+        ];
       }
     }
 
@@ -846,9 +933,9 @@ export class ProjectsService {
         awards.every((award) =>
           project.awards.some(
             (projectAward) =>
-              normalizeText(projectAward.institution) === award
-          )
-        )
+              normalizeText(projectAward.institution) === award,
+          ),
+        ),
       );
     }
 
@@ -861,9 +948,9 @@ export class ProjectsService {
         keywords.every((keyword) =>
           project.keywords.some(
             (projectKeyword) =>
-              normalizeText(projectKeyword) === keyword
-          )
-        )
+              normalizeText(projectKeyword) === keyword,
+          ),
+        ),
       );
     }
 
@@ -885,16 +972,13 @@ export class ProjectsService {
         theme: project.theme,
         audience: project.audience,
         technologies: project.technologies,
-
-        implementation_date:
-          project.implementation_date,
-
+        implementation_date: project.implementation_date,
         last_update: project.last_update,
         keywords: project.keywords,
         status: project.status,
         awards: project.awards,
         indicators: project.indicators,
-      }))
+      })),
     );
   }
 }

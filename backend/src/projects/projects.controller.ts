@@ -1,3 +1,4 @@
+
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../users/authentication/jwt-auth.guard';
 import { ProjectsService } from './projects.service';
@@ -9,7 +10,7 @@ export class ProjectsController {
     private readonly projectsService: ProjectsService,
   ) { }
 
-  @Post() //Cria projeto e Atualiza quando family!=NULL
+  @Post() // Cria projeto ou nova versão
   @UseGuards(JwtAuthGuard)
   create(
     @Body() dto: CreateProjectsDto,
@@ -18,7 +19,7 @@ export class ProjectsController {
     return this.projectsService.create(dto, req.user.id);
   }
 
-  @Patch(':id') //Altera projeto, quando ainda rascunho (status=1)
+  @Patch(':id') // Altera projeto enquanto está em rascunho
   @UseGuards(JwtAuthGuard)
   update(
     @Param('id') id: string,
@@ -28,7 +29,7 @@ export class ProjectsController {
     return this.projectsService.update(id, dto, req.user.id);
   }
 
-  @Patch(':id/approve') //Aprova projeto quando usuário é approver no team do projeto (status=1 => status=2)
+  @Patch(':id/approve') // Aprova projeto
   @UseGuards(JwtAuthGuard)
   approve(
     @Param('id') id: string,
@@ -37,7 +38,7 @@ export class ProjectsController {
     return this.projectsService.approve(id, req.user.id);
   }
 
-  @Patch(':id/deactivate') //Inativa projeto quando usuário é approver no team do projeto (status=2 => status=3)
+  @Patch(':id/deactivate') // Inativa projeto
   @UseGuards(JwtAuthGuard)
   deactivate(
     @Param('id') id: string,
@@ -46,7 +47,7 @@ export class ProjectsController {
     return this.projectsService.deactivate(id, req.user.id);
   }
 
-  @Delete(':id/reject') //Rejeita projeto quando usuário é approver no team do projeto
+  @Delete(':id/reject') // Rejeita projeto
   @UseGuards(JwtAuthGuard)
   reject(
     @Param('id') id: string,
@@ -58,6 +59,7 @@ export class ProjectsController {
   @Get()
   @UseGuards(JwtAuthGuard)
   find(
+    @Req() req: any,
     @Query('id') id?: string,
     @Query('name') name?: string,
     @Query('user') user?: string,
@@ -73,21 +75,24 @@ export class ProjectsController {
     @Query('status') status?: string,
     @Query('implementation-date') implementation_date?: string,
   ) {
-    return this.projectsService.find({
-      id,
-      name,
-      user,
-      team,
-      family,
-      main_department,
-      related_departments,
-      areas,
-      ods,
-      theme,
-      awards,
-      keywords,
-      status,
-      implementation_date,
-    });
+    return this.projectsService.find(
+      {
+        id,
+        name,
+        user,
+        team,
+        family,
+        main_department,
+        related_departments,
+        areas,
+        ods,
+        theme,
+        awards,
+        keywords,
+        status,
+        implementation_date,
+      },
+      req.user.id,
+    );
   }
 }
