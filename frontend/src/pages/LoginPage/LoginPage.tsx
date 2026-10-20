@@ -245,12 +245,12 @@ function LoginPage() {
               <span>Lembrar de mim</span>
             </label>
 
-            <a
-              href="#recuperar-senha"
+            <Link
+              to={ROUTE_PATHS.forgotPassword}
               className="transition-opacity hover:opacity-80"
             >
               Esqueci minha senha
-            </a>
+            </Link>
           </div>
 
         </form>
