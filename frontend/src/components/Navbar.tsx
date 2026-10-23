@@ -65,15 +65,15 @@ function Navbar() {
             <span className="hidden text-white sm:inline">Login</span>
           </Link>
 
-          <button
-            type="button"
+          <Link
+            to={ROUTE_PATHS.help}
             aria-label="Ajuda"
             data-header-action="button"
             className={`${iconButtonClass} hidden md:inline-flex`}
           >
             <FiHelpCircle className="h-5.5 w-5.5 text-white" />
             <span className="hidden text-white sm:inline">Ajuda</span>
-          </button>
+          </Link>
 
           <button
             type="button"

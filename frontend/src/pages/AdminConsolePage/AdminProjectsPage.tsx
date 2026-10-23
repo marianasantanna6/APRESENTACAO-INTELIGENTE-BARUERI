@@ -126,7 +126,7 @@ export default function AdminProjectsPage() {
             Minhas Apresentações
           </h1>
           <p className="page-subtitle mt-1 text-[1rem] font-medium text-[#878787]">
-            {loading ? "Carregando…" : `${presentations.length} apresentação${presentations.length !== 1 ? "s" : ""}`}
+            {loading ? "Carregando…" : `${presentations.length} ${presentations.length !== 1 ? "apresentações" : "apresentação"}`}
           </p>
         </div>
 
