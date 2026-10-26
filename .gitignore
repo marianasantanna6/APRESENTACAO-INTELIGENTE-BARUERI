@@ -1,53 +1,40 @@
-# Por padrao, manter somente o README da raiz, src/ e este arquivo.
-# A secao IA define os unicos arquivos do componente Python permitidos.
-*
-!.gitignore
-!README.md
-!src/
-!src/**
+=======
+# =========================
+# FRONTEND (VITE / REACT)
+# =========================
+frontend/node_modules/
+frontend/dist/
+frontend/.env
 
-# Nunca versionar segredos, inclusive dentro de src/.
+# =========================
+# BACKEND (quando tiver libs)
+# =========================
+backend/node_modules/
+backend/.env
+backend/logs/
+
+# =========================
+# IA
+# =========================
+
+IA/assets
+IA/output
+IA/src/main.py
+IA/supabase
+IA/estiliza_o_e_configura_o_pptx.md
+
+
+# =========================
+# GERAL
+# =========================
 .env
-.env.*
-**/.env
-**/.env.*
-*.env
-**/*.env
-**/*secret*
-**/*credential*
-**/*credentials*
-**/*token*
-**/*service-account*
-**/*service_account*
-**/*private-key*
-**/*private_key*
-*.pem
-*.key
-*.p12
-*.pfx
-*.crt
-*.cer
-*.jks
-*.keystore
-*.tfstate
-*.tfstate.*
-**/*.pem
-**/*.key
-**/*.p12
-**/*.pfx
-**/*.crt
-**/*.cer
-**/*.jks
-**/*.keystore
-**/*.tfstate
-**/*.tfstate.*
+*.log
+.vscode/
+.DS_Store
 
-# Cache e arquivos locais gerados pelo Python.
-src/**/__pycache__/
-src/**/*.py[cod]
-src/**/.pytest_cache/
-src/**/.venv/
-src/**/venv/
-src/**/*.log
-src/**/.DS_Store
-src/**/Thumbs.db
+# =========================
+# CLAUDE CODE (memória local)
+# =========================
+# =========================
+.claude/
+>>>>>>> 38da87f00c810c78a876f26442914365f6398fb6
