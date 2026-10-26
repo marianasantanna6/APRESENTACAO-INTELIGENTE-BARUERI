@@ -1,7 +1,53 @@
+# Por padrao, manter somente o README da raiz, src/ e este arquivo.
+# A secao IA define os unicos arquivos do componente Python permitidos.
 *
 !.gitignore
 !README.md
 !src/
 !src/**
+
+# Nunca versionar segredos, inclusive dentro de src/.
 .env
-src/main.py
+.env.*
+**/.env
+**/.env.*
+*.env
+**/*.env
+**/*secret*
+**/*credential*
+**/*credentials*
+**/*token*
+**/*service-account*
+**/*service_account*
+**/*private-key*
+**/*private_key*
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.jks
+*.keystore
+*.tfstate
+*.tfstate.*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.crt
+**/*.cer
+**/*.jks
+**/*.keystore
+**/*.tfstate
+**/*.tfstate.*
+
+# Cache e arquivos locais gerados pelo Python.
+src/**/__pycache__/
+src/**/*.py[cod]
+src/**/.pytest_cache/
+src/**/.venv/
+src/**/venv/
+src/**/*.log
+src/**/.DS_Store
+src/**/Thumbs.db

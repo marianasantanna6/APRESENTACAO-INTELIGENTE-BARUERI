@@ -1,0 +1,144 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model awards {
+  id            BigInt   @id @default(autoincrement())
+  project_award BigInt   @map("project-award")
+  institution   String
+  year          Int
+  description   String?
+  link          String?
+  projects      projects @relation(fields: [project_award], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model indicators {
+  id                BigInt   @id @default(autoincrement())
+  project_indicator BigInt   @map("project-indicator")
+  label             String
+  value             String
+  measure           String?
+  source            String
+  year              Int
+  projects          projects @relation(fields: [project_indicator], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model projects {
+  id                  BigInt          @id(map: "project_pkey") @default(autoincrement())
+  name                String
+  team                BigInt
+  user                BigInt
+  version             BigInt
+  family              BigInt
+  status              Int             @default(1) @db.SmallInt
+  last_update         DateTime        @default(now()) @map("last-update") @db.Timestamptz(6)
+  short_description   String?         @map("short-description")
+  full_description    String?         @map("full-description")
+  source              String[]
+  main_department     String          @map("main-department")
+  related_departments String[]        @map("related-departments")
+  areas               String[]
+  ods                 Int[]           @db.SmallInt
+  theme               String?
+  audience            String?
+  technologies        String[]
+  implementation_date DateTime?       @map("implementation-date") @db.Date
+  keywords            String[]
+  awards              awards[]
+  indicators          indicators[]
+  teams               teams           @relation(fields: [team], references: [id], onDelete: Cascade)
+  users               users           @relation(fields: [user], references: [id], onUpdate: Restrict, map: "project_user_fkey")
+  projects_logs       projects_logs[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model projects_logs {
+  id       BigInt   @id(map: "log-analytics_pkey") @default(autoincrement())
+  user     BigInt
+  action   String
+  project  BigInt
+  moment   DateTime @default(now()) @db.Timestamptz(6)
+  projects projects @relation(fields: [project], references: [id], onDelete: Cascade, map: "project-logs_project_fkey")
+  users    users    @relation(fields: [user], references: [id], onUpdate: Restrict, map: "log-analytics_user_fkey")
+
+  @@map("projects-logs")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model sectors {
+  id         BigInt       @id(map: "sector_pkey") @default(autoincrement())
+  name       String       @unique
+  teams      teams[]
+  users_role users_role[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model teams {
+  id         BigInt       @id(map: "team_pkey") @default(autoincrement())
+  name       String
+  sector     BigInt
+  status     Boolean      @default(true)
+  projects   projects[]
+  sectors    sectors      @relation(fields: [sector], references: [id], onDelete: Cascade, map: "team_sector_fkey")
+  users_role users_role[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model users {
+  id            BigInt          @id(map: "user_pkey") @default(autoincrement())
+  name          String
+  email         String          @unique
+  password      String
+  cpf           String          @unique @db.VarChar
+  photo         String?
+  head_manager  Boolean         @default(false) @map("head-manager")
+  status        Boolean         @default(true)
+  projects      projects[]
+  projects_logs projects_logs[]
+  users_logs    users_logs[]
+  users_role    users_role[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model users_logs {
+  id       BigInt    @id(map: "analytics_pkey") @default(autoincrement())
+  user     BigInt?
+  device   String?
+  language String?
+  start    DateTime? @db.Timestamptz(6)
+  end      DateTime? @default(now()) @db.Timestamptz(6)
+  users    users?    @relation(fields: [user], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "analytics_user_fkey")
+
+  @@map("users-logs")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model users_role {
+  id             BigInt  @id(map: "user-sector_pkey") @default(autoincrement())
+  user           BigInt
+  sector         BigInt
+  sector_manager Boolean @default(false) @map("sector-manager")
+  team           BigInt?
+  team_manager   Boolean @default(false) @map("team-manager")
+  team_approver  Boolean @default(false) @map("team-approver")
+  sectors        sectors @relation(fields: [sector], references: [id], onDelete: Cascade, map: "user-sector_sector_fkey")
+  teams          teams?  @relation(fields: [team], references: [id])
+  users          users   @relation(fields: [user], references: [id], onDelete: Cascade, map: "users-sectors_user_fkey")
+
+  @@map("users-role")
+}
