@@ -57,12 +57,6 @@ export class UsersRoleService {
     const teamManager = dto.team_manager ?? false;
     const teamApprover = dto.team_approver ?? false;
 
-    if (sectorManager && teamId !== null) {
-      throw new ConflictException(
-        'Sector-manager não pode ser vinculado a um time',
-      );
-    }
-
     if ((teamManager || teamApprover) && teamId === null) {
       throw new ConflictException(
         'Team-manager e team-approver precisam estar vinculados a um time',
@@ -205,12 +199,6 @@ export class UsersRoleService {
     ) {
       throw new ConflictException(
         'Nenhuma função foi informada para atualização',
-      );
-    }
-
-    if (sectorManager === true && usersRole.team !== null) {
-      throw new ConflictException(
-        'Sector-manager não pode ser vinculado a um time',
       );
     }
 

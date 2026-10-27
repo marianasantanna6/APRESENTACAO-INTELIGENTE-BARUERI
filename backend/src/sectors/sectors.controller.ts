@@ -21,10 +21,14 @@ export class SectorsController {
   @Get()
   @UseGuards(JwtAuthGuard)
   find(
+    @Req() req: any,
     @Query('id') id?: string,
     @Query('name') name?: string,
   ) {
-    return this.sectorsService.find({ id, name });
+    return this.sectorsService.find(
+      { id, name },
+      req.user.id,
+    );
   }
 
   @Delete(':id')

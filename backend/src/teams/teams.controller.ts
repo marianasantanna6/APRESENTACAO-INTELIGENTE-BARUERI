@@ -21,10 +21,11 @@ export class TeamsController {
   @Get()
   @UseGuards(JwtAuthGuard)
   find(
+    @Req() req: any,
     @Query('id') id?: string,
     @Query('name') name?: string,
   ) {
-    return this.teamsService.find({ id, name });
+    return this.teamsService.find({ id, name }, req.user.id);
   }
 
   @Delete(':id')
