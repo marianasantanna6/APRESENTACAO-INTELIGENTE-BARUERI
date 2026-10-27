@@ -12,7 +12,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
-import { NavLink, Navigate, Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import AuthenticatedHeader from "../../components/AuthenticatedHeader";
 import {
   useAuth,
@@ -325,9 +325,11 @@ function ApproverMinimalLayout() {
         className="min-h-[calc(100vh-89px)] min-w-0 flex-1 px-4 pb-10 pt-6 sm:px-6 lg:px-8 lg:pt-8"
       >
         <Outlet />
-        <div className="mt-8 flex items-center justify-end gap-2 text-[0.92rem] font-medium text-[#8a8a8a]">
-          <FiHelpCircle className="h-4 w-4" />
-          {t("landing.help")}
+        <div className="mt-8 flex items-center justify-end">
+          <Link to={ROUTE_PATHS.help} className="inline-flex items-center gap-2 text-[0.92rem] font-medium text-[#8a8a8a] transition-opacity hover:opacity-70">
+            <FiHelpCircle className="h-4 w-4" aria-hidden="true" />
+            {t("landing.help")}
+          </Link>
         </div>
       </main>
     </div>
@@ -441,10 +443,10 @@ function AdminConsoleLayoutContent() {
               <span />
             )}
 
-            <span className="inline-flex items-center gap-2 self-end sm:self-auto">
+            <Link to={ROUTE_PATHS.help} className="inline-flex items-center gap-2 self-end text-[0.92rem] font-medium text-[#8a8a8a] transition-opacity hover:opacity-70 sm:self-auto">
               <FiHelpCircle className="h-4 w-4" aria-hidden="true" />
               {t("landing.help")}
-            </span>
+            </Link>
           </div>
         </main>
       </div>

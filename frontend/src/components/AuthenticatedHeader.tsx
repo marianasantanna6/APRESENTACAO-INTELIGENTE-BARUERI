@@ -154,15 +154,15 @@ export default function AuthenticatedHeader({
             </Link>
           ) : null}
 
-          <button
-            type="button"
+          <Link
+            to={ROUTE_PATHS.help}
             aria-label="Ajuda"
             data-header-action="button"
             className={`${iconButtonClass} hidden md:inline-flex`}
           >
             <FiHelpCircle className="h-5.5 w-5.5 text-white" />
             <span className="hidden text-white sm:inline">Ajuda</span>
-          </button>
+          </Link>
 
           {onLogout ? (
             <button
@@ -234,6 +234,15 @@ export default function AuthenticatedHeader({
                 Minha conta
               </Link>
             ) : null}
+
+            <Link
+              to={ROUTE_PATHS.help}
+              onClick={handleCloseMobileMenu}
+              data-header-action="button"
+              className="inline-flex h-11 items-center rounded-[8px] px-3 text-[0.94rem] font-semibold !text-white transition-all hover:-translate-y-0.5 hover:bg-white/12 focus:outline-none focus:ring-4 focus:ring-white/25"
+            >
+              Ajuda
+            </Link>
 
             {onLogout ? (
               <button

@@ -11,9 +11,12 @@ import {
   TemplatesPage,
 } from "../pages/AdminConsolePage";
 import CreatePresentationPage from "../pages/CreatePresentationPage";
+import { ForgotPasswordPage } from "../pages/ForgotPasswordPage";
 import GeneratedPresentationPage from "../pages/GeneratedPresentationPage";
+import { HelpPage } from "../pages/HelpPage";
 import LandingPage from "../pages/LandingPage";
 import LoginPage from "../pages/LoginPage";
+import { ResetPasswordPage } from "../pages/ResetPasswordPage";
 import TeamsPage from "../pages/TeamsPage/TeamsPage";
 import {
   AdminRoute,
@@ -34,6 +37,9 @@ export function AppRouter() {
     <Routes>
       <Route path={ROUTE_PATHS.home} element={<LandingPage />} />
       <Route path={ROUTE_PATHS.login} element={<LoginPage />} />
+      <Route path={ROUTE_PATHS.forgotPassword} element={<ForgotPasswordPage />} />
+      <Route path={ROUTE_PATHS.resetPassword} element={<ResetPasswordPage />} />
+      <Route path={ROUTE_PATHS.help} element={<HelpPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AdminConsoleLayout />}>
           <Route

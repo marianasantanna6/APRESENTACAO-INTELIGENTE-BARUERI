@@ -1,0 +1,12 @@
+requests
+python-dotenv
+langchain
+langchain-core
+langchain-google-genai
+psycopg[binary]
+pgvector
+google-genai
+python-pptx
+Pillow
+fastapi>=0.115,<1.0
+uvicorn>=0.30,<1.0

@@ -20,6 +20,9 @@ export const ROUTE_PATHS = {
   generatedPresentation: "/criar/resultado",
   analytics: "/analytics",
   teams: "/times",
+  forgotPassword: "/recuperar-senha",
+  resetPassword: "/redefinir-senha",
+  help: "/ajuda",
 } as const;
 
 export type AppRoutePath = (typeof ROUTE_PATHS)[keyof typeof ROUTE_PATHS];

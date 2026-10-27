@@ -1,3 +1,4 @@
+=======
 # =========================
 # FRONTEND (VITE / REACT)
 # =========================
@@ -15,9 +16,13 @@ backend/logs/
 # =========================
 # IA
 # =========================
-ia/venv/
-ia/__pycache__/
-ia/*.pyc
+
+IA/assets
+IA/output
+IA/src/main.py
+IA/supabase
+IA/estiliza_o_e_configura_o_pptx.md
+
 
 # =========================
 # GERAL
@@ -30,4 +35,6 @@ ia/*.pyc
 # =========================
 # CLAUDE CODE (memória local)
 # =========================
+# =========================
 .claude/
+>>>>>>> 38da87f00c810c78a876f26442914365f6398fb6
