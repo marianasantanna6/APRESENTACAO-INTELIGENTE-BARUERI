@@ -4,7 +4,7 @@ import { JwtAuthGuard } from '../users/authentication/jwt-auth.guard';
 import { ProjectsService } from './projects.service';
 import { CreateProjectsDto } from './dto/inputs-projects.dto';
 
-@Controller('projects')
+@Controller('projects') //Rota pai
 export class ProjectsController {
   constructor(
     private readonly projectsService: ProjectsService,

@@ -3,7 +3,7 @@ import { SectorsService } from './sectors.service';
 import { CreateSectorsDto } from './dto/inputs-sectors.dto';
 import { JwtAuthGuard } from '../users/authentication/jwt-auth.guard';
 
-@Controller('sectors')
+@Controller('sectors') //Rota pai
 export class SectorsController {
   constructor(
     private readonly sectorsService: SectorsService,

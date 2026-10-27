@@ -2,7 +2,7 @@ import { BadRequestException, Controller, Get, Query, Req, UseGuards } from '@ne
 import { ProjectsLogsService } from './projects-logs.service';
 import { JwtAuthGuard } from '../users/authentication/jwt-auth.guard';
 
-@Controller('projects-logs')
+@Controller('projects-logs') //Rota pai
 @UseGuards(JwtAuthGuard)
 export class ProjectsLogsController {
   constructor(

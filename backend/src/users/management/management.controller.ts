@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Query, Req, UseGuards } fr
 import { JwtAuthGuard } from '../authentication/jwt-auth.guard';
 import { ManagementService } from './management.service';
 
-@Controller('management')
+@Controller('management') //Rota pai
 @UseGuards(JwtAuthGuard)
 export class ManagementController {
   constructor(

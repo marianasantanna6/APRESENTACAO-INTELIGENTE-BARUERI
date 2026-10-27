@@ -5,7 +5,7 @@ import { CreateUsersRoleDto } from './dto/inputs-create-users-role.dto';
 import { UpdateUsersRoleDto } from './dto/inputs-update-users-role.dto';
 import { JwtAuthGuard } from '../users/authentication/jwt-auth.guard';
 
-@Controller('users-role')
+@Controller('users-role') //Rota pai
 export class UsersRoleController {
   constructor(
     private readonly usersRoleService: UsersRoleService,
