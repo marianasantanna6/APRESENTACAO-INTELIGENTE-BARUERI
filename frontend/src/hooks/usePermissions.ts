@@ -14,12 +14,21 @@ import type { UserAccessLevel } from "../types/auth";
 import { useAuth } from "../context/AuthContext";
 
 function toSubject(
-  user: { id: string; accessLevel: UserAccessLevel; role?: string; department?: string } | null,
+  user: { id: string; accessLevel: UserAccessLevel; role?: string; department?: string; master_admin?: boolean; head_manager?: boolean } | null,
 ): PermissionSubject {
   if (!user) return null;
+
+  // master_admin → administrador-geral; head_manager → gestor-institucional
+  // (só quando não há role explícito definido)
+  let role = user.role as UserRole | undefined;
+  if (!role) {
+    if (user.master_admin) role = "administrador-geral";
+    else if (user.head_manager) role = "gestor-institucional";
+  }
+
   return {
     id: user.id,
-    role: user.role as UserRole | undefined,
+    role,
     accessLevel: user.accessLevel,
     department: user.department,
   };

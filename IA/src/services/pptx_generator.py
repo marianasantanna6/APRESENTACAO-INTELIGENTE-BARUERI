@@ -12,7 +12,7 @@ from pptx.oxml.xmlchemy import OxmlElement
 from pptx.util import Inches, Pt
 
 from config.pptx_style import load_style_guide
-from config.settings import ASSETS_DIR, PRESENTATION_CONTACT
+from config.settings import ASSETS_DIR, PRESENTATION_CONTACT, PROJECT_ROOT
 
 
 SLIDE_WIDTH_IN = 40 / 3
@@ -738,7 +738,27 @@ def criar_apresentacao(presentation: dict, caminho_saida: str | Path, assets_dir
         slide = prs.slides.add_slide(blank_layout)
         renderer(slide, data, catalog.get(layout, {}), guide, assets_path)
 
-    output = Path(caminho_saida)
+    output = Path(caminho_saida).resolve()
+    project_root = PROJECT_ROOT.resolve()
+    if not output.is_relative_to(project_root):
+        raise ValueError("O arquivo PPTX precisa ser salvo dentro da pasta IA.")
     output.parent.mkdir(parents=True, exist_ok=True)
     prs.save(str(output))
     return output
+
+
+def validate_pptx_file(path: str | Path, *, minimum_slides: int = 3) -> None:
+    """Confirma que o artefato salvo é um PPTX aberto pelo python-pptx e contém slides."""
+    candidate = Path(path)
+    if not candidate.is_file():
+        raise ValueError("O arquivo PPTX não foi criado.")
+    if candidate.stat().st_size == 0:
+        raise ValueError("O arquivo PPTX criado está vazio.")
+    try:
+        rendered = Presentation(str(candidate))
+    except Exception as exc:
+        raise ValueError("O arquivo gerado não é uma apresentação PowerPoint válida.") from exc
+    if len(rendered.slides) < minimum_slides:
+        raise ValueError(
+            f"A apresentação gerada contém {len(rendered.slides)} slides; esperado ao menos {minimum_slides}."
+        )

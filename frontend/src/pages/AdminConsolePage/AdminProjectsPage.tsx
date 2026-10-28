@@ -86,6 +86,12 @@ export default function AdminProjectsPage() {
     [allProjects],
   );
 
+  // Times do usuário atual (da sessão)
+  const userTeamNames = useMemo(
+    () => (user?.teams ?? []).map((t) => t.name).filter(Boolean),
+    [user],
+  );
+
   // Dados para aba Times
   const teamPresentations = useMemo(() => {
     if (!user) return [];
@@ -106,11 +112,16 @@ export default function AdminProjectsPage() {
       return presentationsMock.filter((p) => p.team === user.team);
     }
 
-    // Usuário comum: vê apenas seus próprios projetos (em todos os times em que está)
+    // Usuário comum: apresentações dos times em que está (via user.teams)
+    if (userTeamNames.length > 0) {
+      return presentationsMock.filter((p) => userTeamNames.includes(p.team));
+    }
+
+    // Fallback: apenas os próprios projetos
     return presentationsMock.filter(
       (p) => p.ownerUserId === user.id || p.ownerName === user.name,
     );
-  }, [user, isAdmin, searchParams]);
+  }, [user, isAdmin, userTeamNames, searchParams]);
 
   const tabs: { id: TabId; label: string; count?: number }[] = [
     { id: "minhas", label: "Minhas", count: presentations.length },
@@ -230,6 +241,7 @@ export default function AdminProjectsPage() {
           userTeam={user?.team ?? ""}
           isMasterAdmin={!!user?.master_admin}
           isAdmin={isAdmin}
+          userTeamNames={userTeamNames}
         />
       )}
     </section>
@@ -243,15 +255,35 @@ function TeamsPresentationsTab({
   userTeam,
   isMasterAdmin,
   isAdmin,
+  userTeamNames,
 }: {
   presentations: AdminPresentationSummary[];
   userTeam: string;
   isMasterAdmin: boolean;
   isAdmin: boolean;
+  userTeamNames: string[];
 }) {
-  const showTeamHeader = isMasterAdmin || !isAdmin;
+  const showTeamHeader = isMasterAdmin || !isAdmin || userTeamNames.length > 0;
 
-  if (presentations.length === 0) {
+  // Agrupa por time; para usuários comuns, garante que todos os seus times apareçam
+  const grouped = useMemo(() => {
+    const map = new Map<string, AdminPresentationSummary[]>();
+
+    // Garante que os times do usuário aparecem mesmo com 0 apresentações
+    const seedTeams = !isMasterAdmin && !isAdmin && userTeamNames.length > 0
+      ? userTeamNames
+      : userTeam ? [userTeam] : [];
+    for (const name of seedTeams) map.set(name, []);
+
+    for (const p of presentations) {
+      const list = map.get(p.team) ?? [];
+      list.push(p);
+      map.set(p.team, list);
+    }
+    return map;
+  }, [presentations, isMasterAdmin, isAdmin, userTeamNames, userTeam]);
+
+  if (grouped.size === 0) {
     return (
       <div className="flex flex-col items-center gap-5 rounded-[24px] border border-dashed border-[#d1d5db] bg-[#f9fafb] py-20 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f0fdf4]">
@@ -266,23 +298,12 @@ function TeamsPresentationsTab({
               ? "Nenhuma apresentação encontrada para os filtros selecionados."
               : isAdmin
               ? `Nenhuma apresentação do time "${userTeam}" ainda.`
-              : "Você ainda não tem projetos em nenhum time."}
+              : "Você ainda não está em nenhum time."}
           </p>
         </div>
       </div>
     );
   }
-
-  // Agrupa por time — útil para master_admin e para usuário comum (pode estar em vários times)
-  const grouped = useMemo(() => {
-    const map = new Map<string, AdminPresentationSummary[]>();
-    for (const p of presentations) {
-      const list = map.get(p.team) ?? [];
-      list.push(p);
-      map.set(p.team, list);
-    }
-    return map;
-  }, [presentations]);
 
   return (
     <div className="space-y-8">
@@ -295,15 +316,21 @@ function TeamsPresentationsTab({
                 {teamName}
               </h2>
               <span className="rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[0.72rem] font-semibold text-[#6b7280]">
-                {items.length}
+                {items.length} apresentaç{items.length !== 1 ? "ões" : "ão"}
               </span>
             </div>
           )}
-          <div className="grid gap-4 xl:grid-cols-2">
-            {items.map((p) => (
-              <TeamPresentationCard key={p.id} presentation={p} />
-            ))}
-          </div>
+          {items.length === 0 ? (
+            <p className="text-[0.88rem] text-[#9ca3af] italic">
+              Nenhuma apresentação neste time ainda.
+            </p>
+          ) : (
+            <div className="grid gap-4 xl:grid-cols-2">
+              {items.map((p) => (
+                <TeamPresentationCard key={p.id} presentation={p} />
+              ))}
+            </div>
+          )}
         </div>
       ))}
     </div>

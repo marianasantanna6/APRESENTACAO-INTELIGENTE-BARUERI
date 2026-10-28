@@ -5,7 +5,6 @@ import {
   FiArrowRight,
   FiAward,
   FiBarChart2,
-  FiBookOpen,
   FiCalendar,
   FiCheck,
   FiCpu,
@@ -36,10 +35,9 @@ import DashboardSection from "../../components/DashboardSection";
 import { PresentationModeOverlay } from "../../components/PresentationMode";
 import PresentationCardsSection from "../../components/PresentationCardsSection";
 import { useAuth } from "../../context";
+import { authFetch } from "../../lib/apiClient";
 import { usePresentationData, usePresentationDeck } from "../../hooks";
-import { templateService } from "../../services/templateService";
 import { ShareModal } from "../../components/ShareModal";
-import type { NewTemplatePayload } from "../../types/template";
 import { canCreatePresentations } from "../../lib/accessControl";
 import { getPresentationsRouteForUser } from "../../lib/authRouting";
 import { formatShortDate } from "../../lib/formatters";
@@ -57,226 +55,6 @@ import type {
   PresentationStatus,
 } from "../../types/institutionalPresentation";
 import type { ProjectSummary } from "../../types/project";
-
-// ─── Modal: Salvar como Template ─────────────────────────────────────────────
-
-type SaveAsTemplateModalProps = {
-  presentation: import("../../types/institutionalPresentation").InstitutionalPresentation;
-  projects: import("../../types/project").ProjectSummary[];
-  userId: string;
-  userName?: string;
-  onClose: () => void;
-  onSaved: () => void;
-};
-
-function SaveAsTemplateModal({ presentation: p, projects, userId, userName, onClose, onSaved }: SaveAsTemplateModalProps) {
-  const [name, setName]       = useState(`Template — ${p.title}`);
-  const [objective, setObj]   = useState(p.mainFocus ?? "");
-  const [focus, setFocus]     = useState(p.mainFocus ?? "");
-  const [notes, setNotes]     = useState("");
-  const [saving, setSaving]   = useState(false);
-  const [done, setDone]       = useState(false);
-
-  async function handleSave() {
-    if (!name.trim()) return;
-    setSaving(true);
-    try {
-      const payload: NewTemplatePayload = {
-        name:      name.trim(),
-        description: `Template gerado a partir de "${p.title}"`,
-        eventName:   p.eventName,
-        eventType:   p.eventType,
-        focus:       focus.trim() || p.mainFocus || "Geral",
-        objective:   objective.trim() || undefined,
-        categories:  projects.flatMap((x) => x.categories).filter((v, i, a) => a.indexOf(v) === i),
-        projects:    projects.map((x) => x.id),
-        modules:     [],
-        moduleOrder: [],
-        moduleConfigs: p.moduleConfigs,
-        language:    p.language,
-        createdBy:   userId,
-        createdByName: userName,
-        status:      "draft",
-        isOfficial:  false,
-        estimatedDurationMinutes: 0,
-        notes:       notes.trim() || undefined,
-      };
-      await templateService.createTemplate(payload);
-      setDone(true);
-      setTimeout(onSaved, 1200);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const activeModules = p.moduleConfigs.filter((m) => m.enabled && !m.hidden);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Salvar como Template">
-      <div className="absolute inset-0 bg-[#142133]/50 backdrop-blur-[3px]" onClick={onClose} />
-      <div className="relative z-10 flex w-full max-w-xl flex-col rounded-2xl bg-white shadow-[0_32px_80px_rgba(20,33,51,0.28)] max-h-[90vh] overflow-hidden">
-        {/* Cabeçalho */}
-        <div className="flex items-center justify-between border-b border-[#f0f1f5] px-6 py-4 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#f59e0b,#d97706)]">
-              <FiBookOpen className="h-4 w-4 text-white" />
-            </div>
-            <h2 className="text-[1rem] font-bold text-[#1e1e1e]">Salvar como Template</h2>
-          </div>
-          <button type="button" onClick={onClose} className="rounded-full p-2 text-[#6b7280] hover:bg-[#f3f4f6]">
-            <FiX className="h-4 w-4" />
-          </button>
-        </div>
-
-        {/* Corpo scrollável */}
-        <div className="overflow-y-auto px-6 py-5 space-y-4">
-          {done ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-8 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#dcfce7]">
-                <FiCheck className="h-6 w-6 text-[#166534]" />
-              </div>
-              <p className="text-[0.95rem] font-bold text-[#166534]">Template salvo com sucesso!</p>
-              <p className="text-[0.82rem] text-[#9ca3af]">Disponível em Templates Salvos.</p>
-            </div>
-          ) : (
-            <>
-              {/* Nome */}
-              <div>
-                <label className="mb-1.5 block text-[0.78rem] font-semibold text-[#374151]">Nome do template *</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded-xl border border-[#e5e7eb] px-4 py-2.5 text-[0.9rem] text-[#1e1e1e] focus:border-[#f59e0b] focus:outline-none focus:ring-2 focus:ring-[#f59e0b]/20"
-                />
-              </div>
-
-              {/* Evento (read-only) */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1.5 block text-[0.78rem] font-semibold text-[#374151]">Evento</label>
-                  <input
-                    readOnly
-                    value={p.eventName ?? "—"}
-                    className="w-full rounded-xl border border-[#f0f1f5] bg-[#f8fafc] px-4 py-2.5 text-[0.87rem] text-[#6b7280] cursor-not-allowed"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-[0.78rem] font-semibold text-[#374151]">Tipo de evento</label>
-                  <input
-                    readOnly
-                    value={p.eventType}
-                    className="w-full rounded-xl border border-[#f0f1f5] bg-[#f8fafc] px-4 py-2.5 text-[0.87rem] text-[#6b7280] cursor-not-allowed"
-                  />
-                </div>
-              </div>
-
-              {/* Objetivo */}
-              <div>
-                <label className="mb-1.5 block text-[0.78rem] font-semibold text-[#374151]">Objetivo</label>
-                <input
-                  type="text"
-                  value={objective}
-                  onChange={(e) => setObj(e.target.value)}
-                  placeholder="Ex: Apresentar projetos de inovação para gestores…"
-                  className="w-full rounded-xl border border-[#e5e7eb] px-4 py-2.5 text-[0.9rem] text-[#1e1e1e] placeholder:text-[#9ca3af] focus:border-[#f59e0b] focus:outline-none focus:ring-2 focus:ring-[#f59e0b]/20"
-                />
-              </div>
-
-              {/* Enfoque */}
-              <div>
-                <label className="mb-1.5 block text-[0.78rem] font-semibold text-[#374151]">Enfoque principal</label>
-                <input
-                  type="text"
-                  value={focus}
-                  onChange={(e) => setFocus(e.target.value)}
-                  placeholder="Ex: Saúde Digital, Inovação, Infraestrutura…"
-                  className="w-full rounded-xl border border-[#e5e7eb] px-4 py-2.5 text-[0.9rem] text-[#1e1e1e] placeholder:text-[#9ca3af] focus:border-[#f59e0b] focus:outline-none focus:ring-2 focus:ring-[#f59e0b]/20"
-                />
-              </div>
-
-              {/* Idioma (read-only) */}
-              <div>
-                <label className="mb-1.5 block text-[0.78rem] font-semibold text-[#374151]">Idioma</label>
-                <input
-                  readOnly
-                  value={p.language}
-                  className="w-full rounded-xl border border-[#f0f1f5] bg-[#f8fafc] px-4 py-2.5 text-[0.87rem] text-[#6b7280] cursor-not-allowed"
-                />
-              </div>
-
-              {/* Observações */}
-              <div>
-                <label className="mb-1.5 block text-[0.78rem] font-semibold text-[#374151]">Observações</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={2}
-                  placeholder="Anotações internas para a equipe…"
-                  className="w-full resize-none rounded-xl border border-[#e5e7eb] px-4 py-2.5 text-[0.9rem] text-[#1e1e1e] placeholder:text-[#9ca3af] focus:border-[#f59e0b] focus:outline-none focus:ring-2 focus:ring-[#f59e0b]/20"
-                />
-              </div>
-
-              {/* Projetos incluídos (read-only) */}
-              <div>
-                <label className="mb-1.5 block text-[0.78rem] font-semibold text-[#374151]">
-                  Projetos incluídos <span className="font-normal text-[#9ca3af]">({projects.length})</span>
-                </label>
-                {projects.length === 0 ? (
-                  <p className="text-[0.82rem] italic text-[#9ca3af]">Nenhum projeto selecionado.</p>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {projects.map((proj) => (
-                      <span key={proj.id} className="rounded-full border border-[#e5e7eb] bg-[#f8fafc] px-2.5 py-0.5 text-[0.75rem] font-medium text-[#374151]">
-                        {proj.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Módulos incluídos (read-only) */}
-              <div>
-                <label className="mb-1.5 block text-[0.78rem] font-semibold text-[#374151]">
-                  Módulos incluídos <span className="font-normal text-[#9ca3af]">({activeModules.length} ativos)</span>
-                </label>
-                {activeModules.length === 0 ? (
-                  <p className="text-[0.82rem] italic text-[#9ca3af]">Nenhum módulo ativo.</p>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {activeModules.map((m) => (
-                      <span key={m.instanceId} className="rounded-full border border-[#dbeafe] bg-[#eff6ff] px-2.5 py-0.5 text-[0.75rem] font-medium text-[#1d4ed8]">
-                        {m.moduleId}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Rodapé */}
-        {!done && (
-          <div className="flex justify-end gap-3 border-t border-[#f0f1f5] px-6 py-4 shrink-0">
-            <button type="button" onClick={onClose} className="rounded-xl border border-[#e5e7eb] px-4 py-2 text-[0.86rem] font-semibold text-[#6b7280] hover:bg-[#f3f4f6]">
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={!name.trim() || saving}
-              className="inline-flex items-center gap-2 rounded-xl bg-[linear-gradient(135deg,#f59e0b,#d97706)] px-5 py-2 text-[0.86rem] font-semibold text-white shadow-[0_4px_14px_-4px_rgba(217,119,6,0.5)] transition hover:-translate-y-0.5 disabled:opacity-50"
-            >
-              {saving ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiSave className="h-3.5 w-3.5" />}
-              Salvar Template
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ─── Metadados de exibição ────────────────────────────────────────────────────
 
@@ -347,14 +125,15 @@ function InstitutionalHeader({
   onOpenPresenterMode,
   onSaveAsTemplate,
   onShare,
+  onDownloadPptx,
 }: {
   presentation: InstitutionalPresentation;
   projects: ProjectSummary[];
   onBack: () => void;
   onToast: (msg: string) => void;
   onOpenPresenterMode: () => void;
-  onSaveAsTemplate?: () => void;
   onShare?: () => void;
+  onDownloadPptx?: () => void;
 }) {
   const status = STATUS_CONFIG[p.status] ?? STATUS_CONFIG.draft;
   const eventLabel = EVENT_LABELS[p.eventType] ?? p.eventType;
@@ -374,6 +153,16 @@ function InstitutionalHeader({
           Minhas Apresentações
         </button>
         <div className="flex flex-wrap items-center gap-2">
+          {onDownloadPptx && (
+            <button
+              type="button"
+              onClick={onDownloadPptx}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-2 text-[0.86rem] font-semibold text-[#166534] transition hover:bg-[#dcfce7]"
+            >
+              <FiSave className="h-3.5 w-3.5" />
+              Baixar PPTX
+            </button>
+          )}
           <button
             type="button"
             onClick={() => onToast("Exportação em PDF será conectada em breve.")}
@@ -390,16 +179,6 @@ function InstitutionalHeader({
             <FiShare2 className="h-3.5 w-3.5" />
             Compartilhar
           </button>
-          {onSaveAsTemplate && (
-            <button
-              type="button"
-              onClick={onSaveAsTemplate}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#fde68a] bg-[#fffbeb] px-4 py-2 text-[0.86rem] font-semibold text-[#d97706] transition hover:bg-[#fef3c7]"
-            >
-              <FiBookOpen className="h-3.5 w-3.5" />
-              Salvar como Template
-            </button>
-          )}
           <button
             type="button"
             onClick={onOpenPresenterMode}
@@ -591,6 +370,7 @@ export default function GeneratedPresentationPage() {
 
   // ── Apresentação institucional (quando vem do wizard com ?pid) ──
   const presentationId = searchParams.get("pid");
+  const downloadUrlParam = searchParams.get("dlUrl");
   const [institutionalPresentation, setInstitutionalPresentation] =
     useState<InstitutionalPresentation | null>(null);
   const [institutionalProjects, setInstitutionalProjects] = useState<ProjectSummary[]>([]);
@@ -626,7 +406,6 @@ export default function GeneratedPresentationPage() {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [presenterModeOpen, setPresenterModeOpen] = useState(false);
   const [presenterInitialSlideId, setPresenterInitialSlideId] = useState<string | undefined>(undefined);
-  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
 
   const activeCategory = filters.category;
@@ -672,6 +451,25 @@ export default function GeneratedPresentationPage() {
 
   function handleExportPdfRequest() {
     setToast({ message: "A exportação em PDF será conectada aqui em breve." });
+  }
+
+  async function handleDownloadPptx() {
+    if (!downloadUrlParam) return;
+    try {
+      const res = await authFetch(`/api${downloadUrlParam}`);
+      if (!res.ok) throw new Error("download failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "apresentacao.pptx";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      setToast({ message: "Erro ao baixar o PPTX. Tente novamente." });
+    }
   }
 
   // ── Seção de slides compartilhada (usada nos dois modos) ──
@@ -803,8 +601,8 @@ export default function GeneratedPresentationPage() {
             onBack={() => navigate(presentationsRoute)}
             onToast={(msg) => setToast({ message: msg })}
             onOpenPresenterMode={() => setPresenterModeOpen(true)}
-            onSaveAsTemplate={() => setSaveTemplateOpen(true)}
             onShare={() => setShareModalOpen(true)}
+            onDownloadPptx={downloadUrlParam ? handleDownloadPptx : undefined}
           />
 
           {/* Divisor */}
@@ -831,20 +629,6 @@ export default function GeneratedPresentationPage() {
             onDeleteSlide={canCreate ? presentationDeck.deleteSlide : undefined}
             onRestoreSlides={canCreate ? presentationDeck.restoreSlides : undefined}
             hasHiddenSlides={canCreate && presentationDeck.hasHiddenSlides}
-          />
-        )}
-
-        {saveTemplateOpen && (
-          <SaveAsTemplateModal
-            presentation={institutionalPresentation}
-            projects={institutionalProjects}
-            userId={user?.id ?? "unknown"}
-            userName={user?.name}
-            onClose={() => setSaveTemplateOpen(false)}
-            onSaved={() => {
-              setSaveTemplateOpen(false);
-              setToast({ message: "Template salvo com sucesso! Disponível em Templates Salvos." });
-            }}
           />
         )}
 

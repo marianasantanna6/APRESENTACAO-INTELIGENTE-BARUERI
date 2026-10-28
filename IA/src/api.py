@@ -1,5 +1,3 @@
-
-
 from pathlib import Path
 import sys
 from typing import Any
@@ -7,11 +5,12 @@ from uuid import UUID, uuid4
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 if str(Path(__file__).resolve().parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from models.request import LegacyResearchRequest, ProjectGenerationRequest  # noqa: E402
 from config.settings import OUTPUT_DIR  # noqa: E402
 from main import generate_research  # noqa: E402
 
@@ -21,10 +20,6 @@ app = FastAPI(
     version="1.0.0",
     description="Pesquisa fontes, recupera pesquisas anteriores e gera apresentações acadêmicas.",
 )
-
-
-class ResearchRequest(BaseModel):
-    tema: str = Field(min_length=1, max_length=300, description="Pergunta ou tema enviado pelo usuário.")
 
 
 class ResearchResponse(BaseModel):
@@ -41,11 +36,24 @@ def health() -> dict[str, str]:
 
 
 @app.post("/research", response_model=ResearchResponse)
-def research(request: ResearchRequest) -> ResearchResponse:
-    '''Roda o python e retorna a estrutura de slides mais a URL do PPTX.'''
+def research(
+    request: ProjectGenerationRequest | LegacyResearchRequest,
+) -> ResearchResponse:
+    """Gera JSON estruturado e disponibiliza o PPTX para download."""
     presentation_id = uuid4()
+    request_context = request.to_prompt_context()
+    project_source = (
+        request.to_project_source_text()
+        if isinstance(request, ProjectGenerationRequest)
+        else None
+    )
     try:
-        result = generate_research(request.tema, str(presentation_id))
+        result = generate_research(
+            request.query,
+            str(presentation_id),
+            request_context=request_context,
+            project_source=project_source,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:

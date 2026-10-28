@@ -1,22 +1,22 @@
 # Gerador de apresentações a partir de pesquisa
 
-Este serviço Python recebe um tema, pesquisa a Wikipédia em português, recupera pesquisas anteriores por similaridade no Supabase/pgvector, gera slides estruturados com Gemini e entrega JSON e um PowerPoint (`.pptx`). A interface HTTP é consumida pelo backend Node.js; o frontend comunica somente com o backend.
+Este serviço Python recebe um tema legado ou o DTO completo de um projeto, recupera pesquisas anteriores por similaridade no Supabase/pgvector, pesquisa fontes conectadas, gera slides estruturados com Gemini e entrega JSON e um PowerPoint (`.pptx`). A API retorna o JSON e uma URL de download do arquivo.
 
 ## Fluxo da pesquisa até o arquivo
 
-1. **Entrada — `src/api.py` ou `src/main.py`:** o backend envia `tema` para `POST /research`; o CLI continua disponível para execução manual. A função `generate_research(tema)` coordena o fluxo e retorna os dados validados, o caminho do PPTX e o estado da busca RAG.
+1. **Entrada — `src/api.py` e `src/models/request.py`:** `POST /research` aceita o DTO de projeto no corpo raiz, ou `{ "tema": "..." }` / `{ "prompt": "..." }` para clientes antigos. O DTO é validado, os IDs administrativos (`user`, `team`, `family`) não são enviados ao modelo e os demais campos são preparados como contexto de apresentação. O CLI continua disponível para execução manual.
 
 2. **Recuperação RAG — `services/supabase_service.py`:** a consulta é convertida para embedding com o modelo configurado e buscada por similaridade no PostgreSQL/pgvector. A busca exige o mesmo `embedding_model`, vetor de 1536 dimensões, pontuação mínima de 0,25 e metadados de fonte; aceita filtros opcionais por `source` e `intent`.
 
-3. **Pesquisa atual — `services/wiki_service.py`:** remove palavras comuns da busca, consulta a API da Wikipédia e tenta obter resumos de até cinco páginas. Cada página utilizável vira uma `ResearchSource` com ID, título, URL, trecho, data/hora UTC da consulta e metadados disponíveis (descrição, idioma, ID da página, última edição e dados de imagem/localização, quando retornados); os resultados atuais são combinados com fontes RAG sem duplicar URLs ou trechos idênticos.
+3. **Pesquisa atual — `services/wiki_service.py`:** remove palavras comuns da busca, consulta a API da Wikipédia e tenta obter resumos de até cinco páginas. Cada página utilizável vira uma `ResearchSource`; os resultados atuais são combinados com fontes RAG sem duplicar URLs ou trechos idênticos. O DTO também é incluído como fonte de proveniência `dados_projeto_01`, claramente identificada como dado recebido e não verificado externamente. URLs declaradas no DTO não são acessadas. Adaptadores adicionais existem em `services/sources/`, mas ainda não estão conectados ao fluxo principal.
 
-4. **Memória e geração — `services/supabase_service.py`, `prompts/academic_prompt.py`, `chains/research_chain.py`, `services/llm_service.py`:** uma nova pesquisa atual é salva junto com a lista completa de fontes para futuras recuperações. O prompt envia ao Gemini apenas as fontes verificáveis atuais e recuperadas e pede JSON com título, slides, IDs de fonte e limitações.
+4. **Memória e geração — `services/supabase_service.py`, `prompts/academic_prompt.py`, `chains/research_chain.py`, `services/llm_service.py`:** uma nova pesquisa atual é salva junto com as fontes externas para futuras recuperações. O prompt recebe o contexto do DTO separado das fontes externas, pode usar os dados do projeto sem alterar seus valores e pede citações pelo ID de proveniência correspondente.
 
 5. **Validação — `services/presentation_service.py`:** confere o JSON, os layouts, os limites de conteúdo e os IDs de fontes. Verifica também citações literais, organiza capa e encerramento e anexa os metadados de referência; respostas inválidas podem receber uma tentativa de correção.
 
 6. **Entrega — `services/pptx_generator.py`:** renderiza os slides 16:9 segundo `estiliza_o_e_configura_o_pptx.md`, adiciona a página de referências e salva o `.pptx` em `output/`.
 
-Na versão atual, a única integração externa de pesquisa encontrada no código é a Wikipédia em português. APIs governamentais adicionais ainda não estão implementadas; o serviço não apresenta dados dessas fontes como se já estivessem conectadas.
+No fluxo de geração atual, a única integração externa de pesquisa ativa é a Wikipédia em português. Os adaptadores de IBGE, SEADE, Centro Paula Souza, OpenAlex e SciELO estão em `services/sources/`, mas sua seleção/coleta ainda não está ligada a `generate_research()`.
 
 ## Responsabilidades dos serviços
 
@@ -66,13 +66,42 @@ Resposta `200 application/json`:
 
 Recebe uma pergunta/tema, executa a pesquisa e a geração síncrona, e devolve o JSON validado dos slides com um identificador para baixar o PowerPoint.
 
-Requisição `application/json`:
+Requisição `application/json` com o DTO do projeto diretamente no corpo:
+
+```json
+{
+  "name": "Projeto de Tecnologia",
+  "user": "123",
+  "team": "4",
+  "family": 0,
+  "short_description": "Descrição curta do projeto",
+  "full_description": "Descrição completa do projeto",
+  "source": ["https://barueri.sp.gov.br"],
+  "main_department": "Secretaria de Educação",
+  "related_departments": ["Secretaria de Educação"],
+  "areas": ["Tecnologia"],
+  "ods": [4],
+  "theme": "Educação e Tecnologia",
+  "audience": "Alunos e professores",
+  "technologies": ["React", "NestJS"],
+  "implementation_date": "2026-09-04",
+  "awards": [],
+  "indicators": [],
+  "keywords": ["educação", "tecnologia"]
+}
+```
+
+Os campos seguem o DTO de projeto do backend. Campos opcionais de descrição, tema, público, data, prêmios e indicadores podem ser omitidos; os demais campos-base são obrigatórios. `ods` aceita valores de 1 a 17. O tamanho serializado do DTO tem limite de 20.000 caracteres.
+
+O nome, tema, descrição curta e palavras-chave formam a consulta de pesquisa (limitada a 300 caracteres). Os campos administrativos `user`, `team` e `family` são validados, mas não enviados ao modelo. O restante do DTO é passado como contexto e também como fonte `dados_projeto_01`, identificada na resposta como informação fornecida pelo backend e não verificada externamente. URLs em `source` e `awards[].link` são apenas metadados recebidos: a IA não as acessa nem as trata como conteúdo consultado.
+
+A entrada antiga continua aceita:
 
 ```json
 {"tema":"Como políticas públicas reduzem a evasão escolar?"}
 ```
 
-`tema` é obrigatório, texto de 1 a 300 caracteres. A resposta `200 application/json` segue esta estrutura (o conteúdo dos slides e as fontes variam conforme a pesquisa):
+A resposta `200 application/json` devolve a apresentação validada e um caminho para baixar o PowerPoint:
 
 ```json
 {
@@ -89,9 +118,9 @@ Requisição `application/json`:
 }
 ```
 
-`rag.status` pode ser `used`, `no_results`, `no_new_sources` ou `unavailable`. `memories_retrieved` conta os registros de pesquisa encontrados; fontes repetidas por URL ou trecho idêntico são removidas do contexto. Estados sem RAG são explicitados também em `presentation.limitacoes`.
+`rag.status` pode ser `used`, `no_results`, `no_new_sources` ou `unavailable`. `memories_retrieved` conta os registros de pesquisa encontrados; fontes repetidas por URL ou trecho idêntico são removidas do contexto. A fonte do DTO pode aparecer em `presentation.fontes` sem URL externa; seu `id` é `dados_projeto_01`. Estados sem RAG são explicitados também em `presentation.limitacoes`.
 
-Erros: `422` para tema inválido; `502` quando fontes verificáveis ou a geração não puderem ser concluídas. As chamadas são síncronas e o tempo total varia com os provedores e retries; o backend deve usar timeout de vários minutos ou, para uma experiência com progresso e filas, implementar essa orquestração no seu próprio serviço.
+Erros: `422` para corpo inválido; `502` quando fontes suficientes ou a geração não puderem ser concluídas. As chamadas são síncronas e o tempo total varia com os provedores e retries; o backend deve usar timeout de vários minutos ou, para uma experiência com progresso e filas, implementar essa orquestração no seu próprio serviço.
 
 #### `GET /presentations/{presentation_id}`
 
@@ -107,9 +136,9 @@ A API não implementa autenticação, rate limit ou fila. Mantenha-a em `localho
 
 O modelo retorna um objeto com `titulo`, `subtitulo`, `slides` e `limitacoes`. Cada slide descreve `tipo_layout`, `titulo`, texto de apoio, pontos, KPIs, tags, blocos, citação, reconhecimentos e `fontes` (IDs como `fonte_01`). O conjunto de layouts e limites visuais é derivado do guia `estiliza_o_e_configura_o_pptx.md`; URLs e títulos completos das fontes são anexados pelo validador usando os dados coletados, e a página de referências é montada pelo gerador.
 
-Cada item de `presentation.fontes[]` na resposta HTTP contém `id`, `titulo`, `url` e `trecho`; quando disponíveis, também contém `consultado_em` (data/hora UTC ISO 8601) e `metadados` (objeto com os campos realmente retornados pela Wikipédia, como `description`, `lang`, `pageid` e `timestamp`, que indica a última edição da página). Esses campos são persistidos junto das fontes no Supabase e mantidos quando uma fonte reaparece em resultados RAG; registros antigos continuam sem os campos que não guardaram.
+Cada item externo de `presentation.fontes[]` contém `id`, `titulo`, `url` e `trecho`; quando disponíveis, também contém `consultado_em` e metadados. A fonte do DTO contém `id`, `titulo`, `trecho`, `fonte` e metadados de proveniência, sem URL externa. A fonte do DTO só é usada na apresentação atual e não é salva como evidência de pesquisa no Supabase.
 
-`ResearchData.to_chain_input()` converte os dados da pesquisa para as chaves esperadas pelo prompt (`titulo`, `detectar_intencao`, `fontes_fornecidas`). `validate_presentation()` converte a resposta do modelo para o formato canônico usado por `criar_apresentacao()`.
+`ResearchData.to_chain_input()` converte a consulta, o contexto do DTO e as fontes para as chaves esperadas pelo prompt (`titulo`, `detectar_intencao`, `contexto_solicitacao`, `fontes_fornecidas`). `validate_presentation()` converte a resposta do modelo para o formato canônico usado por `criar_apresentacao()`.
 
 
 ## RAG e migração de dados

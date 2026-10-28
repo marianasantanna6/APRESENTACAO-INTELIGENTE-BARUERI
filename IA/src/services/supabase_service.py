@@ -96,7 +96,13 @@ def _vector_literal(values: list[float] | None) -> str | None:
     return "[" + ",".join(str(value) for value in values) + "]"
 
 
-def store_research(query: str, research: ResearchData, source_url: str | None = None) -> StoredResearch:
+def store_research(
+    query: str,
+    research: ResearchData,
+    source_url: str | None = None,
+    *,
+    source: str = "multi_source",
+) -> StoredResearch:
     """Persiste a coleta e seus metadados no Supabase e tenta gerar seu embedding para busca vetorial futura. Se a vetorização falhar, grava a pesquisa como pendente para processamento posterior."""
     embedding_input = _embedding_input(query, research)
     content_hash = hashlib.sha256(embedding_input.encode("utf-8")).hexdigest()
@@ -140,7 +146,7 @@ def store_research(query: str, research: ResearchData, source_url: str | None = 
 
     params: dict[str, Any] = {
         "query": query, "title": research.title, "content": research.resumo_wiki,
-        "source_url": source_url, "keywords": research.keywords, "intent": research.detectar_intencao,
+        "source": source, "source_url": source_url, "keywords": research.keywords, "intent": research.detectar_intencao,
         "embedding_input": embedding_input, "content_hash": content_hash, "embedding": vector,
         "embedding_model": EMBEDDING_MODEL if vector else None, "embedding_status": status,
         "sources": json.dumps(
@@ -167,7 +173,7 @@ def store_research(query: str, research: ResearchData, source_url: str | None = 
             query, canonical_title, content, source, source_url, keywords, intent,
             embedding_input, content_hash, embedding, embedding_model, embedding_status, sources
         ) VALUES (
-            %(query)s, %(title)s, %(content)s, 'wikipedia', %(source_url)s, %(keywords)s, %(intent)s,
+            %(query)s, %(title)s, %(content)s, %(source)s, %(source_url)s, %(keywords)s, %(intent)s,
             %(embedding_input)s, %(content_hash)s, %(embedding)s::extensions.vector,
             %(embedding_model)s, %(embedding_status)s, %(sources)s::jsonb
         ) RETURNING id, embedding_status;
@@ -191,9 +197,30 @@ def _research_source(item: object, index: int, memory_id: str) -> ResearchSource
     if not all(isinstance(value, str) and value.strip() for value in (title, url, extract)):
         return None
     consulted_at = item.get("consultado_em") or item.get("consulted_at")
+    source_name = item.get("fonte") or item.get("source_name")
+    identifier = item.get("identificador") or item.get("identifier")
+    published_at = item.get("publicado_em") or item.get("published_at")
+    updated_at = item.get("atualizado_em") or item.get("updated_at")
+    author = item.get("autor_ou_instituicao") or item.get("author")
+    reference_date = item.get("data_referencia") or item.get("reference_date")
+    data = item.get("dados") or item.get("data") or {}
     metadata = item.get("metadados") or item.get("metadata") or {}
     if not isinstance(consulted_at, str):
         consulted_at = None
+    if not isinstance(source_name, str):
+        source_name = None
+    if not isinstance(identifier, str):
+        identifier = None
+    if not isinstance(published_at, str):
+        published_at = None
+    if not isinstance(updated_at, str):
+        updated_at = None
+    if not isinstance(author, str):
+        author = None
+    if not isinstance(reference_date, str):
+        reference_date = None
+    if not isinstance(data, dict):
+        data = {}
     if not isinstance(metadata, dict):
         metadata = {}
     return ResearchSource(
@@ -202,6 +229,13 @@ def _research_source(item: object, index: int, memory_id: str) -> ResearchSource
         url=url.strip(),
         extract=extract.strip(),
         consulted_at=consulted_at,
+        source_name=source_name,
+        identifier=identifier,
+        published_at=published_at,
+        updated_at=updated_at,
+        author=author,
+        reference_date=reference_date,
+        data=data,
         metadata=metadata,
     )
 
