@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { IconType } from "react-icons";
 import {
-  FiBookOpen,
   FiFolder,
   FiHelpCircle,
   FiLayers,
@@ -43,12 +42,6 @@ const primarySidebarDefs: SidebarItemDef[] = [
     path: ROUTE_PATHS.institutionalProjects,
     icon: FiLayers,
     requiresAdmin: true,
-  },
-  {
-    labelKey: "nav.templates",
-    path: ROUTE_PATHS.templates,
-    icon: FiBookOpen,
-    requiresAdmin: false,
   },
   {
     labelKey: "nav.administracao",

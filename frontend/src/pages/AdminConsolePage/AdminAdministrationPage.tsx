@@ -86,12 +86,16 @@ function MobileInfoField({
 
 function EmployeeMobileCard({
   canManageEmployees,
+  isHeadManager,
   employee,
   onRemove,
+  onHardDelete,
 }: {
   canManageEmployees: boolean;
+  isHeadManager: boolean;
   employee: EmployeeDirectoryEntry;
   onRemove: (employee: EmployeeDirectoryEntry) => void;
+  onHardDelete: (employee: EmployeeDirectoryEntry) => void;
 }) {
   return (
     <article className="rounded-[22px] border border-[#e4ebf2] bg-white/88 p-4 shadow-[0_16px_40px_-28px_rgba(20,33,51,0.28)] md:hidden">
@@ -113,12 +117,23 @@ function EmployeeMobileCard({
           </div>
         </div>
 
-        {canManageEmployees ? (
+        {canManageEmployees && employee.status === "active" ? (
           <button
             type="button"
             onClick={() => onRemove(employee)}
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
-            aria-label={`Remover ${employee.name}`}
+            aria-label={`Inativar ${employee.name}`}
+            title="Inativar funcionário"
+          >
+            <FiTrash2 className="h-4.5 w-4.5" />
+          </button>
+        ) : canManageEmployees && isHeadManager && employee.status === "inactive" ? (
+          <button
+            type="button"
+            onClick={() => onHardDelete(employee)}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fef2f2] text-[#991b1b] transition hover:bg-[#fee2e2]"
+            aria-label={`Excluir permanentemente ${employee.name}`}
+            title="Excluir permanentemente"
           >
             <FiTrash2 className="h-4.5 w-4.5" />
           </button>
@@ -186,15 +201,19 @@ export default function AdminAdministrationPage() {
     addSetor,
     addTime,
     canManageEmployees,
+    isHeadManager,
     employees,
     removeEmployee,
+    permanentDeleteEmployee,
     removeSetor,
     removeTime,
     setores,
     times,
   } = useAdminConsole();
-  const { user, verifyCurrentUser } = useAuth();
+  const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [setorFilter, setSetorFilter] = useState<string>("all");
+  const [timeFilter, setTimeFilter] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // ── Filtros do Log de Atividades ───────────────────────────────────────────
@@ -233,10 +252,31 @@ export default function AdminAdministrationPage() {
     initialDeleteConfirmationForm,
   );
   const [deleteConfirmationError, setDeleteConfirmationError] = useState("");
+  const [employeePendingHardDelete, setEmployeePendingHardDelete] =
+    useState<EmployeeDirectoryEntry | null>(null);
+  const [hardDeleteEmail, setHardDeleteEmail] = useState("");
+  const [hardDeletePassword, setHardDeletePassword] = useState("");
+  const [hardDeleteError, setHardDeleteError] = useState("");
 
-  const filteredEmployees = statusFilter === "all"
-    ? employees
-    : employees.filter((employee) => employee.status === statusFilter);
+  const isSectorManager = !user?.master_admin && !user?.head_manager && (user?.accessLevel === "admin_level_2" || !!user?.sectorManager);
+  const isTeamManager = !user?.master_admin && !user?.head_manager && !isSectorManager && user?.accessLevel === "admin_level_1";
+
+  // times disponíveis para o filtro do sector manager (só os times do seu setor)
+  const timesInMySetor = useMemo(
+    () => times.filter((t) => t.secretariaNome === user?.department),
+    [times, user],
+  );
+
+  const filteredEmployees = useMemo(() =>
+    employees.filter((emp) => {
+      if (statusFilter !== "all" && emp.status !== statusFilter) return false;
+      // head_manager vê filtro de setor
+      if (setorFilter !== "all" && emp.department !== setorFilter) return false;
+      // sector_manager vê filtro de time dentro do seu setor
+      if (timeFilter !== "all" && emp.team !== timeFilter) return false;
+      return true;
+    }),
+  [employees, statusFilter, setorFilter, timeFilter]);
 
   const filteredActivityLog = useMemo(() => {
     const query = logSearch.trim().toLowerCase();
@@ -249,8 +289,10 @@ export default function AdminAdministrationPage() {
       return true;
     });
   }, [activityLog, logPeriod, logSearch]);
-  const scopeDescription = (user?.master_admin || user?.head_manager || user?.accessLevel === "admin_level_2")
-    ? "Você está visualizando funcionários e logs de todas as equipes."
+  const scopeDescription = (user?.master_admin || user?.head_manager)
+    ? "Você está visualizando funcionários de todos os setores."
+    : isSectorManager
+    ? `Você está visualizando todos os times do setor ${user?.department ?? ""}.`
     : `Você está visualizando somente a equipe ${user?.team ?? ""}.`;
 
   function resetForm() {
@@ -340,31 +382,18 @@ export default function AdminAdministrationPage() {
   async function handleRemoveEmployee(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!employeePendingRemoval) {
+    if (!employeePendingRemoval) return;
+
+    if (!deleteConfirmationForm.email.trim() || !deleteConfirmationForm.password.trim()) {
+      setDeleteConfirmationError("Informe o e-mail e senha do head-manager.");
       return;
     }
 
-    if (
-      !deleteConfirmationForm.email.trim()
-      || !deleteConfirmationForm.password.trim()
-    ) {
-      setDeleteConfirmationError(
-        "Confirme e-mail institucional e senha antes de excluir o funcionário.",
-      );
-      return;
-    }
-
-    const verificationResult = verifyCurrentUser({
-      email: deleteConfirmationForm.email,
-      password: deleteConfirmationForm.password,
-    });
-
-    if ("message" in verificationResult) {
-      setDeleteConfirmationError(verificationResult.message);
-      return;
-    }
-
-    const result = await removeEmployee(employeePendingRemoval.id, deleteConfirmationForm.password);
+    const result = await removeEmployee(
+      employeePendingRemoval.id,
+      deleteConfirmationForm.email,
+      deleteConfirmationForm.password,
+    );
 
     if ("message" in result) {
       setDeleteConfirmationError(result.message);
@@ -372,6 +401,24 @@ export default function AdminAdministrationPage() {
     }
 
     closeDeleteConfirmationModal();
+  }
+
+  async function handleHardDeleteEmployee(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!employeePendingHardDelete) return;
+    if (!hardDeleteEmail.trim() || !hardDeletePassword.trim()) {
+      setHardDeleteError("Informe o e-mail e senha do head-manager.");
+      return;
+    }
+    const result = await permanentDeleteEmployee(employeePendingHardDelete.id, hardDeleteEmail, hardDeletePassword);
+    if ("message" in result) {
+      setHardDeleteError(result.message);
+      return;
+    }
+    setEmployeePendingHardDelete(null);
+    setHardDeleteEmail("");
+    setHardDeletePassword("");
+    setHardDeleteError("");
   }
 
   // ── Handlers: Setores ─────────────────────────────────────────────────────
@@ -415,6 +462,11 @@ export default function AdminAdministrationPage() {
     isOpen: employeePendingRemoval !== null,
     onClose: closeDeleteConfirmationModal,
     initialFocusSelector: "[data-modal-initial-focus]",
+  });
+  const hardDeleteEmployeeModalRef = useModalAccessibility({
+    isOpen: employeePendingHardDelete !== null,
+    onClose: () => { setEmployeePendingHardDelete(null); setHardDeleteEmail(""); setHardDeletePassword(""); setHardDeleteError(""); },
+    initialFocusSelector: "[data-hard-delete-focus]",
   });
   const setorModalRef = useModalAccessibility({
     isOpen: isSetorModalOpen,
@@ -468,21 +520,46 @@ export default function AdminAdministrationPage() {
               </button>
             ) : null}
 
-            <div className="relative w-full sm:w-auto">
+            <div className="flex flex-wrap gap-2">
               <select
                 value={statusFilter}
                 onChange={(event) =>
                   setStatusFilter(event.target.value as StatusFilter)
                 }
-                className="h-11 w-full appearance-none rounded-full bg-[#f1f1f4] px-4 pr-10 text-[0.9rem] font-medium text-[#818181] outline-none sm:w-auto"
+                className="h-11 appearance-none rounded-full bg-[#f1f1f4] px-4 pr-8 text-[0.9rem] font-medium text-[#818181] outline-none"
               >
                 <option value="all">Todos</option>
                 <option value="active">Ativos</option>
                 <option value="inactive">Inativos</option>
               </select>
-              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#9a9a9a]">
-                v
-              </span>
+
+              {/* head_manager / master_admin: filtro por setor */}
+              {(user?.master_admin || user?.head_manager) ? (
+                <select
+                  value={setorFilter}
+                  onChange={(event) => setSetorFilter(event.target.value)}
+                  className="h-11 appearance-none rounded-full bg-[#f1f1f4] px-4 pr-8 text-[0.9rem] font-medium text-[#818181] outline-none"
+                >
+                  <option value="all">Todos os setores</option>
+                  {setoresSorted.map((s) => (
+                    <option key={s.id} value={s.nome}>{s.nome}</option>
+                  ))}
+                </select>
+              ) : null}
+
+              {/* sector_manager: filtro por time dentro do seu setor */}
+              {isSectorManager && timesInMySetor.length > 0 ? (
+                <select
+                  value={timeFilter}
+                  onChange={(event) => setTimeFilter(event.target.value)}
+                  className="h-11 appearance-none rounded-full bg-[#f1f1f4] px-4 pr-8 text-[0.9rem] font-medium text-[#818181] outline-none"
+                >
+                  <option value="all">Todos os times</option>
+                  {timesInMySetor.map((t) => (
+                    <option key={t.id} value={t.nome}>{t.nome}</option>
+                  ))}
+                </select>
+              ) : null}
             </div>
           </div>
         </div>
@@ -494,8 +571,10 @@ export default function AdminAdministrationPage() {
                 <EmployeeMobileCard
                   key={employee.id}
                   canManageEmployees={canManageEmployees}
+                  isHeadManager={isHeadManager}
                   employee={employee}
                   onRemove={handleOpenDeleteConfirmation}
+                  onHardDelete={(emp) => { setEmployeePendingHardDelete(emp); setHardDeleteEmail(""); setHardDeletePassword(""); setHardDeleteError(""); }}
                 />
               ))}
             </div>
@@ -543,14 +622,27 @@ export default function AdminAdministrationPage() {
                         </td>
                         {canManageEmployees ? (
                           <td className="rounded-r-[18px] bg-white/72 px-5 py-2.5 text-right">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenDeleteConfirmation(employee)}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
-                              aria-label={`Remover ${employee.name}`}
-                            >
-                              <FiTrash2 className="h-4.5 w-4.5" />
-                            </button>
+                            {employee.status === "active" ? (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDeleteConfirmation(employee)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
+                                aria-label={`Inativar ${employee.name}`}
+                                title="Inativar funcionário"
+                              >
+                                <FiTrash2 className="h-4.5 w-4.5" />
+                              </button>
+                            ) : isHeadManager ? (
+                              <button
+                                type="button"
+                                onClick={() => { setEmployeePendingHardDelete(employee); setHardDeleteEmail(""); setHardDeletePassword(""); setHardDeleteError(""); }}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fef2f2] text-[#991b1b] transition hover:bg-[#fee2e2]"
+                                aria-label={`Excluir permanentemente ${employee.name}`}
+                                title="Excluir permanentemente"
+                              >
+                                <FiTrash2 className="h-4.5 w-4.5" />
+                              </button>
+                            ) : null}
                           </td>
                         ) : null}
                       </tr>
@@ -1276,13 +1368,13 @@ export default function AdminAdministrationPage() {
                   id="delete-employee-dialog-title"
                   className="text-[1.65rem] font-extrabold tracking-[-0.04em] text-[#1f1f1f]"
                 >
-                  Confirmar exclusão
+                  Inativar funcionário
                 </h3>
                 <p
                   id="delete-employee-dialog-description"
                   className="mt-1 text-[0.92rem] font-medium text-[#8a8a8a]"
                 >
-                  Confirme seu e-mail e sua senha para evitar remoções por engano.
+                  Confirme com as credenciais do head-manager para prosseguir.
                 </p>
               </div>
 
@@ -1317,7 +1409,7 @@ export default function AdminAdministrationPage() {
 
             <form className="space-y-4" onSubmit={handleRemoveEmployee}>
               <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                E-mail institucional do administrador
+                E-mail do head-manager
                 <input
                   type="email"
                   value={deleteConfirmationForm.email}
@@ -1325,13 +1417,13 @@ export default function AdminAdministrationPage() {
                     handleDeleteConfirmationFieldChange("email", event)
                   }
                   data-modal-initial-focus
-                  placeholder={user?.email ?? "admin@barueri.sp.gov.br"}
+                  placeholder="headmanager@barueri.sp.gov.br"
                   className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
                 />
               </label>
 
               <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                Senha
+                Senha do head-manager
                 <input
                   type="password"
                   value={deleteConfirmationForm.password}
@@ -1360,7 +1452,114 @@ export default function AdminAdministrationPage() {
                   type="submit"
                   className="h-11 w-full rounded-full bg-[#d86b6b] px-5 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(216,107,107,0.24)] transition hover:-translate-y-0.5 hover:bg-[#ca5a5a] sm:w-auto"
                 >
-                  Excluir funcionário
+                  Inativar funcionário
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Modal: Excluir permanentemente (head_manager) */}
+      {employeePendingHardDelete !== null ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
+          onClick={() => { setEmployeePendingHardDelete(null); setHardDeleteEmail(""); setHardDeletePassword(""); setHardDeleteError(""); }}
+        >
+          <div
+            ref={hardDeleteEmployeeModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="hard-delete-dialog-title"
+            tabIndex={-1}
+            data-modal-surface="dialog"
+            className="w-full max-w-[540px] rounded-[26px] bg-white p-6 shadow-[0_24px_80px_rgba(20,33,51,0.24)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h3
+                  id="hard-delete-dialog-title"
+                  className="text-[1.65rem] font-extrabold tracking-[-0.04em] text-[#1f1f1f]"
+                >
+                  Excluir permanentemente
+                </h3>
+                <p className="mt-1 text-[0.92rem] font-medium text-[#8a8a8a]">
+                  Esta ação é irreversível. Confirme com as credenciais do head-manager.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setEmployeePendingHardDelete(null); setHardDeleteEmail(""); setHardDeletePassword(""); setHardDeleteError(""); }}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#f2f4f7] text-[#7a7a7a] transition hover:bg-[#e6ecf3]"
+                aria-label="Fechar"
+              >
+                <FiX className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mb-5 rounded-[20px] border border-[#f0dcdc] bg-[#fff7f7] px-4 py-4">
+              <div className="flex items-center gap-3">
+                <AdminAvatar
+                  name={employeePendingHardDelete.name}
+                  sizeClassName="h-11 w-11"
+                  textClassName="text-[0.9rem]"
+                  className="shadow-none"
+                />
+                <div>
+                  <p className="text-[1rem] font-semibold text-[#5d3a3a]">
+                    {employeePendingHardDelete.name}
+                  </p>
+                  <p className="text-[0.82rem] font-medium text-[#b16c6c]">
+                    {employeePendingHardDelete.email}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <form className="space-y-4" onSubmit={handleHardDeleteEmployee}>
+              <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
+                E-mail do head-manager
+                <input
+                  type="email"
+                  value={hardDeleteEmail}
+                  onChange={(e) => { setHardDeleteEmail(e.target.value); setHardDeleteError(""); }}
+                  data-hard-delete-focus
+                  placeholder="headmanager@barueri.sp.gov.br"
+                  className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
+                />
+              </label>
+
+              <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
+                Senha do head-manager
+                <input
+                  type="password"
+                  value={hardDeletePassword}
+                  onChange={(e) => { setHardDeletePassword(e.target.value); setHardDeleteError(""); }}
+                  placeholder="Senha"
+                  className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
+                />
+              </label>
+
+              {hardDeleteError ? (
+                <p className="rounded-[16px] bg-[#fff5f5] px-4 py-3 text-[0.9rem] font-medium text-[#be3232]">
+                  {hardDeleteError}
+                </p>
+              ) : null}
+
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => { setEmployeePendingHardDelete(null); setHardDeleteEmail(""); setHardDeletePassword(""); setHardDeleteError(""); }}
+                  className="h-11 w-full rounded-full border border-[#d7dde4] px-5 text-[0.92rem] font-semibold text-[#6a6a6a] transition hover:bg-[#f5f7f9] sm:w-auto"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="h-11 w-full rounded-full bg-[#991b1b] px-5 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(153,27,27,0.24)] transition hover:-translate-y-0.5 hover:bg-[#7f1d1d] sm:w-auto"
+                >
+                  Excluir permanentemente
                 </button>
               </div>
             </form>

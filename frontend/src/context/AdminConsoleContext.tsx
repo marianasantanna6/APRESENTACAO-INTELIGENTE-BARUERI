@@ -23,8 +23,10 @@ type AdminConsoleContextValue = {
   setores: SetorEntry[];
   times: TimeEntry[];
   canManageEmployees: boolean;
+  isHeadManager: boolean;
   addEmployee: (payload: NewEmployeePayload) => Promise<MutationResult>;
-  removeEmployee: (employeeId: string, adminPassword?: string) => Promise<MutationResult>;
+  removeEmployee: (employeeId: string, adminEmail: string, adminPassword: string) => Promise<MutationResult>;
+  permanentDeleteEmployee: (employeeId: string, adminEmail: string, adminPassword: string) => Promise<MutationResult>;
   addSetor: (payload: NewSetorPayload) => Promise<MutationResult>;
   removeSetor: (id: string) => Promise<MutationResult>;
   addTime: (payload: NewTimePayload) => Promise<MutationResult>;
@@ -56,7 +58,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     if (!user) return;
     type RawSector = { id: string; name: string };
     type RawTeam = { id: string; name: string; sectorId: string; sectorName: string; level_acess: number };
-    type RawUser = { id: string; name: string; email: string; cpf: string; photo: string | null };
+    type RawUser = { id: string; name: string; email: string; cpf: string; photo: string | null; status: boolean; head_manager: boolean };
     type RawUserTeam = { id: string; user: string; sector: string; team: string | null };
     type RawLog = { id: string; user: string; action: string; project: string; moment: string };
 
@@ -85,15 +87,16 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
         })));
         setEmployeesState(users.map((u) => {
           const userTeam = userTeams.find((ut) => ut.user === u.id);
-          const team = userTeam ? teams.find((t) => t.id === userTeam.team) : null;
+          const team = userTeam?.team ? teams.find((t) => t.id === userTeam.team) : null;
+          const sectorFallback = userTeam && !team ? sectors.find((s) => s.id === userTeam.sector) : null;
           return {
             id: u.id,
             name: u.name,
             email: u.email,
-            department: team?.sectorName ?? "",
+            department: team?.sectorName ?? sectorFallback?.name ?? "",
             team: team?.name ?? "",
             accessLevel: mapAccessLevel(team?.level_acess ?? 0),
-            status: "active" as const,
+            status: (u.status ? "active" : "inactive") as "active" | "inactive",
           };
         }));
 
@@ -128,6 +131,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
   }, [user]);
   const allowCrossTeamData = canViewCrossTeamData(user);
   const allowEmployeeManagement = canManageEmployees(user);
+  const allowHardDelete = !!(user?.head_manager || user?.master_admin);
 
   const presentations = useMemo(
     () =>
@@ -139,15 +143,17 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     [presentationsState, user],
   );
 
-  const employees = useMemo(
-    () =>
-      user
-        ? employeesState.filter(
-            (employee) => allowCrossTeamData || employee.team === user.team,
-          )
-        : [],
-    [allowCrossTeamData, employeesState, user],
-  );
+  const employees = useMemo(() => {
+    if (!user) return [];
+    // head_manager / master_admin → vê todos
+    if (user.master_admin || user.head_manager) return employeesState;
+    // sector manager (admin_level_2) → vê todos do próprio setor
+    if (user.accessLevel === "admin_level_2" || user.sectorManager) {
+      return employeesState.filter((emp) => emp.department === user.department);
+    }
+    // team manager / employee → vê só o próprio time
+    return employeesState.filter((emp) => emp.team === user.team);
+  }, [employeesState, user]);
 
   const activityLog = activityLogState;
 
@@ -205,43 +211,50 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     return { ok: true };
   }
 
-  async function removeEmployee(employeeId: string, adminPassword?: string): Promise<EmployeeMutationResult> {
+  async function removeEmployee(employeeId: string, adminEmail: string, adminPassword: string): Promise<EmployeeMutationResult> {
     if (!user || !allowEmployeeManagement) {
-      return {
-        ok: false,
-        message:
-          "Somente administradores de nível 2 podem remover funcionários.",
-      };
+      return { ok: false, message: "Sem permissão para inativar funcionários." };
     }
 
-    const targetEmployee = employeesState.find(
-      (employee) => employee.id === employeeId,
-    );
+    const res = await authFetch(`/api/management/${employeeId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adminEmail, adminPassword }),
+    }).catch(() => null);
 
-    if (!targetEmployee) {
-      return {
-        ok: false,
-        message: "Funcionário não encontrado para remoção.",
-      };
-    }
-
-    if (adminPassword) {
-      const res = await authFetch(`/api/management/${employeeId}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: adminPassword }),
-      }).catch(() => null);
-
-      if (res && !res.ok) {
-        const err = await res.json().catch(() => ({})) as { message?: string };
-        return { ok: false, message: err.message ?? "Erro ao remover funcionário." };
-      }
+    if (!res || !res.ok) {
+      const err = res ? await res.json().catch(() => ({})) as { message?: string } : {};
+      return { ok: false, message: err.message ?? "Erro ao inativar funcionário." };
     }
 
     setEmployeesState((current) =>
-      current.filter((employee) => employee.id !== employeeId),
+      current.map((employee) =>
+        employee.id === employeeId
+          ? { ...employee, status: "inactive" as const }
+          : employee,
+      ),
     );
 
+    return { ok: true };
+  }
+
+  async function permanentDeleteEmployee(employeeId: string, adminEmail: string, adminPassword: string): Promise<MutationResult> {
+    if (!user || !allowHardDelete) {
+      return { ok: false, message: "Apenas head-manager pode excluir funcionários permanentemente." };
+    }
+
+    const res = await authFetch(`/api/management/${employeeId}/permanent`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adminEmail, adminPassword }),
+    }).catch(() => null);
+
+    if (res && !res.ok) {
+      const err = await res.json().catch(() => ({})) as { message?: string };
+      return { ok: false, message: err.message ?? "Erro ao excluir funcionário." };
+    }
+
+    setEmployeesState((current) => current.filter((emp) => emp.id !== employeeId));
     return { ok: true };
   }
 
@@ -333,8 +346,10 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
         setores: setoresState,
         times: timesState,
         canManageEmployees: allowEmployeeManagement,
+        isHeadManager: allowHardDelete,
         addEmployee,
         removeEmployee,
+        permanentDeleteEmployee,
         addSetor,
         removeSetor,
         addTime,

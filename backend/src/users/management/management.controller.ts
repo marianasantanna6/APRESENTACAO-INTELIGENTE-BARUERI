@@ -49,9 +49,19 @@ export class ManagementController {
   @Delete(':id')
   remove(
     @Param('id') id: string,
-    @Body('password') password: string,
+    @Body('adminEmail') adminEmail: string,
+    @Body('adminPassword') adminPassword: string,
+  ) {
+    return this.managementService.remove(id, adminEmail, adminPassword);
+  }
+
+  @Delete(':id/permanent')
+  permanentDelete(
+    @Param('id') id: string,
+    @Body('adminEmail') adminEmail: string,
+    @Body('adminPassword') adminPassword: string,
     @Req() req: any,
   ) {
-    return this.managementService.remove(id, password, req.user.id);
+    return this.managementService.permanentDelete(id, adminEmail, adminPassword, req.user.id);
   }
 }
