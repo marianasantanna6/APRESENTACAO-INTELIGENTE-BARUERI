@@ -153,6 +153,7 @@ def _repair_feedback(error: ValueError) -> str:
 
 def generate_research(
     tema: str,
+    ia_prompt: str | None = None,
     presentation_id: str | None = None,
     *,
     request_context: dict | None = None,
@@ -248,6 +249,7 @@ def generate_research(
 
         entradas = {
             **contexto_ia,
+            "ia_prompt": ia_prompt or "",
             "resposta_anterior": "",
             "feedback_validacao": "",
         }
