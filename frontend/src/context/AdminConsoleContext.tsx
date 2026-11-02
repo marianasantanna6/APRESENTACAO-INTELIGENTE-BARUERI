@@ -58,14 +58,23 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     type RawTeam = { id: string; name: string; sectorId: string; sectorName: string; level_acess: number };
     type RawUser = { id: string; name: string; email: string; cpf: string; photo: string | null };
     type RawUserTeam = { id: string; user: string; sector: string; team: string | null };
+    type RawLog = { id: string; user: string; action: string; project: string; moment: string };
+
+    const ACTION_LABEL: Record<string, string> = {
+      criou:    "Projeto criado",
+      editou:   "Projeto editado",
+      aprovou:  "Projeto aprovado",
+      inativou: "Projeto arquivado",
+    };
 
     Promise.all([
       authFetch("/api/sectors").then((r) => r.ok ? r.json() as Promise<RawSector[]> : Promise.resolve([])),
       authFetch("/api/teams").then((r) => r.ok ? r.json() as Promise<RawTeam[]> : Promise.resolve([])),
       authFetch("/api/management").then((r) => r.ok ? r.json() as Promise<RawUser[]> : Promise.resolve([])),
       authFetch("/api/users-role").then((r) => r.ok ? r.json() as Promise<RawUserTeam[]> : Promise.resolve([])),
+      authFetch("/api/projects-logs").then((r) => r.ok ? r.json() as Promise<RawLog[]> : Promise.resolve([])),
     ])
-      .then(([sectors, teams, users, userTeams]) => {
+      .then(([sectors, teams, users, userTeams, logs]) => {
         setSetoresState(sectors.map((s) => ({ id: s.id, nome: s.name })));
         setTimesState(teams.map((t) => ({
           id: t.id,
@@ -87,48 +96,38 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
             status: "active" as const,
           };
         }));
-      })
-      .catch(() => {});
-  }, [user]);
-  const allowCrossTeamData = canViewCrossTeamData(user);
-  const allowEmployeeManagement = canManageEmployees(user);
 
-  useEffect(() => {
-    if (!user) return;
-    const ACTION_LABEL: Record<string, string> = {
-      criou:    "Projeto criado",
-      editou:   "Projeto editado",
-      aprovou:  "Projeto aprovado",
-      inativou: "Projeto arquivado",
-    };
-    // Logs de demonstração exibidos quando o banco ainda não tem registros
-    const demoLogs: ActivityLogEntry[] = [
-      { id: "demo-1", timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), type: "Projeto aprovado",  action: "Projeto aprovado",  source: "Sistema", userName: "", department: "", team: "", entityName: "demo", entityType: "projeto" },
-      { id: "demo-2", timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), type: "Projeto editado",   action: "Projeto editado",   source: "Sistema", userName: "", department: "", team: "", entityName: "demo", entityType: "projeto" },
-      { id: "demo-3", timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), type: "Projeto criado",   action: "Projeto criado",    source: "Sistema", userName: "", department: "", team: "", entityName: "demo", entityType: "projeto" },
-      { id: "demo-4", timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), type: "Projeto arquivado", action: "Projeto arquivado", source: "Sistema", userName: "", department: "", team: "", entityName: "demo", entityType: "projeto" },
-      { id: "demo-5", timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(), type: "Projeto criado",   action: "Projeto criado",    source: "Sistema", userName: "", department: "", team: "", entityName: "demo", entityType: "projeto" },
-    ];
-    authFetch("/api/projects-logs")
-      .then((res) => res.ok ? res.json() : Promise.reject())
-      .then((data: { id: string; user: string; action: string; project: string; moment: string }[]) => {
-        const mapped = data.map((log) => ({
+        const userMap = new Map(users.map((u) => [u.id, u.name]));
+        const mapped: ActivityLogEntry[] = logs.map((log) => ({
           id: log.id,
           timestamp: log.moment,
           type: ACTION_LABEL[log.action] ?? log.action,
           action: ACTION_LABEL[log.action] ?? log.action,
           source: "Sistema",
-          userName: `#${log.user}`,
+          userName: userMap.get(log.user) ?? `Usuário #${log.user}`,
           department: "",
           team: "",
           entityName: `#${log.project}`,
           entityType: "projeto",
           entityId: log.project,
         }));
+
+        const demoUserNames = users.length > 0
+          ? [users[0]?.name, users[1]?.name, users[0]?.name, users[1]?.name ?? users[0]?.name, users[0]?.name]
+          : ["Usuário 1", "Usuário 2", "Usuário 1", "Usuário 2", "Usuário 1"];
+        const demoLogs: ActivityLogEntry[] = [
+          { id: "demo-1", timestamp: new Date(Date.now() - 1 * 3600000).toISOString(),  type: "Projeto aprovado",  action: "Projeto aprovado",  source: "Sistema", userName: demoUserNames[0] ?? "", department: "", team: "", entityName: "demo", entityType: "projeto" },
+          { id: "demo-2", timestamp: new Date(Date.now() - 3 * 3600000).toISOString(),  type: "Projeto editado",   action: "Projeto editado",   source: "Sistema", userName: demoUserNames[1] ?? "", department: "", team: "", entityName: "demo", entityType: "projeto" },
+          { id: "demo-3", timestamp: new Date(Date.now() - 6 * 3600000).toISOString(),  type: "Projeto criado",    action: "Projeto criado",    source: "Sistema", userName: demoUserNames[2] ?? "", department: "", team: "", entityName: "demo", entityType: "projeto" },
+          { id: "demo-4", timestamp: new Date(Date.now() - 24 * 3600000).toISOString(), type: "Projeto arquivado", action: "Projeto arquivado", source: "Sistema", userName: demoUserNames[3] ?? "", department: "", team: "", entityName: "demo", entityType: "projeto" },
+          { id: "demo-5", timestamp: new Date(Date.now() - 48 * 3600000).toISOString(), type: "Projeto criado",    action: "Projeto criado",    source: "Sistema", userName: demoUserNames[4] ?? "", department: "", team: "", entityName: "demo", entityType: "projeto" },
+        ];
         setActivityLogState(mapped.length > 0 ? mapped : demoLogs);
       })
-      .catch(() => setActivityLogState(demoLogs));
+      .catch(() => {});
   }, [user]);
+  const allowCrossTeamData = canViewCrossTeamData(user);
+  const allowEmployeeManagement = canManageEmployees(user);
 
   const presentations = useMemo(
     () =>

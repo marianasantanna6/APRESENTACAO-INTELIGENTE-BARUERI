@@ -151,11 +151,14 @@ function ActivityLogMobileCard({ entry }: { entry: ActivityLogEntry }) {
         <p className="mt-1 text-[0.97rem] font-bold text-[#3a4651] leading-snug">
           {displayAction}
         </p>
-        {entry.entityName && (
-          <p className="mt-0.5 text-[0.82rem] text-[#8a96a2]">
-            Projeto {entry.entityName}
-          </p>
-        )}
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+          {entry.userName && (
+            <p className="text-[0.82rem] text-[#5d6c78]">{entry.userName}</p>
+          )}
+          {entry.entityName && (
+            <p className="text-[0.82rem] text-[#9aa5b0]">Projeto {entry.entityName}</p>
+          )}
+        </div>
       </div>
     </article>
   );
@@ -737,8 +740,9 @@ export default function AdminAdministrationPage() {
                 <table className="w-full border-separate border-spacing-y-3 text-left">
                   <thead>
                     <tr className="text-[0.75rem] font-semibold uppercase tracking-[0.08em] text-[#b1b1b1]">
-                      <th className="w-[18%] pb-2 pr-4">Data / Hora</th>
-                      <th className="w-[50%] pb-2 px-4">Ação</th>
+                      <th className="w-[16%] pb-2 pr-4">Data / Hora</th>
+                      <th className="w-[32%] pb-2 px-4">Ação</th>
+                      <th className="w-[28%] pb-2 px-4">Usuário</th>
                       <th className="pb-2 px-4">Projeto</th>
                     </tr>
                   </thead>
@@ -752,6 +756,9 @@ export default function AdminAdministrationPage() {
                           </td>
                           <td className="bg-white/72 px-4 py-3">
                             <p className="font-semibold text-[#353535] leading-snug">{displayAction}</p>
+                          </td>
+                          <td className="bg-white/72 px-4 py-3 text-[0.85rem] text-[#5d6c78]">
+                            {entry.userName || "—"}
                           </td>
                           <td className="rounded-r-[18px] bg-white/72 px-4 py-3 text-[0.82rem] text-[#9b9b9b]">
                             {entry.entityName ?? "—"}
