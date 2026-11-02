@@ -330,7 +330,7 @@ export default function AdminAdministrationPage() {
       return true;
     });
   }, [activityLog, logCategory, logPeriod, logDepartment, logSearch]);
-  const scopeDescription = user?.accessLevel === "admin_level_2"
+  const scopeDescription = (user?.master_admin || user?.head_manager || user?.accessLevel === "admin_level_2")
     ? "Você está visualizando funcionários e logs de todas as equipes."
     : `Você está visualizando somente a equipe ${user?.team ?? ""}.`;
 
