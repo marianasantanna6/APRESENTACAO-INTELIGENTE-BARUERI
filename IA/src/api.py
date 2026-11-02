@@ -12,7 +12,7 @@ if str(Path(__file__).resolve().parent) not in sys.path:
 
 from models.request import LegacyResearchRequest, ProjectGenerationRequest  # noqa: E402
 from config.settings import OUTPUT_DIR  # noqa: E402
-from main import ResearchGenerationError, generate_research  # noqa: E402
+from main import ResearchGenerationError, ResearchModelRateLimitError, generate_research  # noqa: E402
 
 
 app = FastAPI(
@@ -72,12 +72,14 @@ def research(
                 "claims": [claim.to_dict() for claim in exc.claims],
             },
         ) from exc
+    except ResearchModelRateLimitError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
     except Exception as exc:
         print(f"[API] Falha não tratada durante pesquisa ({type(exc).__name__}).")
         raise HTTPException(status_code=502, detail="Não foi possível concluir a pesquisa.") from None
 
     if result is None:
-        raise HTTPException(status_code=502, detail="Não foi possível gerar uma apresentação com fontes verificáveis.")
+        raise HTTPException(status_code=502, detail="Não foi possível gerar uma apresentação.")
 
     return ResearchResponse(
         presentation_id=presentation_id,

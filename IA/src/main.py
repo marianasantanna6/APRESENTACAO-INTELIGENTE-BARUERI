@@ -16,11 +16,7 @@ if str(ROOT) not in sys.path:
 
 from chains.research_chain import build_research_chain
 from config.settings import DEFAULT_GEMINI_MODEL, GEMINI_FALLBACK_MODELS, OUTPUT_DIR
-from services.claim_service import (
-    UnsupportedClaimsError,
-    build_claim_evidence,
-    require_supported_claims,
-)
+from services.claim_service import build_claim_evidence
 from services.presentation_service import validate_presentation
 from services.pptx_generator import criar_apresentacao
 from services.research_context import merge_research_context
@@ -44,6 +40,10 @@ class ResearchGenerationError(RuntimeError):
         self.source_status = source_status
         self.claims = claims or []
         super().__init__(message)
+
+
+class ResearchModelRateLimitError(RuntimeError):
+    """O provedor recusou a geração por limite de requisições/quota."""
 
 
 def _output_path(title: str, presentation_id: str | None = None) -> Path:
@@ -77,10 +77,25 @@ def _gemini_status(exc: Exception) -> int | None:
     return None
 
 
+def _gemini_quota_exhausted(exc: Exception) -> bool:
+    for item in _exception_chain(exc):
+        message = str(item).casefold()
+        if any(
+            marker in message
+            for marker in ("resource_exhausted", "quota exceeded", "quotaexceeded")
+        ):
+            return True
+        if "rate limit" in type(item).__name__.casefold():
+            return True
+    return False
+
+
 def _transient_gemini_error(exc: Exception) -> bool:
+    if _gemini_quota_exhausted(exc):
+        return False
     status = _gemini_status(exc)
     if status is not None:
-        return status in {408, 429, 500, 502, 503, 504}
+        return status in {408, 500, 502, 503, 504}
     if isinstance(exc, (TimeoutError, ConnectionError)):
         return True
     return any(
@@ -102,52 +117,10 @@ def _gemini_retry_after(exc: Exception) -> float | None:
 
 
 def _repair_feedback(error: ValueError) -> str:
-    message = str(error)
-    if "Há afirmações sem correspondência textual ou numérica suficiente" in message:
-        return (
-            f"Erro de validação: {message}\n"
-            "Remova ou reescreva as afirmações indicadas para que cada uma seja sustentada "
-            "pelas fontes citadas. Não invente números, relações ou conclusões; se não houver "
-            "evidência explícita, omita a afirmação."
-        )
-
-    quote_error = re.search(
-        r"A citação do slide (\d+) excede (\d+) caracteres", message, re.IGNORECASE
-    )
-    if quote_error:
-        slide_number, limit = quote_error.groups()
-        return (
-            f"Erro de validação: {message}\n"
-            f"Corrija o slide {slide_number}: use em 'citacao.texto' um trecho literal e contíguo, "
-            f"copiado de uma fonte citada nesse slide, com no máximo {limit} caracteres. "
-            "Não resuma nem parafraseie. Se nenhuma fonte citada tiver um trecho adequado nesse limite, "
-            "troque o layout para um que não seja 'destaque_citacao' e defina 'citacao' como null. "
-            "Preserve as afirmações factuais apenas se continuarem sustentadas pelas fontes."
-        )
-
-    source_error = re.search(
-        r"O slide (\d+) \(([^)]+)\) precisa citar pelo menos uma fonte válida", message
-    )
-    if source_error:
-        slide_number, layout = source_error.groups()
-        return (
-            f"Erro de validação: {message}\n"
-            f"Corrija o slide {slide_number} ({layout}): preencha 'fontes' com pelo menos um ID existente "
-            "na lista de fontes fornecidas e que sustente o conteúdo/título do slide. Isso também vale para "
-            "divisores de seção. Não invente IDs. Se nenhum dado puder ser sustentado, remova o slide ou "
-            "reformule-o usando somente conteúdo apoiado pelas fontes; não deixe fontes vazias."
-        )
-
-    if "só pode ser preenchido no layout 'destaque_citacao'" in message:
-        return (
-            f"Erro de validação: {message}\n"
-            "Use 'citacao' somente no layout 'destaque_citacao'. Nos demais layouts, defina 'citacao' como null."
-        )
-
     return (
-        f"Erro de validação: {message}\n"
+        f"Erro de validação: {error}\n"
         "Corrija o objeto JSON completo para cumprir o contrato e todos os limites visuais por layout. "
-        "Preserve somente afirmações sustentadas pelas fontes fornecidas, use IDs existentes e não invente dados."
+        "Fontes e citações são opcionais; nunca invente IDs ou apresente conteúdo não verificado como dado oficial."
     )
 
 
@@ -208,13 +181,16 @@ def generate_research(
         contexto.resumo_wiki = "\n\n".join(
             part for part in (contexto.resumo_wiki, project_source) if part
         )
-    if contexto is not None:
-        contexto.request_context = request_context or {}
-    if not contexto:
-        raise ResearchGenerationError(
-            "Não foi possível obter fontes atuais nem memórias RAG com referências verificáveis.",
-            source_status,
+    if contexto is None:
+        contexto = ResearchData(
+            title=tema,
+            resumo_wiki="",
+            keywords=extract_keywords(tema),
+            detectar_intencao=detect_intent(tema),
+            query=tema,
+            source_status=source_status,
         )
+    contexto.request_context = request_context or {}
 
     if live_context.fontes:
         live_context.detectar_intencao = detect_intent(tema)
@@ -236,7 +212,6 @@ def generate_research(
 
     modelos = list(dict.fromkeys([DEFAULT_GEMINI_MODEL, *GEMINI_FALLBACK_MODELS]))
     ultimo_erro = None
-    unsupported_claims = []
     contexto_ia = contexto.to_chain_input()
 
     for modelo in modelos:
@@ -274,9 +249,13 @@ def generate_research(
                     continue
                 print(f"[AVISO] O modelo {modelo} continuou retornando JSON inválido: {exc}")
                 break
-            except GoogleGenerativeAIError as exc:
+            except Exception as exc:
+                if not isinstance(exc, GoogleGenerativeAIError) and _gemini_status(exc) is None:
+                    raise
                 ultimo_erro = exc
                 print(f"[AVISO] O modelo {modelo} falhou ao gerar a resposta ({type(exc).__name__}).")
+                if _gemini_status(exc) == 429:
+                    break
                 if not _transient_gemini_error(exc):
                     print("[ERRO] Falha permanente do provedor/modelo; não serão feitas novas chamadas de modelo.")
                     return None
@@ -285,13 +264,7 @@ def generate_research(
             try:
                 candidate = validate_presentation(resposta, contexto.fontes, tema)
                 claims = build_claim_evidence(candidate, contexto.fontes)
-                try:
-                    require_supported_claims(claims)
-                except UnsupportedClaimsError as exc:
-                    unsupported_claims = exc.claims
-                    raise
                 apresentacao = candidate
-                unsupported_claims = []
             except ValueError as exc:
                 ultimo_erro = exc
                 if tentativa == 0:
@@ -307,9 +280,14 @@ def generate_research(
             continue
 
         if rag_status == "unavailable":
-            apresentacao["limitacoes"].append(
-                "A recuperação RAG não ficou disponível; a apresentação usou somente as fontes atuais da pesquisa."
-            )
+            if contexto.fontes:
+                apresentacao["limitacoes"].append(
+                    "A recuperação RAG não ficou disponível; a apresentação usou somente as fontes atuais da pesquisa."
+                )
+            else:
+                apresentacao["limitacoes"].append(
+                    "A recuperação RAG não ficou disponível e nenhuma fonte externa foi encontrada."
+                )
         elif rag_status in {"no_results", "no_new_sources"}:
             apresentacao["limitacoes"].append(
                 "A busca RAG não encontrou fontes anteriores adicionais com relevância e referências verificáveis."
@@ -346,12 +324,11 @@ def generate_research(
             source_status=source_status,
         )
 
-    if unsupported_claims:
-        raise ResearchGenerationError(
-        "A apresentação foi rejeitada porque contém afirmações sem suporte suficiente.",
-        source_status,
-        unsupported_claims,
-        )
+    if ultimo_erro is not None and _gemini_status(ultimo_erro) == 429:
+        raise ResearchModelRateLimitError(
+            "O provedor de IA atingiu o limite de requisições. Tente novamente mais tarde "
+            "ou configure outro modelo/provedor."
+        ) from ultimo_erro
     print(f"[ERRO] Não foi possível gerar uma apresentação válida: {ultimo_erro}")
     return None
 

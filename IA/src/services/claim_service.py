@@ -109,8 +109,6 @@ def build_claim_evidence(presentation: dict, sources: list[ResearchSource]) -> l
     claims: list[ClaimEvidence] = []
     for slide_index, slide in enumerate(presentation.get("slides", []), start=1):
         source_ids = list(slide.get("fontes") or [])
-        if not source_ids:
-            continue
         prefix = f"slide_{slide_index:02d}"
         support_text = slide.get("texto_apoio") or ""
         if support_text:

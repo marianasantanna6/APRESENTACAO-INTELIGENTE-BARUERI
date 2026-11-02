@@ -17,11 +17,11 @@ backend/logs/
 # IA
 # =========================
 
+.venv
 IA/assets
 IA/output
 IA/tests
 IA/supabase
-IA/estiliza_o_e_configura_o_pptx.md
 
 
 # =========================

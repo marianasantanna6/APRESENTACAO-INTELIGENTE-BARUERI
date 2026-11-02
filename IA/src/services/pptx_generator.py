@@ -352,6 +352,18 @@ def _add_source_footer(
     if source_ids:
         add_text_box(slide, "Fontes: " + " · ".join(source_ids), 0.35, 6.55, 8.6, 0.26,
                      8, False, _color("#556273" if light_background else "#B0BAC8"))
+    else:
+        add_text_box(
+            slide,
+            "Sem fontes vinculadas — conteúdo não verificado",
+            0.35,
+            6.55,
+            8.6,
+            0.26,
+            8,
+            False,
+            _color("#556273" if light_background else "#B0BAC8"),
+        )
     _add_branding(slide, guide, assets_dir, ods=True, light_background=light_background)
 
 
@@ -509,11 +521,12 @@ def _draw_content(slide, data: dict, style: dict, guide: dict, assets: Path) -> 
 def _draw_quote(slide, data: dict, style: dict, guide: dict, assets: Path) -> None:
     _add_background(slide, "destaque_citacao", style, guide, assets)
     quote = data.get("citacao") or {}
-    text = quote.get("texto") if isinstance(quote, dict) else ""
-    text = text or data.get("texto_apoio") or data.get("titulo") or ""
+    citation_text = quote.get("texto") if isinstance(quote, dict) else ""
+    text = citation_text or data.get("texto_apoio") or data.get("titulo") or ""
     quote_element = _element(style, "texto_destaque")
     quote_x, quote_y = _xy(quote_element, 0.75, 1.7)
-    add_text_box(slide, f"“{text}”", quote_x, quote_y, 11.8, 2.8,
+    displayed_text = f"“{text}”" if citation_text else text
+    add_text_box(slide, displayed_text, quote_x, quote_y, 11.8, 2.8,
                  _font_size(quote_element, 42), True, _color(quote_element.get("cor", "#F5C518")))
     author = quote.get("autor") if isinstance(quote, dict) else ""
     if author:
@@ -717,7 +730,7 @@ def criar_apresentacao(presentation: dict, caminho_saida: str | Path, assets_dir
     for index, slide_data in enumerate(slides):
         # Keep the public, validated slide contract unchanged for API callers.
         data = dict(slide_data)
-        if index == end_index:
+        if index == end_index and presentation.get("fontes"):
             reference_slide = prs.slides.add_slide(blank_layout)
             _draw_references(
                 reference_slide,

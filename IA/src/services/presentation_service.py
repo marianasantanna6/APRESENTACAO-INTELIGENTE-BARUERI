@@ -26,14 +26,24 @@ def _string_list(value: object, field: str) -> list[str]:
     return [item.strip() for item in value if item.strip()]
 
 
-def _source_ids(value: object, known_ids: set[str], slide_number: int) -> list[str]:
-    ids = _string_list(value, f"slides[{slide_number}].fontes")
+def _source_ids(
+    value: object, known_ids: set[str], slide_number: int
+) -> tuple[list[str], list[str]]:
+    field = f"slides[{slide_number}].fontes"
+    if value is None:
+        return [], []
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        return [], [f"O campo '{field}' foi ignorado por não ser uma lista de textos."]
+    ids = [item.strip() for item in value if item.strip()]
     unknown = sorted(set(ids).difference(known_ids))
+    valid_ids = list(dict.fromkeys(source_id for source_id in ids if source_id in known_ids))
+    warnings = []
     if unknown:
-        raise ValueError(
-            f"O slide {slide_number + 1} cita IDs de fonte inexistentes: {', '.join(unknown)}."
+        warnings.append(
+            f"Slide {slide_number + 1}: IDs de fontes inexistentes foram ignorados: "
+            f"{', '.join(unknown)}."
         )
-    return list(dict.fromkeys(ids))
+    return valid_ids, warnings
 
 
 def _validate_kpis(
@@ -123,6 +133,7 @@ def validate_presentation(
     canonical_sources = {source.id: source for source in sources}
     known_ids = set(canonical_sources)
     slides: list[dict] = []
+    validation_limitations: list[str] = []
     for slide_number, raw in enumerate(raw_slides):
         if not isinstance(raw, Mapping):
             raise ValueError(f"O slide {slide_number + 1} precisa ser um objeto JSON.")
@@ -161,7 +172,10 @@ def validate_presentation(
             )
 
         kpis = _validate_kpis(raw.get("kpis"), slide_number, max_kpis, max_kpi_label_words)
-        source_ids = _source_ids(raw.get("fontes"), known_ids, slide_number)
+        source_ids, source_warnings = _source_ids(
+            raw.get("fontes"), known_ids, slide_number
+        )
+        validation_limitations.extend(source_warnings)
         tags = _string_list(raw.get("tags"), f"slides[{slide_number}].tags")
         if len(tags) > max_tags:
             raise ValueError(f"O slide {slide_number + 1} excede o limite de {max_tags} tags.")
@@ -185,14 +199,7 @@ def validate_presentation(
                 raise ValueError(f"Os pontos do bloco {block_index} excedem os limites visuais.")
             normalized_blocks.append({"titulo": block_title, "pontos": block_points})
 
-        citation = raw.get("citacao") or {}
-        if citation and not isinstance(citation, Mapping):
-            raise ValueError(f"A citação do slide {slide_number + 1} precisa ser um objeto.")
-        if citation and layout != "destaque_citacao":
-            raise ValueError(
-                f"O slide {slide_number + 1} usa citacao, mas o campo só pode ser preenchido no layout 'destaque_citacao'. "
-                "Em outros layouts, use citacao null."
-            )
+        citation = raw.get("citacao")
         recognition = raw.get("reconhecimentos") or []
         if not isinstance(recognition, list) or len(recognition) > max_recognitions:
             raise ValueError(
@@ -209,39 +216,55 @@ def validate_presentation(
             })
         normalized_citation = {}
         if citation:
-            normalized_citation = {
-                "texto": _as_text(citation.get("texto"), "citacao.texto"),
-                "autor": _as_text(citation.get("autor"), "citacao.autor", allow_empty=True),
-            }
-            quote_limit = int(
-                next(
-                    (element for element in layout_catalog.get(layout, {}).get("elementos", [])
-                     if element.get("id") == "texto_destaque"),
-                    {},
-                ).get("max_chars", 10_000)
-            )
-            if len(normalized_citation["texto"]) > quote_limit:
-                raise ValueError(f"A citação do slide {slide_number + 1} excede {quote_limit} caracteres.")
-            quote = re.sub(r"\s+", " ", normalized_citation["texto"]).strip().casefold()
-            cited_extracts = [
-                re.sub(r"\s+", " ", canonical_sources[source_id].extract).strip().casefold()
-                for source_id in source_ids
-            ]
-            if not any(quote in extract for extract in cited_extracts):
-                raise ValueError(
-                    f"A citação literal do slide {slide_number + 1} não aparece exatamente nas fontes citadas."
+            citation_issue = None
+            if not isinstance(citation, Mapping):
+                citation_issue = "o campo não é um objeto"
+            elif layout != "destaque_citacao":
+                citation_issue = "o layout do slide não é destaque_citacao"
+            else:
+                try:
+                    candidate_citation = {
+                        "texto": _as_text(citation.get("texto"), "citacao.texto"),
+                        "autor": _as_text(
+                            citation.get("autor"), "citacao.autor", allow_empty=True
+                        ),
+                    }
+                    quote_limit = int(
+                        next(
+                            (
+                                element
+                                for element in layout_catalog.get(layout, {}).get("elementos", [])
+                                if element.get("id") == "texto_destaque"
+                            ),
+                            {},
+                        ).get("max_chars", 10_000)
+                    )
+                    if len(candidate_citation["texto"]) > quote_limit:
+                        citation_issue = f"o texto excede {quote_limit} caracteres"
+                    else:
+                        quote = re.sub(
+                            r"\s+", " ", candidate_citation["texto"]
+                        ).strip().casefold()
+                        cited_extracts = [
+                            re.sub(
+                                r"\s+", " ", canonical_sources[source_id].extract
+                            ).strip().casefold()
+                            for source_id in source_ids
+                        ]
+                        if any(quote in extract for extract in cited_extracts):
+                            normalized_citation = candidate_citation
+                        else:
+                            citation_issue = "o trecho literal não foi encontrado nas fontes citadas"
+                except ValueError as exc:
+                    citation_issue = str(exc)
+            if citation_issue:
+                validation_limitations.append(
+                    f"Slide {slide_number + 1}: citação ignorada porque {citation_issue}."
                 )
-        if layout == "destaque_citacao" and not normalized_citation:
-            raise ValueError(
-                f"O layout de citação do slide {slide_number + 1} exige texto literal verificável."
-            )
-
-        has_claims = bool(support_text or points or kpis or tags or normalized_blocks or normalized_citation or normalized_recognition)
-        if (has_claims or layout not in {"capa", "encerramento"}) and not source_ids:
-            raise ValueError(
-                f"O slide {slide_number + 1} ({layout}) precisa citar pelo menos uma fonte válida em 'fontes'. "
-                "Todos os layouts, inclusive divisor_secao e slides sem pontos, exigem fonte; "
-                "somente capa e encerramento podem ficar sem fontes."
+        elif layout == "destaque_citacao":
+            validation_limitations.append(
+                f"Slide {slide_number + 1}: sem citação literal verificável; "
+                "o texto será exibido sem aspas."
             )
 
         slides.append({
@@ -289,7 +312,11 @@ def validate_presentation(
     limitations = _string_list(payload.get("limitacoes"), "limitacoes")
     cited_ids = list(dict.fromkeys(source_id for slide in slides for source_id in slide["fontes"]))
     if not cited_ids:
-        raise ValueError("Nenhuma fonte foi citada. A apresentação acadêmica precisa de referências verificáveis.")
+        limitations.append(
+            "Nenhuma fonte verificável foi vinculada aos slides; o conteúdo não deve ser "
+            "interpretado como verificado por fontes externas."
+        )
+    limitations.extend(validation_limitations)
     return {
         "titulo": title,
         "subtitulo": subtitle,

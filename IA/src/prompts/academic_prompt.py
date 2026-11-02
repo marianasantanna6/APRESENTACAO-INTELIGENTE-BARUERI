@@ -1,11 +1,8 @@
 '''Desgraca'''
 
 import json
-
 from langchain_core.prompts import PromptTemplate
-
 from config.pptx_style import load_style_guide, title_character_limit
-
 
 ACADEMIC_PROMPT_TEMPLATE = """
 Você é um pesquisador acadêmico que prepara apresentações institucionais claras e verificáveis.
@@ -29,16 +26,15 @@ Erro de validação a corrigir, se houver:
 {feedback_validacao}
 
 Regras de pesquisa e redação:
-- Não use memória, conhecimento geral nem navegação externa.
+- Priorize as fontes fornecidas e o contexto do projeto. Não afirme que URLs do DTO foram acessadas ou verificadas.
 - Quando o registro do projeto estiver presente, use seus dados para descrever o projeto, público, objetivos, tecnologias, indicadores e reconhecimentos, sem alterar valores, datas ou nomes. Cite "dados_projeto_01" nos slides que usarem esses dados; essa referência identifica somente o registro recebido do backend e não significa verificação externa.
-- Trate URLs recebidas no DTO como referências declaradas, não como páginas consultadas. Não afirme que foram acessadas ou verificadas.
 - Ignore identificadores administrativos e não os exponha nos slides.
-- Use fontes externas recuperadas para fatos gerais e afirmações que não constem do registro do projeto. Se não houver suporte, indique a limitação e não invente.
-- Não invente afirmações, métricas, datas, autores, contatos, URLs ou identificadores.
-- Toda afirmação factual de um slide deve ser sustentada por dados explicitamente presentes no registro do projeto ou por um ou mais IDs existentes nas fontes.
-- Em cada slide factual, preencha "fontes" com pelo menos um ID exatamente como aparece nas fontes fornecidas.
+- Use fontes externas recuperadas para fatos gerais quando estiverem disponíveis. Se faltarem fontes, ainda assim produza os slides solicitados, mas identifique claramente o conteúdo como não verificado e não invente estatísticas, datas, autores, URLs ou identificadores.
+- Diferencie dados declarados pelo projeto, fatos apoiados por fontes e explicações gerais da IA. Não apresente conteúdo não verificado como dado oficial.
+- "fontes" é opcional em todos os slides. Preencha somente com IDs existentes nas fontes fornecidas; use lista vazia quando não houver fonte adequada. Nunca invente IDs.
+- "citacao" é opcional. Use-a somente para um trecho literal encontrado em uma fonte citada; se não houver trecho adequado, use null e continue a apresentação normalmente.
 - Diferencie fatos, análises e projeções; só apresente projeções explicitamente descritas nas fontes.
-- Se houver lacunas, conflitos ou fontes insuficientes, descreva-os em "limitacoes" e omita dados não comprovados.
+- Se houver lacunas, conflitos ou fontes insuficientes, descreva-os em "limitacoes" e sinalize as informações que não puderam ser verificadas.
 - Escreva em português claro, com tom acadêmico e sem linguagem promocional.
 - Não use dados municipais fixos do guia visual. Inclua um slide de dados de Barueri somente se os dados aparecerem nas fontes recebidas.
 
@@ -123,8 +119,8 @@ def build_prompt_template() -> PromptTemplate:
             ],
         },
         "fontes": {
-            "obrigatorias_em_todos_os_layouts_exceto": ["capa", "encerramento"],
-            "inclui_layouts_estruturais": True,
+            "obrigatorias": False,
+            "use_lista_vazia_quando_nao_houver_fonte": True,
         },
     }
 
@@ -140,7 +136,7 @@ def build_prompt_template() -> PromptTemplate:
                 "texto_apoio": f"até {max_support_words} palavras ou null",
                 "pontos": [f"ponto objetivo de até {max_words_per_point} palavras"],
                 "kpis": [{"valor": "valor citado", "unidade": "unidade ou null", "label": f"rótulo de até {max_kpi_label_words} palavras"}],
-                "fontes": ["fonte_01"],
+                "fontes": [],
                 "imagem_descricao": "descrição de imagem desejada ou null",
                 "tags": ["termo"],
                 "blocos": [{"titulo": "título curto", "pontos": ["ponto breve"]}],
@@ -151,14 +147,14 @@ def build_prompt_template() -> PromptTemplate:
         "limitacoes": ["limitação factual, conflito ou ausência de dados"],
         "regras_de_contrato": [
             "A primeira apresentação é capa e a última é encerramento; inclua-as em slides.",
-            "fontes contém apenas IDs das fontes fornecidas; nunca crie ou altere IDs.",
+            "fontes é opcional e contém apenas IDs fornecidos; use lista vazia quando não houver fonte.",
             "O título da apresentação também é o título exibido na capa e deve respeitar o limite de capa.",
-            "Todo slide, inclusive divisor_secao e slides sem pontos, deve citar ao menos uma fonte válida; somente capa e encerramento podem usar fontes vazias.",
-            f"Use citacao somente com o layout destaque_citacao; o texto deve ser literal, estar em uma fonte citada e ter no máximo {quote_limit} caracteres.",
-            "Se não houver trecho literal curto que cumpra essas regras, não use destaque_citacao; escolha outro layout e deixe citacao como null.",
+            "Fontes e citações são opcionais; nunca invente um ID ou apresente paráfrase como citação literal.",
+            f"Quando usada, citacao deve estar no layout destaque_citacao, ser literal, estar em uma fonte citada e ter no máximo {quote_limit} caracteres.",
+            "Se não houver trecho literal adequado, use citacao null; o sistema exibirá o slide sem aspas.",
             "Use listas vazias e null quando um campo não se aplicar.",
             "Não devolva URL ou metadados de fonte: o sistema os anexa a partir das fontes verificadas.",
-            "A página de referências é criada automaticamente pelo sistema; não crie um slide de referências.",
+            "A página de referências é criada automaticamente quando houver fontes citadas; não crie um slide de referências.",
         ],
     }
     return PromptTemplate.from_template(ACADEMIC_PROMPT_TEMPLATE).partial(
