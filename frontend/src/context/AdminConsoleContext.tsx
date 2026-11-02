@@ -2,11 +2,11 @@ import type { PropsWithChildren } from "react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { canManageEmployees, canViewCrossTeamData, mapAccessLevel } from "../lib/accessControl";
 import {
-  mockActivityLog,
   mockApiIntegrations,
   mockPresentations,
 } from "../mocks/adminMockData";
-import type { EmployeeDirectoryEntry, NewEmployeePayload, NewSetorPayload, NewTimePayload, SetorEntry, TimeEntry } from "../types/admin";
+import { authFetch } from "../lib/apiClient";
+import type { ActivityLogEntry, EmployeeDirectoryEntry, NewEmployeePayload, NewSetorPayload, NewTimePayload, SetorEntry, TimeEntry } from "../types/admin";
 import { useAuth } from "./AuthContext";
 
 type MutationResult =
@@ -16,7 +16,7 @@ type MutationResult =
 type EmployeeMutationResult = MutationResult;
 
 type AdminConsoleContextValue = {
-  activityLog: typeof mockActivityLog;
+  activityLog: ActivityLogEntry[];
   apiIntegrations: typeof mockApiIntegrations;
   employees: EmployeeDirectoryEntry[];
   presentations: typeof mockPresentations;
@@ -48,7 +48,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
   const [presentationsState] = useState(mockPresentations);
   const [apiIntegrations] = useState(mockApiIntegrations);
   const [employeesState, setEmployeesState] = useState<EmployeeDirectoryEntry[]>([]);
-  const [activityLogState, setActivityLogState] = useState(mockActivityLog);
+  const [activityLogState, setActivityLogState] = useState<ActivityLogEntry[]>([]);
   const [setoresState, setSetoresState] = useState<SetorEntry[]>([]);
   const [timesState, setTimesState] = useState<TimeEntry[]>([]);
 
@@ -92,6 +92,34 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
   const allowCrossTeamData = canViewCrossTeamData(user);
   const allowEmployeeManagement = canManageEmployees(user);
 
+  useEffect(() => {
+    if (!user) return;
+    const ACTION_LABEL: Record<string, string> = {
+      criou:    "Projeto criado",
+      editou:   "Projeto editado",
+      aprovou:  "Projeto aprovado",
+      inativou: "Projeto arquivado",
+    };
+    authFetch("/api/projects-logs")
+      .then((res) => res.ok ? res.json() : Promise.reject())
+      .then((data: { id: string; user: string; action: string; project: string; moment: string }[]) => {
+        setActivityLogState(data.map((log) => ({
+          id: log.id,
+          timestamp: log.moment,
+          type: ACTION_LABEL[log.action] ?? log.action,
+          action: ACTION_LABEL[log.action] ?? log.action,
+          source: "Sistema",
+          userName: `#${log.user}`,
+          department: "",
+          team: "",
+          entityName: `#${log.project}`,
+          entityType: "projeto",
+          entityId: log.project,
+        })));
+      })
+      .catch(() => {});
+  }, [user]);
+
   const presentations = useMemo(
     () =>
       user
@@ -112,15 +140,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     [allowCrossTeamData, employeesState, user],
   );
 
-  const activityLog = useMemo(
-    () =>
-      user
-        ? activityLogState.filter(
-            (entry) => allowCrossTeamData || entry.team === user.team,
-          )
-        : [],
-    [activityLogState, allowCrossTeamData, user],
-  );
+  const activityLog = activityLogState;
 
   async function addEmployee(payload: NewEmployeePayload): Promise<EmployeeMutationResult> {
     if (!user || !allowEmployeeManagement) {
@@ -212,25 +232,6 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     setEmployeesState((current) =>
       current.filter((employee) => employee.id !== employeeId),
     );
-    setActivityLogState((current) => [
-      {
-        id: createId("log"),
-        timestamp: new Date().toISOString(),
-        source: "Administração",
-        type: "Funcionário removido",
-        category: "Usuários" as const,
-        action: "Usuário removido da plataforma",
-        entityName: targetEmployee.name,
-        entityType: "usuário",
-        userName: user.name,
-        userRole: "Administrador Geral",
-        department: targetEmployee.department,
-        team: targetEmployee.team,
-        status: "warning" as const,
-        updateType: "manual" as const,
-      },
-      ...current,
-    ]);
 
     return { ok: true };
   }
