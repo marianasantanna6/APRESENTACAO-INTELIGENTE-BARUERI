@@ -76,6 +76,7 @@ import type {
   PresentationModuleId,
 } from "../../types/institutionalPresentation";
 import type { ProjectCategory, ProjectSummary } from "../../types/project";
+import { authFetch } from "../../lib/apiClient";
 import { ROUTE_PATHS } from "../../router/paths";
 import { buildPresentationSearchParams } from "../../router/presentationSearchParams";
 
@@ -216,6 +217,10 @@ const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query)
   const [isSaving, setIsSaving]   = useState(false);
   const [saveError, setSaveError] = useState("");
 
+  // ── Resultado da geração (preenchido após handleGenerate) ──
+  const [generatedPresentationId, setGeneratedPresentationId] = useState<string | null>(null);
+  const [generatedDownloadUrl, setGeneratedDownloadUrl]       = useState<string | null>(null);
+
   // Carrega projetos ao entrar na etapa 2
   useEffect(() => {
     if (step !== 2 || allProjects.length > 0) return;
@@ -283,16 +288,6 @@ const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query)
       setTemplateBanner(template.name);
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Inicializa módulos ao entrar na etapa 3
-  useEffect(() => {
-    if (step !== 3 || moduleConfigs.length > 0) return;
-    const selectedProjs = allProjects.filter((p) => selectedIds.has(p.id));
-    const secondaryFocuses = ed.draft.categories.slice(1) as string[];
-    const suggested = suggestModules(selectedProjs, primaryCategory, eventType, secondaryFocuses);
-    setModuleConfigs(suggested);
-    setSuggestedIds(new Set(suggested.filter((m) => m.enabled).map((m) => m.moduleId)));
-  }, [step, allProjects, selectedIds, primaryCategory, eventType, ed.draft.categories, moduleConfigs.length]);
 
   // Scroll-spy: destaca seção ativa no nav lateral
   useEffect(() => {
@@ -424,6 +419,32 @@ const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query)
     setIsSaving(true);
     try {
       const secondaryFocuses = ed.draft.categories.slice(1) as string[];
+
+      // Chama o serviço de IA para gerar o PPTX real
+      let downloadUrl: string | undefined;
+      try {
+        const aiRes = await authFetch("/api/ai/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            eventName:        eventName.trim() || primaryCategory,
+            eventType:        (eventType as EventType) || "outro",
+            audience:         audience.trim() || ed.draft.targetAudience.join(", "),
+            mainFocus:        primaryCategory,
+            language,
+            selectedProjects: [...selectedIds],
+            moduleConfigs,
+          }),
+          signal: AbortSignal.timeout(6 * 60 * 1000),
+        });
+        if (aiRes.ok) {
+          const aiData = await aiRes.json() as { downloadUrl?: string };
+          downloadUrl = aiData.downloadUrl;
+        }
+      } catch {
+        // Serviço de IA indisponível — prossegue sem download de PPTX
+      }
+
       const presentation = await presentationService.createPresentation({
         title:            eventName.trim() || ed.draft.name.trim() || `Apresentação — ${primaryCategory}`,
         eventName:        eventName.trim() || primaryCategory,
@@ -440,44 +461,34 @@ const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query)
         notes:            search.trim(),
       });
 
-      // Se o usuário preencheu a identidade do projeto, persiste como projeto institucional
-      if (ed.draft.name.trim()) {
-        projectService.createProject({
-          name:               ed.draft.name,
-          shortDescription:   ed.draft.shortDescription,
-          fullDescription:    ed.draft.fullDescription,
-          mainDepartment:     ed.draft.mainDepartment,
-          relatedDepartments: ed.draft.relatedDepartments,
-          governmentArea:     ed.draft.governmentArea,
-          categories:         ed.draft.categories,
-          technologies:       ed.draft.technologies,
-          keywords:           ed.draft.keywords,
-          targetAudience:     ed.draft.targetAudience,
-          status:             ed.draft.status,
-          implementationDate: ed.draft.implementationDate,
-          indicators:         ed.draft.indicators,
-          images:             ed.draft.images,
-          videos:             ed.draft.videos,
-          officialLinks:      ed.draft.officialLinks,
-          awards:             ed.draft.awards,
-          ods:                ed.draft.ods,
-          sources:            ed.draft.sources,
-          updatedBy:          user?.id ?? "unknown",
-          createdByUserId:    user?.id ?? "unknown",
-        }).catch(() => {}); // não bloqueia a navegação
-      }
+      // Inicializa módulos para a etapa de visibilidade (step 3)
+      const selectedProjs = allProjects.filter((p) => selectedIds.has(p.id));
+      const suggested = suggestModules(selectedProjs, primaryCategory, eventType, secondaryFocuses);
+      setModuleConfigs(suggested);
+      setSuggestedIds(new Set(suggested.filter((m) => m.enabled).map((m) => m.moduleId)));
 
-      const params = buildPresentationSearchParams({
-        query:    search.trim() || DEFAULT_PRESENTATION_FILTERS.query,
-        category: primaryCategory,
-        year:     DEFAULT_PRESENTATION_FILTERS.year,
-      });
-      params.set("pid", presentation.id);
-      navigate(`${ROUTE_PATHS.generatedPresentation}?${params.toString()}`);
+      // Guarda IDs para navegar no Concluir
+      setGeneratedPresentationId(presentation.id);
+      setGeneratedDownloadUrl(downloadUrl ?? null);
+
+      setStep(3);
     } catch {
       setSaveError("Erro ao salvar a apresentação. Tente novamente.");
+    } finally {
       setIsSaving(false);
     }
+  }
+
+  function handleFinish() {
+    if (!generatedPresentationId) return;
+    const params = buildPresentationSearchParams({
+      query:    search.trim() || DEFAULT_PRESENTATION_FILTERS.query,
+      category: primaryCategory,
+      year:     DEFAULT_PRESENTATION_FILTERS.year,
+    });
+    params.set("pid", generatedPresentationId);
+    if (generatedDownloadUrl) params.set("dlUrl", generatedDownloadUrl);
+    navigate(`${ROUTE_PATHS.generatedPresentation}?${params.toString()}`);
   }
 
   const activeModuleCount = moduleConfigs.filter((m) => m.enabled && !m.hidden).length;
@@ -919,26 +930,36 @@ const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query)
               </div>
             )}
 
+            {saveError && (
+              <p className="mt-4 rounded-xl bg-[#fef2f2] px-4 py-2 text-[0.88rem] text-[#b91c1c]">
+                {saveError}
+              </p>
+            )}
             <StepNav
-              onBack={() => setStep(1)}
-              onNext={() => setStep(3)}
-              nextLabel="Montar Módulos"
-              skipLabel="Avançar sem selecionar projetos"
-              onSkip={() => setStep(3)}
+              onBack={() => { setSaveError(""); setStep(1); }}
+              onNext={isSaving ? undefined : handleGenerate}
+              nextLabel={isSaving ? "Gerando…" : "Gerar Apresentação"}
+              skipLabel={isSaving ? undefined : "Avançar sem selecionar projetos"}
+              onSkip={isSaving ? undefined : handleGenerate}
             />
+            {isSaving && (
+              <div className="mt-4 flex items-center justify-center gap-2 text-[0.88rem] text-[#1675b8]">
+                <FiLoader className="h-4 w-4 animate-spin" />
+                <span>Enviando para a IA e gerando apresentação…</span>
+              </div>
+            )}
           </section>
         )}
 
-        {/* ── Etapa 3 — Módulos ── */}
+        {/* ── Etapa 3 — Ajuste de slides (pós-geração da IA) ── */}
         {step === 3 && (
           <section className="mx-auto max-w-[1100px]">
             <div className="mb-6">
               <h2 className="text-[1.8rem] font-extrabold tracking-[-0.04em] text-[#1e1e1e] sm:text-[2.4rem]">
-                Módulos da Apresentação
+                Ajuste os Slides
               </h2>
               <p className="mt-1 text-[0.94rem] text-[#706e6e]">
-                O sistema sugeriu módulos com base nos projetos e no tipo de evento.
-                Ajuste, reordene, oculte ou duplique conforme necessário.
+                Apresentação gerada! Reordene, oculte, duplique ou desative slides conforme necessário.
               </p>
             </div>
 
@@ -952,7 +973,7 @@ const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query)
                 <div className="space-y-2">
                   <div className="mb-3 flex items-center justify-between">
                     <p className="text-[0.82rem] font-bold uppercase tracking-widest text-[#9ca3af]">
-                      Módulos ({activeModuleCount} ativos)
+                      Slides ({activeModuleCount} ativos)
                     </p>
                     <button
                       type="button"
@@ -1043,36 +1064,26 @@ const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query)
                       />
                       <SummaryRow
                         icon={<FiGrid className="h-4 w-4" />}
-                        label="Módulos ativos"
+                        label="Slides ativos"
                         value={`${activeModuleCount} de ${moduleConfigs.length}`}
                         highlight={activeModuleCount > 0}
                       />
                     </div>
 
-                    {saveError && (
-                      <p className="mt-4 rounded-xl bg-[#fef2f2] px-3 py-2 text-[0.84rem] text-[#b91c1c]">
-                        {saveError}
-                      </p>
-                    )}
-
                     <button
                       type="button"
-                      onClick={handleGenerate}
-                      disabled={isSaving || activeModuleCount === 0}
+                      onClick={handleFinish}
+                      disabled={activeModuleCount === 0}
                       className="mt-6 flex w-full items-center justify-center gap-2.5 rounded-full bg-[linear-gradient(90deg,#1675b8_0%,#1255a0_100%)] py-3.5 text-[1rem] font-bold text-white shadow-[0_10px_24px_-10px_rgba(22,117,184,0.6)] transition hover:-translate-y-0.5 disabled:opacity-60"
                     >
-                      {isSaving ? (
-                        <><FiLoader className="h-4.5 w-4.5 animate-spin" /> Gerando…</>
-                      ) : (
-                        <><FiZap className="h-4.5 w-4.5" /> Gerar Apresentação</>
-                      )}
+                      <FiCheck className="h-4.5 w-4.5" /> Concluir
                     </button>
                   </div>
                 </div>
               </div>
             )}
 
-            <StepNav onBack={goToStep2} />
+            <StepNav onBack={() => setStep(2)} />
           </section>
         )}
       </main>
@@ -1264,7 +1275,7 @@ function StepIndicator({ currentStep }: { currentStep: 1 | 2 | 3 }) {
   const steps = [
     { n: 1, label: "Contexto" },
     { n: 2, label: "Projetos" },
-    { n: 3, label: "Módulos" },
+    { n: 3, label: "Visibilidade" },
   ];
 
   return (

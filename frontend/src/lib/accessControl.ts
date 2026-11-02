@@ -29,6 +29,7 @@ export function canCreatePresentations(user: AuthSessionUser | null) {
 export function canAccessAdminModules(user: AuthSessionUser | null) {
   if (!user) return false;
   if (user.master_admin) return true;
+  if (user.head_manager) return true;
   return isAdminAccessLevel(user.accessLevel);
 }
 

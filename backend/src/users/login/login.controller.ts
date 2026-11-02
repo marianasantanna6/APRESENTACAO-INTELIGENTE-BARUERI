@@ -1,7 +1,7 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { LoginService } from './login.service';
 
-@Controller('login')
+@Controller('login') //Rota pai
 export class LoginController {
   constructor(
     private readonly loginService: LoginService,

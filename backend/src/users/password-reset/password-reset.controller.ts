@@ -1,7 +1,7 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { PasswordResetService } from './password-reset.service';
 
-@Controller('password-reset')
+@Controller('password-reset') //Rota pai
 export class PasswordResetController {
   constructor(
     private readonly passwordResetService: PasswordResetService,

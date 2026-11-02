@@ -44,6 +44,11 @@ class CreateIndicatorDto {
 export class CreateProjectsDto {
   @IsNotEmpty()
   @IsString()
+  ia_prompt!: string;
+   //OBS: "ia_prompt" não é salvo no banco
+
+  @IsNotEmpty()
+  @IsString()
   name!: string;
 
   @IsNotEmpty()

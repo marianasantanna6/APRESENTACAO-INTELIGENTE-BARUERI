@@ -1,4 +1,10 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { normalizeText } from '../common/normalizer';
 import { CreateTeamsDto } from './dto/inputs-teams.dto';
@@ -7,7 +13,7 @@ import { CreateTeamsDto } from './dto/inputs-teams.dto';
 export class TeamsService {
   constructor(
     private readonly prisma: PrismaService,
-  ) { }
+  ) {}
 
   async create(dto: CreateTeamsDto, actorId: string) {
     const actor = await this.prisma.users.findUnique({
@@ -15,12 +21,15 @@ export class TeamsService {
     });
 
     if (!actor) {
-      throw new NotFoundException('Usuário autenticado não encontrado');
+      throw new NotFoundException(
+        'Usuário autenticado não encontrado',
+      );
     }
 
     const sector = await this.prisma.sectors.findUnique({
-      where: { id: BigInt(dto.sector) }
+      where: { id: BigInt(dto.sector) },
     });
+
     if (!sector) {
       throw new NotFoundException('Setor não encontrado');
     }
@@ -54,7 +63,7 @@ export class TeamsService {
       });
 
     const existingTeam = existingTeams.find(
-      (team) => normalizeText(team.name) === normalizedName
+      (team) => normalizeText(team.name) === normalizedName,
     );
 
     if (existingTeam) {
@@ -67,6 +76,7 @@ export class TeamsService {
         sector: BigInt(dto.sector),
       },
     });
+
     return {
       id: team.id.toString(),
       name: team.name,
@@ -75,10 +85,24 @@ export class TeamsService {
     };
   }
 
-  async find(filters: {
-    id?: string;
-    name?: string;
-  }) {
+  async find(
+    filters: {
+      id?: string;
+      name?: string;
+    },
+    actorId: string,
+  ) {
+    const actor = await this.prisma.users.findUnique({
+      where: { id: BigInt(actorId) },
+      select: { head_manager: true },
+    });
+
+    if (!actor) {
+      throw new NotFoundException(
+        'Usuário autenticado não encontrado',
+      );
+    }
+
     const where: any = {};
 
     if (filters.id !== undefined) {
@@ -90,6 +114,65 @@ export class TeamsService {
         contains: normalizeText(filters.name),
         mode: 'insensitive',
       };
+    }
+
+    if (!actor.head_manager) {
+      const actorRoles =
+        await this.prisma.users_role.findMany({
+          where: {
+            user: BigInt(actorId),
+          },
+          select: {
+            sector: true,
+            team: true,
+            sector_manager: true,
+          },
+        });
+
+      const sectorIds = [
+        ...new Set(
+          actorRoles
+            .filter((role) => role.sector_manager)
+            .map((role) => role.sector),
+        ),
+      ];
+
+      const assignedTeamIds = [
+        ...new Set(
+          actorRoles
+            .filter((role) => role.team !== null)
+            .map((role) => role.team!),
+        ),
+      ];
+
+      const scopeConditions: any[] = [];
+
+      if (sectorIds.length > 0) {
+        scopeConditions.push({
+          sector: {
+            in: sectorIds,
+          },
+        });
+      }
+
+      if (assignedTeamIds.length > 0) {
+        scopeConditions.push({
+          id: {
+            in: assignedTeamIds,
+          },
+        });
+      }
+
+      if (scopeConditions.length === 0) {
+        return [];
+      }
+
+      where.AND = [
+        ...(where.AND ?? []),
+        {
+          OR: scopeConditions,
+        },
+      ];
     }
 
     const teams = await this.prisma.teams.findMany({
@@ -108,7 +191,10 @@ export class TeamsService {
   }
 
   async remove(id: string) {
-    await this.prisma.teams.delete({ where: { id: BigInt(id) } });
+    await this.prisma.teams.delete({
+      where: { id: BigInt(id) },
+    });
+
     return { ok: true };
   }
 }

@@ -17,7 +17,9 @@ export type MockUser = {
   status: AccountStatus;
   avatarDataUrl?: string | null;
   master_admin?: boolean;
+  head_manager?: boolean;
   approver?: boolean;
+  teams?: Array<{ id: string; name: string; sectorId: string; sectorName: string; areaManager: boolean; approver: boolean }>;
 };
 
 export type AuthSessionUser = Omit<MockUser, "password">;

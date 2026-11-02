@@ -3,7 +3,7 @@ import { SectorsService } from './sectors.service';
 import { CreateSectorsDto } from './dto/inputs-sectors.dto';
 import { JwtAuthGuard } from '../users/authentication/jwt-auth.guard';
 
-@Controller('sectors')
+@Controller('sectors') //Rota pai
 export class SectorsController {
   constructor(
     private readonly sectorsService: SectorsService,
@@ -21,10 +21,14 @@ export class SectorsController {
   @Get()
   @UseGuards(JwtAuthGuard)
   find(
+    @Req() req: any,
     @Query('id') id?: string,
     @Query('name') name?: string,
   ) {
-    return this.sectorsService.find({ id, name });
+    return this.sectorsService.find(
+      { id, name },
+      req.user.id,
+    );
   }
 
   @Delete(':id')

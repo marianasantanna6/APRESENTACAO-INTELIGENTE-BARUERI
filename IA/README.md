@@ -142,7 +142,7 @@ O modelo retorna um objeto com `titulo`, `subtitulo`, `slides` e `limitacoes`. C
 
 Cada item externo de `presentation.fontes[]` contém `id`, `titulo`, `url` e `trecho`; quando disponíveis, também contém `consultado_em` e metadados. A fonte do DTO contém `id`, `titulo`, `trecho`, `fonte` e metadados de proveniência, sem URL externa. A fonte do DTO só é usada na apresentação atual e não é salva como evidência de pesquisa no Supabase.
 
-`ResearchData.to_chain_input()` converte a consulta, o contexto do DTO e as fontes para as chaves esperadas pelo prompt (`titulo`, `detectar_intencao`, `contexto_solicitacao`, `fontes_fornecidas`). `validate_presentation()` converte a resposta do modelo para o formato canônico usado por `criar_apresentacao()`. `build_claim_evidence()` registra as afirmações renderizáveis e a evidência; `require_supported_claims()` impede a entrega de conteúdo sem correspondência textual ou numérica suficiente.
+`ResearchData.to_chain_input()` converte a consulta, o contexto do DTO e as fontes para as chaves esperadas pelo prompt (`titulo`, `detectar_intencao`, `contexto_solicitacao`, `fontes_fornecidas`). `validate_presentation()` converte a resposta do modelo para o formato canônico usado por `criar_apresentacao()`.
 
 
 ## RAG e migração de dados

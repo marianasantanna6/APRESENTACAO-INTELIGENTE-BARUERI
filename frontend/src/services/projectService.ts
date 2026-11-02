@@ -143,7 +143,9 @@ const mockProjectService: ProjectServiceContract = {
   },
 };
 
-export const projectService: ProjectServiceContract = mockProjectService;
+import { realProjectService } from "./realProjectService";
+
+export const projectService: ProjectServiceContract = realProjectService;
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));

@@ -3,7 +3,7 @@ import { TeamsService } from './teams.service';
 import { CreateTeamsDto } from './dto/inputs-teams.dto';
 import { JwtAuthGuard } from '../users/authentication/jwt-auth.guard';
 
-@Controller('teams')
+@Controller('teams') //Rota pai
 export class TeamsController {
   constructor(
     private readonly teamsService: TeamsService,
@@ -21,10 +21,11 @@ export class TeamsController {
   @Get()
   @UseGuards(JwtAuthGuard)
   find(
+    @Req() req: any,
     @Query('id') id?: string,
     @Query('name') name?: string,
   ) {
-    return this.teamsService.find({ id, name });
+    return this.teamsService.find({ id, name }, req.user.id);
   }
 
   @Delete(':id')

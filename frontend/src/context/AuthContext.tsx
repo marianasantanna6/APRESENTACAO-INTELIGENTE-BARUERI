@@ -285,7 +285,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
           sectorName: string | null;
           accessLevel: number;
           master_admin: boolean;
+          head_manager: boolean;
           approver: boolean;
+          teams?: Array<{ id: string; name: string; sectorId: string; sectorName: string; areaManager: boolean; approver: boolean }>;
         };
       };
 
@@ -316,7 +318,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
         status: "active",
         avatarDataUrl: data.user.photo ?? null,
         master_admin: data.user.master_admin ?? false,
+        head_manager: data.user.head_manager ?? false,
         approver: data.user.approver ?? false,
+        teams: data.user.teams ?? [],
       };
 
       setUsers((prev) => {
