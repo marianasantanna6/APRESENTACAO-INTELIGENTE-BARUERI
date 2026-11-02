@@ -56,13 +56,13 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     type RawSector = { id: string; name: string };
     type RawTeam = { id: string; name: string; sectorId: string; sectorName: string; level_acess: number };
     type RawUser = { id: string; name: string; email: string; cpf: string; photo: string | null };
-    type RawUserTeam = { id: string; user: string; team: string };
+    type RawUserTeam = { id: string; user: string; sector: string; team: string | null };
 
     Promise.all([
       fetch("/api/sectors").then((r) => r.json() as Promise<RawSector[]>),
       fetch("/api/teams").then((r) => r.json() as Promise<RawTeam[]>),
       fetch("/api/management").then((r) => r.json() as Promise<RawUser[]>),
-      fetch("/api/users-teams").then((r) => r.json() as Promise<RawUserTeam[]>),
+      fetch("/api/users-role").then((r) => r.json() as Promise<RawUserTeam[]>),
     ])
       .then(([sectors, teams, users, userTeams]) => {
         setSetoresState(sectors.map((s) => ({ id: s.id, nome: s.name })));
@@ -151,10 +151,14 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
 
     const team = timesState.find((t) => t.id === payload.teamId);
 
-    await fetch("/api/users-teams", {
+    await fetch("/api/users-role", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user: parseInt(newUser.id), team: parseInt(payload.teamId) }),
+      body: JSON.stringify({
+        user: newUser.id,
+        sector: team?.secretariaId,
+        team: payload.teamId,
+      }),
     });
 
     const newEmployee: EmployeeDirectoryEntry = {

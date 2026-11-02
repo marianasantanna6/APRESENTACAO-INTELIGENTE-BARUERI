@@ -36,11 +36,15 @@ export function canAccessAdminModules(user: AuthSessionUser | null) {
 export function canManageEmployees(user: AuthSessionUser | null) {
   if (!user) return false;
   if (user.master_admin) return true;
+  if (user.head_manager) return true;
   return user.accessLevel === "admin_level_2";
 }
 
 export function canViewCrossTeamData(user: AuthSessionUser | null) {
-  return user?.accessLevel === "admin_level_2";
+  if (!user) return false;
+  if (user.master_admin) return true;
+  if (user.head_manager) return true;
+  return user.accessLevel === "admin_level_2";
 }
 
 export function getAccessLevelLabel(accessLevel?: UserAccessLevel) {
