@@ -19,6 +19,8 @@ export type MockUser = {
   master_admin?: boolean;
   head_manager?: boolean;
   approver?: boolean;
+  areaManager?: boolean;
+  sectorManager?: boolean;
   teams?: Array<{ id: string; name: string; sectorId: string; sectorName: string; areaManager: boolean; approver: boolean }>;
 };
 

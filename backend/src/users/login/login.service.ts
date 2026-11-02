@@ -85,7 +85,9 @@ export class LoginService {
         teamName: primaryTeam?.name ?? null,
         sectorId: primarySector?.id?.toString() ?? null,
         sectorName: primarySector?.name ?? null,
+        accessLevel: primaryTeam?.level_acess ?? 0,
         areaManager: primaryRole?.team_manager ?? false,
+        sectorManager: primaryRole?.sector_manager ?? false,
         approver: primaryRole?.team_approver ?? false,
 
         // Lista completa dos vínculos do usuário com os times.

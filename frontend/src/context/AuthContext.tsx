@@ -287,6 +287,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
           master_admin: boolean;
           head_manager: boolean;
           approver: boolean;
+          areaManager: boolean;
+          sectorManager: boolean;
           teams?: Array<{ id: string; name: string; sectorId: string; sectorName: string; areaManager: boolean; approver: boolean }>;
         };
       };
@@ -320,6 +322,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
         master_admin: data.user.master_admin ?? false,
         head_manager: data.user.head_manager ?? false,
         approver: data.user.approver ?? false,
+        areaManager: data.user.areaManager ?? false,
+        sectorManager: data.user.sectorManager ?? false,
         teams: data.user.teams ?? [],
       };
 

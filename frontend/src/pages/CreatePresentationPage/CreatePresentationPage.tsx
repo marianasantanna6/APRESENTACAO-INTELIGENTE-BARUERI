@@ -423,23 +423,19 @@ const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query)
       // Chama o serviço de IA para gerar o PPTX real
       let downloadUrl: string | undefined;
       try {
-        const aiRes = await authFetch("/api/ai/generate", {
+        const query = [eventName.trim(), primaryCategory].filter(Boolean).join(" — ");
+        const aiRes = await fetch("/api/ia/research", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            eventName:        eventName.trim() || primaryCategory,
-            eventType:        (eventType as EventType) || "outro",
-            audience:         audience.trim() || ed.draft.targetAudience.join(", "),
-            mainFocus:        primaryCategory,
-            language,
-            selectedProjects: [...selectedIds],
-            moduleConfigs,
-          }),
+          body: JSON.stringify({ query }),
           signal: AbortSignal.timeout(6 * 60 * 1000),
         });
         if (aiRes.ok) {
-          const aiData = await aiRes.json() as { downloadUrl?: string };
-          downloadUrl = aiData.downloadUrl;
+          const aiData = await aiRes.json() as { download_url?: string };
+          if (aiData.download_url) {
+            // prefixo /ia faz o Vite rotear para :8000 em vez de :3000
+            downloadUrl = `/ia${aiData.download_url}`;
+          }
         }
       } catch {
         // Serviço de IA indisponível — prossegue sem download de PPTX
