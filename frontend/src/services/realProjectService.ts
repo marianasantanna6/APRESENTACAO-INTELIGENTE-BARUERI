@@ -148,8 +148,12 @@ export const realProjectService: ProjectServiceContract = {
     // Sem endpoint de delete no backend (usa reject para rascunhos)
   },
 
-  async archiveProject(_id: string) {
-    // Sem endpoint de archive no backend atual
+  async archiveProject(id: string) {
+    const res = await authFetch(`/api/projects/${id}/deactivate`, { method: "PATCH" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({})) as { message?: string };
+      throw new Error(err.message ?? "Falha ao arquivar projeto");
+    }
   },
 
   async searchProjects(query: string) {

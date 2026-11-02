@@ -87,13 +87,14 @@ model sectors {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model teams {
-  id         BigInt       @id(map: "team_pkey") @default(autoincrement())
-  name       String
-  sector     BigInt
-  status     Boolean      @default(true)
-  projects   projects[]
-  sectors    sectors      @relation(fields: [sector], references: [id], onDelete: Cascade, map: "team_sector_fkey")
-  users_role users_role[]
+  id          BigInt       @id(map: "team_pkey") @default(autoincrement())
+  name        String
+  sector      BigInt
+  status      Boolean      @default(true)
+  level_acess Int          @default(0) @map("level-acess")
+  projects    projects[]
+  sectors     sectors      @relation(fields: [sector], references: [id], onDelete: Cascade, map: "team_sector_fkey")
+  users_role  users_role[]
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments

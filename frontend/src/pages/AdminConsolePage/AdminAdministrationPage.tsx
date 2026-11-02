@@ -649,7 +649,7 @@ export default function AdminAdministrationPage() {
         )}
       </AdminPanel>
 
-      {/* ── Painel Setores (somente admin_level_2) ─────────────────────────── */}
+      {/* ── Painel Setores + Times agrupados ───────────────────────────────── */}
       {canManageEmployees ? (
         <AdminPanel className="space-y-5 px-5 py-5 sm:px-7">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -658,7 +658,7 @@ export default function AdminAdministrationPage() {
                 Setores
               </h2>
               <p className="mt-1 text-[0.9rem] font-medium text-[#8f8f8f]">
-                Registro dos setores e secretarias da organização.
+                Cada setor agrupa os seus times de trabalho.
               </p>
             </div>
             {user?.master_admin && (
@@ -674,166 +674,90 @@ export default function AdminAdministrationPage() {
           </div>
 
           {setoresSorted.length ? (
-            <>
-              {/* Mobile */}
-              <div className="space-y-3 md:hidden">
-                {setoresSorted.map((sec) => (
-                  <article key={sec.id} className="rounded-[22px] border border-[#e4ebf2] bg-white/88 p-4 shadow-[0_16px_40px_-28px_rgba(20,33,51,0.28)]">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#e8f0f8] text-[#3d83bc]">
-                          <FiBriefcase className="h-4.5 w-4.5" />
+            <div className="space-y-4">
+              {setoresSorted.map((sec) => {
+                const timesDoSetor = timesSorted.filter((t) => t.secretariaId === sec.id);
+                return (
+                  <div
+                    key={sec.id}
+                    className="rounded-[20px] border border-[#dde6f0] bg-[#f6f9fc] p-4 sm:p-5"
+                  >
+                    {/* Cabeçalho do setor */}
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#ddeaf6] text-[#3d83bc]">
+                          <FiBriefcase className="h-4 w-4" />
                         </span>
-                        <div className="min-w-0">
-                          <p className="truncate text-[1rem] font-semibold text-[#3a4651]">{sec.nome}</p>
-                        </div>
+                        <span className="text-[1rem] font-bold text-[#1e3a52] truncate">{sec.nome}</span>
+                        <span className="shrink-0 rounded-full bg-[#ddeaf6] px-2.5 py-0.5 text-[0.72rem] font-semibold text-[#3d83bc]">
+                          {timesDoSetor.length} {timesDoSetor.length === 1 ? "time" : "times"}
+                        </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setSetorPendingRemoval(sec)}
-                        aria-label={`Remover ${sec.nome}`}
-                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
-                      >
-                        <FiTrash2 className="h-4.5 w-4.5" />
-                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {user?.master_admin && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTimeFormError("");
+                              setTimeForm({ nome: "", secretariaId: sec.id, levelAcess: 1 });
+                              setIsTimeModalOpen(true);
+                            }}
+                            className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#e8f2fb] px-3 text-[0.78rem] font-semibold text-[#3d83bc] transition hover:bg-[#d4e8f7]"
+                          >
+                            <FiPlus className="h-3.5 w-3.5" />
+                            Novo time
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setSetorPendingRemoval(sec)}
+                          aria-label={`Remover ${sec.nome}`}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
+                        >
+                          <FiTrash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </div>
-                  </article>
-                ))}
-              </div>
-              {/* Desktop */}
-              <div className="hidden md:block">
-                <div className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
-                  <table className="min-w-[560px] w-full border-separate border-spacing-y-4 text-left">
-                    <thead>
-                      <tr className="text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-[#b1b1b1]">
-                        <th className="w-[88%] pb-2 pr-4">Nome</th>
-                        <th className="pb-1">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {setoresSorted.map((sec) => (
-                        <tr key={sec.id} className="text-[0.95rem] font-medium text-[#7a7a7a]">
-                          <td className="rounded-l-[18px] bg-white/72 px-5 py-2.5">
-                            <div className="flex items-center gap-3">
-                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e8f0f8] text-[#3d83bc]">
-                                <FiBriefcase className="h-4 w-4" />
-                              </span>
-                              <span className="text-[0.96rem] text-[#3a4651] font-semibold">{sec.nome}</span>
-                            </div>
-                          </td>
-                          <td className="rounded-r-[18px] bg-white/72 px-5 py-2.5 text-right">
-                            <button
-                              type="button"
-                              onClick={() => setSetorPendingRemoval(sec)}
-                              aria-label={`Remover ${sec.nome}`}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
-                            >
-                              <FiTrash2 className="h-4.5 w-4.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </>
+
+                    {/* Times do setor */}
+                    {timesDoSetor.length ? (
+                      <div className="space-y-2 pl-0 sm:pl-12">
+                        {timesDoSetor.map((time) => (
+                          <div
+                            key={time.id}
+                            className="flex items-center justify-between gap-3 rounded-[14px] border border-[#e4ebf2] bg-white px-4 py-2.5"
+                          >
+                            <span className="text-[0.92rem] font-semibold text-[#3a4651] truncate">
+                              {time.nome}
+                            </span>
+                            {user?.master_admin && (
+                              <button
+                                type="button"
+                                onClick={() => setTimePendingRemoval(time)}
+                                aria-label={`Remover ${time.nome}`}
+                                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
+                              >
+                                <FiTrash2 className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="pl-0 sm:pl-12">
+                        <p className="rounded-[14px] border border-dashed border-[#d6dee7] bg-white/60 px-4 py-3 text-center text-[0.82rem] text-[#9aa5b0]">
+                          Nenhum time neste setor ainda.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <EmptyMobileState
               title="Nenhum setor cadastrado"
               description="Clique em Novo setor para começar o registro."
-            />
-          )}
-        </AdminPanel>
-      ) : null}
-
-      {/* ── Painel Times (somente admin_level_2) ───────────────────────────── */}
-      {canManageEmployees ? (
-        <AdminPanel className="space-y-5 px-5 py-5 sm:px-7">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <h2 className="text-[1.6rem] font-bold tracking-[-0.03em] text-[#262626]">
-                Times
-              </h2>
-              <p className="mt-1 text-[0.9rem] font-medium text-[#8f8f8f]">
-                Equipes de trabalho vinculadas aos setores.
-              </p>
-            </div>
-            {user?.master_admin && (
-              <button
-                type="button"
-                onClick={() => { setTimeFormError(""); setIsTimeModalOpen(true); }}
-                disabled={setores.length === 0}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-4 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(103,156,203,0.24)] transition hover:-translate-y-0.5 self-start disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <FiPlus className="h-4.5 w-4.5" />
-                Novo time
-              </button>
-            )}
-          </div>
-
-          {timesSorted.length ? (
-            <>
-              {/* Mobile */}
-              <div className="space-y-3 md:hidden">
-                {timesSorted.map((time) => (
-                  <article key={time.id} className="rounded-[22px] border border-[#e4ebf2] bg-white/88 p-4 shadow-[0_16px_40px_-28px_rgba(20,33,51,0.28)]">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-[1rem] font-semibold text-[#3a4651]">{time.nome}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setTimePendingRemoval(time)}
-                        aria-label={`Remover ${time.nome}`}
-                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
-                      >
-                        <FiTrash2 className="h-4.5 w-4.5" />
-                      </button>
-                    </div>
-                    <div className="mt-3">
-                      <MobileInfoField label="Setor responsável">{time.secretariaNome}</MobileInfoField>
-                    </div>
-                  </article>
-                ))}
-              </div>
-              {/* Desktop */}
-              <div className="hidden md:block">
-                <div className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
-                  <table className="min-w-[560px] w-full border-separate border-spacing-y-4 text-left">
-                    <thead>
-                      <tr className="text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-[#b1b1b1]">
-                        <th className="w-[45%] pb-2 pr-4">Nome do Time</th>
-                        <th className="w-[45%] pb-2 px-4">Setor Responsável</th>
-                        <th className="pb-1">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {timesSorted.map((time) => (
-                        <tr key={time.id} className="text-[0.95rem] font-medium text-[#7a7a7a]">
-                          <td className="rounded-l-[18px] bg-white/72 px-5 py-2.5 font-semibold text-[#3a4651]">{time.nome}</td>
-                          <td className="bg-white/72 px-5 py-2.5 text-[0.88rem] text-[#7a8694]">{time.secretariaNome}</td>
-                          <td className="rounded-r-[18px] bg-white/72 px-5 py-2.5 text-right">
-                            <button
-                              type="button"
-                              onClick={() => setTimePendingRemoval(time)}
-                              aria-label={`Remover ${time.nome}`}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
-                            >
-                              <FiTrash2 className="h-4.5 w-4.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </>
-          ) : (
-            <EmptyMobileState
-              title="Nenhum time cadastrado"
-              description={setores.length === 0 ? "Cadastre um setor antes de criar times." : "Clique em Novo time para começar."}
             />
           )}
         </AdminPanel>

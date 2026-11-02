@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { IconType } from "react-icons";
 import {
-  FiBarChart2,
   FiBookOpen,
   FiFolder,
   FiHelpCircle,
@@ -50,12 +49,6 @@ const primarySidebarDefs: SidebarItemDef[] = [
     path: ROUTE_PATHS.templates,
     icon: FiBookOpen,
     requiresAdmin: false,
-  },
-  {
-    labelKey: "nav.analytics",
-    path: ROUTE_PATHS.analytics,
-    icon: FiBarChart2,
-    requiresAdmin: true,
   },
   {
     labelKey: "nav.administracao",
