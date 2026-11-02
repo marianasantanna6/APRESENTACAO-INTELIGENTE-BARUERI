@@ -1,5 +1,3 @@
-
-
 from pathlib import Path
 import sys
 from typing import Any
@@ -7,13 +5,14 @@ from uuid import UUID, uuid4
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 if str(Path(__file__).resolve().parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from models.request import LegacyResearchRequest, ProjectGenerationRequest  # noqa: E402
 from config.settings import OUTPUT_DIR  # noqa: E402
-from main import generate_research  # noqa: E402
+from main import ResearchGenerationError, generate_research  # noqa: E402
 
 
 app = FastAPI(
@@ -23,15 +22,13 @@ app = FastAPI(
 )
 
 
-class ResearchRequest(BaseModel):
-    tema: str = Field(min_length=1, max_length=300, description="Pergunta ou tema enviado pelo usuário.")
-
-
 class ResearchResponse(BaseModel):
     presentation_id: UUID
     presentation: dict[str, Any]
     download_url: str
     rag: dict[str, Any]
+    source_status: list[dict[str, Any]]
+    claims: list[dict[str, Any]]
 
 
 @app.get("/health")
@@ -41,13 +38,35 @@ def health() -> dict[str, str]:
 
 
 @app.post("/research", response_model=ResearchResponse)
-def research(request: ResearchRequest) -> ResearchResponse:
-    '''Roda o python e retorna a estrutura de slides mais a URL do PPTX.'''
+def research(
+    request: ProjectGenerationRequest | LegacyResearchRequest,
+) -> ResearchResponse:
+    """Gera JSON estruturado e disponibiliza o PPTX para download."""
     presentation_id = uuid4()
+    request_context = request.to_prompt_context()
+    project_source = (
+        request.to_project_source_text()
+        if isinstance(request, ProjectGenerationRequest)
+        else None
+    )
     try:
-        result = generate_research(request.tema, str(presentation_id))
+        result = generate_research(
+            request.query,
+            str(presentation_id),
+            request_context=request_context,
+            project_source=project_source,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ResearchGenerationError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "message": str(exc),
+                "source_status": exc.source_status,
+                "claims": [claim.to_dict() for claim in exc.claims],
+            },
+        ) from exc
     except Exception as exc:
         print(f"[API] Falha não tratada durante pesquisa ({type(exc).__name__}).")
         raise HTTPException(status_code=502, detail="Não foi possível concluir a pesquisa.") from None
@@ -60,6 +79,8 @@ def research(request: ResearchRequest) -> ResearchResponse:
         presentation=result.presentation,
         download_url=f"/presentations/{presentation_id}",
         rag={"status": result.rag_status, "memories_retrieved": result.retrieved_count},
+        source_status=result.source_status,
+        claims=[claim.to_dict() for claim in result.claims],
     )
 
 

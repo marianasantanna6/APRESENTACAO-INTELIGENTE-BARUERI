@@ -19,7 +19,7 @@ backend/logs/
 
 IA/assets
 IA/output
-IA/src/main.py
+IA/tests
 IA/supabase
 IA/estiliza_o_e_configura_o_pptx.md
 

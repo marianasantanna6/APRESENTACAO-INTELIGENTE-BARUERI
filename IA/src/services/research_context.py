@@ -50,5 +50,7 @@ def merge_research_context(
         detectar_intencao=detect_intent(topic),
         fontes=sources,
         query=topic,
+        request_context=live.request_context if live else {},
+        source_status=live.source_status if live else [],
     )
     return context, added_memory_sources

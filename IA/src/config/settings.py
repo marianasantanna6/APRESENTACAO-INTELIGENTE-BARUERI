@@ -27,8 +27,16 @@ STOPWORDS = [
 
 WIKIPEDIA_SEARCH_URL = "https://pt.wikipedia.org/w/api.php"
 WIKIPEDIA_SUMMARY_URL = "https://pt.wikipedia.org/api/rest_v1/page/summary"
+IBGE_AGGREGATES_URL = "https://servicodados.ibge.gov.br/api/v3/agregados"
+IBGE_LOCALITIES_URL = "https://servicodados.ibge.gov.br/api/v1/localidades"
+SEADE_CKAN_API_URL = os.getenv("SEADE_CKAN_API_URL") or "https://dadosabertos.sp.gov.br/api/3/action"
+RIC_CPS_BASE_URL = os.getenv("RIC_CPS_BASE_URL") or "https://ric.cps.sp.gov.br"
+OPENALEX_API_URL = os.getenv("OPENALEX_API_URL") or "https://api.openalex.org"
+OPENALEX_API_KEY = os.getenv("OPENALEX_API_KEY")
+OPENALEX_MAILTO = os.getenv("OPENALEX_MAILTO")
+SCIELO_SEARCH_URL = os.getenv("SCIELO_SEARCH_URL") or "https://search.scielo.org/"
 DEFAULT_REQUEST_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; LangchainBot/1.0; +https://github.com/user/langchain-bot)"
+    "User-Agent": "ApresentacaoInteligenteBarueri/1.1 (research integration; contact: administrator)"
 }
 DEFAULT_REQUEST_TIMEOUT = 20
 DEFAULT_GEMINI_MODEL = os.getenv("GEMINI_MODEL") or "gemini-3.6-flash"
@@ -55,3 +63,5 @@ GEMINI_TIMEOUT_MS = 30_000
 GEMINI_MAX_RETRY_DELAY_SECONDS = 8.0
 WIKIPEDIA_MAX_ATTEMPTS = 3
 WIKIPEDIA_MAX_RETRY_DELAY_SECONDS = 8.0
+SOURCE_MAX_RESULTS_PER_ADAPTER = 3
+SOURCE_MAX_WORKERS = 4
