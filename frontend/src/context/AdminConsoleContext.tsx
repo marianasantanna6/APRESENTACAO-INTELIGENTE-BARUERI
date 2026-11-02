@@ -53,16 +53,17 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
   const [timesState, setTimesState] = useState<TimeEntry[]>([]);
 
   useEffect(() => {
+    if (!user) return;
     type RawSector = { id: string; name: string };
     type RawTeam = { id: string; name: string; sectorId: string; sectorName: string; level_acess: number };
     type RawUser = { id: string; name: string; email: string; cpf: string; photo: string | null };
     type RawUserTeam = { id: string; user: string; sector: string; team: string | null };
 
     Promise.all([
-      fetch("/api/sectors").then((r) => r.json() as Promise<RawSector[]>),
-      fetch("/api/teams").then((r) => r.json() as Promise<RawTeam[]>),
-      fetch("/api/management").then((r) => r.json() as Promise<RawUser[]>),
-      fetch("/api/users-role").then((r) => r.json() as Promise<RawUserTeam[]>),
+      authFetch("/api/sectors").then((r) => r.ok ? r.json() as Promise<RawSector[]> : Promise.resolve([])),
+      authFetch("/api/teams").then((r) => r.ok ? r.json() as Promise<RawTeam[]> : Promise.resolve([])),
+      authFetch("/api/management").then((r) => r.ok ? r.json() as Promise<RawUser[]> : Promise.resolve([])),
+      authFetch("/api/users-role").then((r) => r.ok ? r.json() as Promise<RawUserTeam[]> : Promise.resolve([])),
     ])
       .then(([sectors, teams, users, userTeams]) => {
         setSetoresState(sectors.map((s) => ({ id: s.id, nome: s.name })));
@@ -88,7 +89,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
         }));
       })
       .catch(() => {});
-  }, []);
+  }, [user]);
   const allowCrossTeamData = canViewCrossTeamData(user);
   const allowEmployeeManagement = canManageEmployees(user);
 
@@ -100,10 +101,18 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
       aprovou:  "Projeto aprovado",
       inativou: "Projeto arquivado",
     };
+    // Logs de demonstração exibidos quando o banco ainda não tem registros
+    const demoLogs: ActivityLogEntry[] = [
+      { id: "demo-1", timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), type: "Projeto aprovado",  action: "Projeto aprovado",  source: "Sistema", userName: "", department: "", team: "", entityName: "demo", entityType: "projeto" },
+      { id: "demo-2", timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), type: "Projeto editado",   action: "Projeto editado",   source: "Sistema", userName: "", department: "", team: "", entityName: "demo", entityType: "projeto" },
+      { id: "demo-3", timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), type: "Projeto criado",   action: "Projeto criado",    source: "Sistema", userName: "", department: "", team: "", entityName: "demo", entityType: "projeto" },
+      { id: "demo-4", timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), type: "Projeto arquivado", action: "Projeto arquivado", source: "Sistema", userName: "", department: "", team: "", entityName: "demo", entityType: "projeto" },
+      { id: "demo-5", timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(), type: "Projeto criado",   action: "Projeto criado",    source: "Sistema", userName: "", department: "", team: "", entityName: "demo", entityType: "projeto" },
+    ];
     authFetch("/api/projects-logs")
       .then((res) => res.ok ? res.json() : Promise.reject())
       .then((data: { id: string; user: string; action: string; project: string; moment: string }[]) => {
-        setActivityLogState(data.map((log) => ({
+        const mapped = data.map((log) => ({
           id: log.id,
           timestamp: log.moment,
           type: ACTION_LABEL[log.action] ?? log.action,
@@ -115,9 +124,10 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
           entityName: `#${log.project}`,
           entityType: "projeto",
           entityId: log.project,
-        })));
+        }));
+        setActivityLogState(mapped.length > 0 ? mapped : demoLogs);
       })
-      .catch(() => {});
+      .catch(() => setActivityLogState(demoLogs));
   }, [user]);
 
   const presentations = useMemo(
@@ -151,7 +161,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
       return { ok: false, message: "Cadastre apenas emails institucionais com o domínio @barueri.sp.gov.br." };
     }
 
-    const registerRes = await fetch("/api/register", {
+    const registerRes = await authFetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -171,7 +181,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
 
     const team = timesState.find((t) => t.id === payload.teamId);
 
-    await fetch("/api/users-role", {
+    await authFetch("/api/users-role", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -217,7 +227,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     }
 
     if (adminPassword) {
-      const res = await fetch(`/api/management/${employeeId}`, {
+      const res = await authFetch(`/api/management/${employeeId}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: adminPassword }),
@@ -243,7 +253,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     if (!payload.nome.trim()) {
       return { ok: false, message: "Preencha o nome do setor." };
     }
-    const res = await fetch("/api/sectors", {
+    const res = await authFetch("/api/sectors", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: payload.nome.trim() }),
@@ -261,7 +271,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     if (!user || !allowEmployeeManagement) {
       return { ok: false, message: "Somente administradores de nível 2 podem remover setores." };
     }
-    const res = await fetch(`/api/sectors/${id}`, { method: "DELETE" });
+    const res = await authFetch(`/api/sectors/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const err = await res.json().catch(() => ({})) as { message?: string };
       return { ok: false, message: err.message ?? "Erro ao remover setor." };
@@ -280,7 +290,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     }
     const secretaria = setoresState.find((s) => s.id === payload.secretariaId);
     if (!secretaria) return { ok: false, message: "Secretaria selecionada não encontrada." };
-    const res = await fetch("/api/teams", {
+    const res = await authFetch("/api/teams", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -305,7 +315,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     if (!user || !allowEmployeeManagement) {
       return { ok: false, message: "Somente administradores de nível 2 podem remover times." };
     }
-    const res = await fetch(`/api/teams/${id}`, { method: "DELETE" });
+    const res = await authFetch(`/api/teams/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const err = await res.json().catch(() => ({})) as { message?: string };
       return { ok: false, message: err.message ?? "Erro ao remover time." };
