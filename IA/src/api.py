@@ -52,7 +52,12 @@ def research(
     try:
         result = generate_research(
             request.query,
-            str(presentation_id),
+            presentation_id=str(presentation_id),
+            ia_prompt=(
+                request.ia_prompt
+                if isinstance(request, ProjectGenerationRequest)
+                else None
+            ),
             request_context=request_context,
             project_source=project_source,
         )

@@ -45,12 +45,12 @@ Os estados `failed` e `no_results` distinguem falha de consulta de uma busca sem
 Com Python 3.15 instalado, a partir da raiz do projeto no PowerShell:
 
 ```powershell
-py -3.15 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r src\requirements.txt
-.\.venv\Scripts\python.exe -m uvicorn api:app --app-dir src --host 127.0.0.1 --port 8000
+py -3.13 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r IA/src\requirements.txt
+.\.venv\Scripts\python.exe -B -m uvicorn api:app --app-dir IA\src --host 127.0.0.1 --port 8000
 ```
 
-No Linux/macOS, use `python3.15 -m venv .venv` e `.venv/bin/python -m uvicorn api:app --app-dir src --host 127.0.0.1 --port 8000`. O serviço escuta em `127.0.0.1:8000` para desenvolvimento local; `GET /health` deve retornar `{"status":"ok"}`. O arquivo `.python-version` registra o alvo informado: `3.15.0`.
+No Linux/macOS, use `python3.15 -m venv .venv` e `.venv/bin/python -B -m uvicorn api:app --app-dir IA/src --host 127.0.0.1 --port 8000`. A opção `-B` impede que esse processo Python grave arquivos `.pyc` ou diretórios `__pycache__`; ela não apaga arquivos de cache que já existam. O serviço escuta em `127.0.0.1:8000` para desenvolvimento local; `GET /health` deve retornar `{"status":"ok"}`. O arquivo `.python-version` registra o alvo informado: `3.15.0`.
 
 ### Endpoints implementados
 

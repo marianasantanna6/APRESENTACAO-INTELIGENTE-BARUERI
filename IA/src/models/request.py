@@ -32,6 +32,7 @@ class ProjectGenerationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     name: str = Field(min_length=1, max_length=300)
+    ia_prompt : str = Field(min_length=1, max_length=2_000)
     user: str | int
     team: str | int
     family: int = Field(ge=0)
@@ -77,7 +78,7 @@ class ProjectGenerationRequest(BaseModel):
         """Exclui campos de identidade do backend do contexto voltado para apresentação."""
         project = self.model_dump(
             mode="json",
-            exclude={"user", "team", "family"},
+            exclude={"user", "team", "family", "ia_prompt"},
             exclude_none=True,
         )
         return {
