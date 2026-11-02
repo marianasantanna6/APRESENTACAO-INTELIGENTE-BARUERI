@@ -371,6 +371,20 @@ export default function GeneratedPresentationPage() {
   // ── Apresentação institucional (quando vem do wizard com ?pid) ──
   const presentationId = searchParams.get("pid");
   const downloadUrlParam = searchParams.get("dlUrl");
+
+  // Fontes reais consultadas pela IA nesta geração
+  const [iaSources, setIaSources] = useState<
+    Array<{ fonte: string; status: string; resultados: number; mensagem?: string }> | null
+  >(null);
+  useEffect(() => {
+    try {
+      const iaId = sessionStorage.getItem("ia_last_presentation_id");
+      if (!iaId) return;
+      const raw = sessionStorage.getItem(`ia_sources_${iaId}`);
+      if (raw) setIaSources(JSON.parse(raw));
+    } catch {}
+  }, []);
+
   const [institutionalPresentation, setInstitutionalPresentation] =
     useState<InstitutionalPresentation | null>(null);
   const [institutionalProjects, setInstitutionalProjects] = useState<ProjectSummary[]>([]);
@@ -616,6 +630,39 @@ export default function GeneratedPresentationPage() {
 
           {/* Dashboard + slides */}
           {renderSlidesSection()}
+
+          {/* Fontes consultadas pela IA */}
+          {iaSources && iaSources.length > 0 && (
+            <section className="mx-auto mt-8 max-w-4xl rounded-[20px] border border-[#e2e8f0] bg-white px-6 py-5 shadow-[0_2px_12px_rgba(0,0,0,0.05)]">
+              <p className="mb-3 text-[0.78rem] font-bold uppercase tracking-widest text-[#94a3b8]">
+                Fontes consultadas pela IA
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {iaSources.map((s) => {
+                  const ok = s.status === "success" && s.resultados > 0;
+                  const skipped = s.status === "skipped";
+                  const failed = s.status === "failed";
+                  return (
+                    <span
+                      key={s.fonte}
+                      title={s.mensagem ?? `${s.resultados} resultado${s.resultados !== 1 ? "s" : ""}`}
+                      className={[
+                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[0.8rem] font-semibold",
+                        ok      ? "border-[#bbf7d0] bg-[#f0fdf4] text-[#166534]" : "",
+                        skipped ? "border-[#e2e8f0] bg-[#f8fafc] text-[#94a3b8]" : "",
+                        failed  ? "border-[#fecaca] bg-[#fff1f2] text-[#991b1b]" : "",
+                        !ok && !skipped && !failed ? "border-[#fef08a] bg-[#fefce8] text-[#92400e]" : "",
+                      ].join(" ")}
+                    >
+                      <span>{ok ? "✓" : skipped ? "—" : "✗"}</span>
+                      {s.fonte}
+                      {ok && <span className="opacity-60">· {s.resultados}</span>}
+                    </span>
+                  );
+                })}
+              </div>
+            </section>
+          )}
         </main>
 
         {presentationData && (

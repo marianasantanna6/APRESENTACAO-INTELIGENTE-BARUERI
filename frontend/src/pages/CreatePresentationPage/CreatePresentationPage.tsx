@@ -431,10 +431,23 @@ const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query)
           signal: AbortSignal.timeout(6 * 60 * 1000),
         });
         if (aiRes.ok) {
-          const aiData = await aiRes.json() as { download_url?: string };
+          const aiData = await aiRes.json() as {
+            download_url?: string;
+            presentation_id?: string;
+            source_status?: Array<{ fonte: string; status: string; resultados: number; mensagem?: string }>;
+          };
           if (aiData.download_url) {
-            // prefixo /ia faz o Vite rotear para :8000 em vez de :3000
             downloadUrl = `/ia${aiData.download_url}`;
+          }
+          if (aiData.source_status && aiData.presentation_id) {
+            try {
+              sessionStorage.setItem(
+                `ia_sources_${aiData.presentation_id}`,
+                JSON.stringify(aiData.source_status),
+              );
+              // guarda o id para que GeneratedPresentationPage saiba onde buscar
+              sessionStorage.setItem("ia_last_presentation_id", aiData.presentation_id);
+            } catch {}
           }
         }
       } catch {
