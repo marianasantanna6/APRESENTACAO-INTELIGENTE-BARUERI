@@ -20,17 +20,17 @@ export class ProjectsService {
   private async requestAi(
     dto: CreateProjectsDto,
   ): Promise<Buffer> {
-    let response: Response;
+    // 1. Gera a pesquisa e recebe o JSON com presentation_id.
+    let researchResponse: Response;
 
     try {
-      response = await fetch(
+      researchResponse = await fetch(
         'http://localhost:8000/research',
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Accept:
-              'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            Accept: 'application/json',
           },
           body: JSON.stringify(dto),
           signal: AbortSignal.timeout(120_000),
@@ -42,27 +42,57 @@ export class ProjectsService {
       );
     }
 
-    if (!response.ok) {
-      const details = await response.text().catch(() => '');
+    if (!researchResponse.ok) {
+      const details = await researchResponse.text().catch(() => '');
 
       throw new BadGatewayException(
-        `O serviço de IA retornou HTTP ${response.status}${
+        `O serviço de IA retornou HTTP ${researchResponse.status}${
           details ? `: ${details.slice(0, 500)}` : ''
         }`,
       );
     }
 
-    const contentType =
-      response.headers.get('content-type') ?? '';
+    let presentationId: string;
 
-    if (
-      contentType.includes('application/json') ||
-      contentType.includes('text/')
-    ) {
-      const details = await response.text().catch(() => '');
+    try {
+      const json = await researchResponse.json() as { presentation_id: string };
+      presentationId = json.presentation_id;
+
+      if (!presentationId) {
+        throw new Error('Campo presentation_id ausente na resposta');
+      }
+    } catch {
+      throw new BadGatewayException(
+        'O serviço de IA retornou uma resposta inválida',
+      );
+    }
+
+    // 2. Baixa o arquivo PPTX gerado.
+    let pptxResponse: Response;
+
+    try {
+      pptxResponse = await fetch(
+        `http://localhost:8000/presentations/${presentationId}`,
+        {
+          method: 'GET',
+          headers: {
+            Accept:
+              'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          },
+          signal: AbortSignal.timeout(30_000),
+        },
+      );
+    } catch {
+      throw new BadGatewayException(
+        'Não foi possível baixar o arquivo PPTX do serviço de IA',
+      );
+    }
+
+    if (!pptxResponse.ok) {
+      const details = await pptxResponse.text().catch(() => '');
 
       throw new BadGatewayException(
-        `O serviço de IA não retornou o arquivo PPTX${
+        `O serviço de IA retornou HTTP ${pptxResponse.status} ao buscar o PPTX${
           details ? `: ${details.slice(0, 500)}` : ''
         }`,
       );
@@ -71,7 +101,7 @@ export class ProjectsService {
     let buffer: Buffer;
 
     try {
-      buffer = Buffer.from(await response.arrayBuffer());
+      buffer = Buffer.from(await pptxResponse.arrayBuffer());
     } catch {
       throw new BadGatewayException(
         'Não foi possível receber o arquivo PPTX da IA',
