@@ -20,58 +20,67 @@ export class ProjectsService {
   private async requestAi(
     dto: CreateProjectsDto,
   ): Promise<Buffer> {
-    let response: Response;
-
+    // Passo 1: POST /research → recebe JSON com download_url
+    let researchRes: Response;
     try {
-      response = await fetch(
-        'http://localhost:8000/research',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept:
-              'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-          },
-          body: JSON.stringify(dto),
-          signal: AbortSignal.timeout(120_000),
-        },
-      );
+      researchRes = await fetch('http://localhost:8000/research', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dto),
+        signal: AbortSignal.timeout(120_000),
+      });
     } catch {
       throw new BadGatewayException(
         'Não foi possível conectar ao serviço de IA',
       );
     }
 
-    if (!response.ok) {
-      const details = await response.text().catch(() => '');
-
+    if (!researchRes.ok) {
+      const details = await researchRes.text().catch(() => '');
       throw new BadGatewayException(
-        `O serviço de IA retornou HTTP ${response.status}${
+        `O serviço de IA retornou HTTP ${researchRes.status}${
           details ? `: ${details.slice(0, 500)}` : ''
         }`,
       );
     }
 
-    const contentType =
-      response.headers.get('content-type') ?? '';
-
-    if (
-      contentType.includes('application/json') ||
-      contentType.includes('text/')
-    ) {
-      const details = await response.text().catch(() => '');
-
+    let researchData: { download_url?: string; presentation_id?: string };
+    try {
+      researchData = await researchRes.json();
+    } catch {
       throw new BadGatewayException(
-        `O serviço de IA não retornou o arquivo PPTX${
-          details ? `: ${details.slice(0, 500)}` : ''
-        }`,
+        'O serviço de IA retornou uma resposta inválida',
+      );
+    }
+
+    if (!researchData.download_url) {
+      throw new BadGatewayException(
+        'O serviço de IA não retornou o caminho do arquivo PPTX',
+      );
+    }
+
+    // Passo 2: GET /presentations/{id} → recebe o binário PPTX
+    const pptxUrl = `http://localhost:8000${researchData.download_url}`;
+    let pptxRes: Response;
+    try {
+      pptxRes = await fetch(pptxUrl, {
+        signal: AbortSignal.timeout(60_000),
+      });
+    } catch {
+      throw new BadGatewayException(
+        'Não foi possível baixar o arquivo PPTX da IA',
+      );
+    }
+
+    if (!pptxRes.ok) {
+      throw new BadGatewayException(
+        `Falha ao baixar PPTX da IA: HTTP ${pptxRes.status}`,
       );
     }
 
     let buffer: Buffer;
-
     try {
-      buffer = Buffer.from(await response.arrayBuffer());
+      buffer = Buffer.from(await pptxRes.arrayBuffer());
     } catch {
       throw new BadGatewayException(
         'Não foi possível receber o arquivo PPTX da IA',
@@ -85,11 +94,7 @@ export class ProjectsService {
     }
 
     // Um arquivo PPTX é um pacote ZIP.
-    if (
-      buffer.length < 4 ||
-      buffer[0] !== 0x50 ||
-      buffer[1] !== 0x4b
-    ) {
+    if (buffer.length < 4 || buffer[0] !== 0x50 || buffer[1] !== 0x4b) {
       throw new BadGatewayException(
         'A resposta da IA não parece ser um arquivo PPTX válido',
       );

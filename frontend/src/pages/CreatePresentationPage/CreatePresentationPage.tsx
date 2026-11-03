@@ -41,16 +41,8 @@ import { AdminConsoleContext } from "../../context/AdminConsoleContext";
 import { useAuth } from "../../context";
 import { canCreatePresentations } from "../../lib/accessControl";
 import { getPresentationsRouteForUser } from "../../lib/authRouting";
-import { presentationService } from "../../services/presentationService";
-import {
-  CANONICAL_MODULE_ORDER,
-} from "../../services/suggestionEngine";
 import { templateService } from "../../services/templateService";
-import type {
-  EventType,
-  PresentationLanguage,
-  PresentationModuleConfig,
-} from "../../types/institutionalPresentation";
+import type { EventType } from "../../types/institutionalPresentation";
 import type { ProjectCategory } from "../../types/project";
 import { authFetch } from "../../lib/apiClient";
 import { ROUTE_PATHS } from "../../router/paths";
@@ -118,8 +110,7 @@ function CreatePresentationPage() {
   const [eventName, setEventName]   = useState("");
   const [eventType, setEventType]   = useState<EventType | "">("");
   const [audience, setAudience]     = useState("");
-  const language: PresentationLanguage = "pt-BR";
-const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query);
+  const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query);
 
   // Categoria primária = primeira da lista; secundárias = restantes
   const primaryCategory = (ed.draft.categories[0] ?? "Todos") as string;
@@ -205,64 +196,79 @@ const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query)
     setSaveError("");
     setIsSaving(true);
     try {
-      const secondaryFocuses = ed.draft.categories.slice(1) as string[];
-
-      // Chama o serviço de IA para gerar o PPTX real
-      let downloadUrl: string | undefined;
-      try {
-        const query = [eventName.trim(), primaryCategory].filter(Boolean).join(" — ");
-        const aiRes = await fetch("/api/ia/research", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query }),
-          signal: AbortSignal.timeout(6 * 60 * 1000),
-        });
-        if (aiRes.ok) {
-          const aiData = await aiRes.json() as {
-            download_url?: string;
-            presentation_id?: string;
-            source_status?: Array<{ fonte: string; status: string; resultados: number; mensagem?: string }>;
-          };
-          if (aiData.download_url) {
-            downloadUrl = `/ia${aiData.download_url}`;
-          }
-          if (aiData.source_status && aiData.presentation_id) {
-            try {
-              sessionStorage.setItem(
-                `ia_sources_${aiData.presentation_id}`,
-                JSON.stringify(aiData.source_status),
-              );
-              sessionStorage.setItem("ia_last_presentation_id", aiData.presentation_id);
-            } catch {}
-          }
-        }
-      } catch {
-        // Serviço de IA indisponível — prossegue sem download de PPTX
+      if (!user?.teams?.length) {
+        setSaveError("Você precisa estar associado a um time para criar um projeto. Entre em contato com o administrador.");
+        return;
       }
 
-      // Todos os módulos iniciam ativos — o usuário ajusta depois na tela de resultado
-      const allModuleConfigs = CANONICAL_MODULE_ORDER.map((moduleId) => ({
-        instanceId: `inst-${moduleId}`,
-        moduleId,
-        enabled: true,
-        hidden: false,
-      }));
+      const teamId = parseInt((user.teams as Array<{ id: string }>)[0].id, 10);
+      const userId = parseInt(user.id, 10);
 
-      const presentation = await presentationService.createPresentation({
-        title:            eventName.trim() || ed.draft.name.trim() || `Apresentação — ${primaryCategory}`,
-        eventName:        eventName.trim() || primaryCategory,
-        eventType:        (eventType as EventType) || "outro",
-        purpose:          search.trim(),
-        audience:         audience.trim() || ed.draft.targetAudience.join(", "),
-        mainFocus:        primaryCategory,
-        secondaryFocuses,
-        selectedProjects: [],
-        moduleConfigs:    allModuleConfigs,
-        language,
-        status:           "draft",
-        createdBy:        user?.id ?? "unknown",
-        notes:            search.trim(),
+      const iaPrompt = [
+        search.trim(),
+        eventName.trim(),
+        eventType ? `Tipo de evento: ${eventType}` : "",
+        audience.trim() ? `Público-alvo: ${audience.trim()}` : "",
+        ed.draft.categories.length > 0 ? `Categoria: ${ed.draft.categories[0]}` : "",
+      ].filter(Boolean).join(". ");
+
+      // Sources: usa links oficiais como fontes, com fallback para site da prefeitura
+      const sources =
+        ed.draft.officialLinks.length > 0
+          ? ed.draft.officialLinks.map((l) => l.url)
+          : ["https://barueri.sp.gov.br"];
+
+      const payload = {
+        ia_prompt: iaPrompt || ed.draft.name,
+        name: ed.draft.name.trim(),
+        user: userId,
+        team: teamId,
+        family: 0,
+        source: sources,
+        main_department: ed.draft.mainDepartment || user.department || "Prefeitura de Barueri",
+        related_departments: ed.draft.relatedDepartments,
+        areas: ed.draft.categories as string[],
+        ods: ed.draft.ods as number[],
+        technologies: ed.draft.technologies,
+        keywords: ed.draft.keywords,
+        ...(ed.draft.shortDescription.trim() ? { short_description: ed.draft.shortDescription } : {}),
+        ...(ed.draft.fullDescription.trim() ? { full_description: ed.draft.fullDescription } : {}),
+        ...(eventName.trim() || primaryCategory ? { theme: eventName.trim() || primaryCategory } : {}),
+        ...(audience.trim() ? { audience: audience.trim() } : {}),
+        ...(ed.draft.implementationDate ? { implementation_date: ed.draft.implementationDate } : {}),
+        ...(ed.draft.awards.length > 0 ? {
+          awards: ed.draft.awards.map((a) => ({
+            institution: a.organization || a.name,
+            year: parseInt(a.year, 10),
+            description: a.description,
+            link: a.link,
+          })),
+        } : {}),
+        ...(ed.draft.indicators.length > 0 ? {
+          indicators: ed.draft.indicators.map((i) => ({
+            label: i.label,
+            value: i.value,
+            measure: i.unit,
+            source: i.source,
+            year: parseInt(i.year, 10),
+          })),
+        } : {}),
+      };
+
+      const res = await authFetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({})) as { message?: string | string[] };
+        const msg = Array.isArray(errData?.message) ? errData.message.join(", ") : (errData?.message ?? `Erro ${res.status}`);
+        setSaveError(`Erro ao criar projeto: ${msg}`);
+        return;
+      }
+
+      const project = await res.json() as { id: string; slides_url?: string };
 
       // Navega diretamente para a página de apresentação gerada
       const params = buildPresentationSearchParams({
@@ -270,11 +276,11 @@ const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query)
         category: primaryCategory,
         year:     DEFAULT_PRESENTATION_FILTERS.year,
       });
-      params.set("pid", presentation.id);
-      if (downloadUrl) params.set("dlUrl", downloadUrl);
+      params.set("pid", project.id);
+      if (project.slides_url) params.set("dlUrl", project.slides_url);
       navigate(`${ROUTE_PATHS.generatedPresentation}?${params.toString()}`);
     } catch {
-      setSaveError("Erro ao salvar a apresentação. Tente novamente.");
+      setSaveError("Erro ao salvar o projeto. Tente novamente.");
     } finally {
       setIsSaving(false);
     }
