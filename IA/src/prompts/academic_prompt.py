@@ -31,8 +31,8 @@ Regras de pesquisa e redação:
 - Ignore identificadores administrativos e não os exponha nos slides.
 - Use fontes externas recuperadas para fatos gerais quando estiverem disponíveis. Se faltarem fontes, ainda assim produza os slides solicitados, mas identifique claramente o conteúdo como não verificado e não invente estatísticas, datas, autores, URLs ou identificadores.
 - Diferencie dados declarados pelo projeto, fatos apoiados por fontes e explicações gerais da IA. Não apresente conteúdo não verificado como dado oficial.
-- "fontes" é opcional em todos os slides. Preencha somente com IDs existentes nas fontes fornecidas; use lista vazia quando não houver fonte adequada. Nunca invente IDs.
-- "citacao" é opcional. Use-a somente para um trecho literal encontrado em uma fonte citada; se não houver trecho adequado, use null e continue a apresentação normalmente.
+- Para cada slide factual, preencha "fontes" com um ou mais IDs relevantes das fontes fornecidas. Use lista vazia somente quando não houver correspondência suficiente; nunca invente IDs.
+- "citacao" é opcional, mas quando existir deve refletir exatamente um trecho literal encontrado em uma das fontes citadas no próprio slide; se não houver trecho adequado, use null e continue a apresentação normalmente.
 - Diferencie fatos, análises e projeções; só apresente projeções explicitamente descritas nas fontes.
 - Se houver lacunas, conflitos ou fontes insuficientes, descreva-os em "limitacoes" e sinalize as informações que não puderam ser verificadas.
 - Escreva em português claro, com tom acadêmico e sem linguagem promocional.

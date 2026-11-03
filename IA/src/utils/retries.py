@@ -43,7 +43,7 @@ def call_with_retry(
     jitter: Callable[[float, float], float] = random.uniform,
 ) -> T:
 
-    '''Realiza uma operação com retry limitado, exponencial apenas depois de alguns segundo, tendo um limite máximo de delay e jitter.'''
+    '''Realiza uma operação com retry limitado, exponencial e com jitter aleatório, respeitando Retry-After quando informado.'''
     if attempts < 1:
         raise ValueError("attempts precisa ser pelo menos 1.")
     if initial_delay < 0 or max_delay < 0:
@@ -56,20 +56,19 @@ def call_with_retry(
             if attempt == attempts or not retryable_exception(exc):
                 raise
             requested_delay = retry_after_exception(exc) if retry_after_exception else None
-            if requested_delay is not None and requested_delay > max_delay:
-                raise
         else:
             if attempt == attempts or not retryable_result(result):
                 return result
             requested_delay = retry_after(result) if retry_after else None
-            if requested_delay is not None and requested_delay > max_delay:
-                return result
 
-        exponential = min(initial_delay * (2 ** (attempt - 1)), max_delay)
+        exponential = initial_delay * (2 ** (attempt - 1))
         if requested_delay is not None:
-            delay = requested_delay
+            delay = max(0.0, requested_delay)
         else:
-            delay = min(exponential + jitter(0.0, min(exponential, 1.0)), max_delay)
+            upper_bound = max(initial_delay, min(exponential, max_delay))
+            delay = min(exponential + jitter(0.0, upper_bound), max_delay if max_delay > 0 else exponential)
+            if delay <= 0:
+                delay = max(0.0, exponential)
         sleep(delay)
 
     raise RuntimeError("Fluxo de retry terminou em estado inesperado.")
