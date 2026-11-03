@@ -201,9 +201,10 @@ function HelpPage() {
           <div className="mt-5 flex flex-wrap justify-center gap-3">
             <a
               href="mailto:apresentacoes.inteligentes.bru@gmail.com"
-              className="inline-flex items-center gap-2 rounded-[12px] bg-white px-5 py-2.5 text-[0.92rem] font-semibold text-[#1675b8] transition-transform hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 rounded-[12px] bg-white px-5 py-2.5 text-[0.92rem] font-semibold transition-transform hover:-translate-y-0.5"
+              style={{ color: "#1675b8" }}
             >
-              <FiMail className="h-4 w-4" aria-hidden="true" />
+              <FiMail className="h-4 w-4" style={{ color: "#1675b8" }} aria-hidden="true" />
               Enviar e-mail
             </a>
             <Link

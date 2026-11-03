@@ -6,10 +6,12 @@
  * - Times: apresentações de todos os membros do mesmo time (ou todos os times para master_admin)
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  FiArchive,
   FiArrowRight,
   FiCalendar,
+  FiFolder,
   FiGrid,
   FiLayers,
   FiLoader,
@@ -24,21 +26,22 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context";
 import { canAccessAdminModules, canCreatePresentations } from "../../lib/accessControl";
 import { formatShortDate } from "../../lib/formatters";
-import { presentationsMock } from "../../mocks/presentationsMock";
+import { authFetch } from "../../lib/apiClient";
 import { presentationService } from "../../services/presentationService";
 import { projectService } from "../../services/projectService";
-import type { AdminPresentationSummary } from "../../types/admin";
 import type { PresentationStatus, EventType } from "../../types/institutionalPresentation";
 import type { PresentationSummary } from "../../types/institutionalPresentation";
-import type { ProjectSummary } from "../../types/project";
+import type { ProjectStatus, ProjectSummary } from "../../types/project";
+import type { AuthSessionUser } from "../../types/auth";
 import { ROUTE_PATHS } from "../../router/paths";
 import { buildPresentationSearchParams } from "../../router/presentationSearchParams";
 
 // ─── Metadados de exibição ────────────────────────────────────────────────────
 
-const STATUS_CONFIG: Record<PresentationStatus, { label: string; cls: string }> = {
-  draft:  { label: "Rascunho", cls: "bg-[#fef9c3] text-[#92400e]" },
-  active: { label: "Ativo",    cls: "bg-[#dcfce7] text-[#166534]" },
+const STATUS_CONFIG: Record<PresentationStatus | ProjectStatus, { label: string; cls: string }> = {
+  draft:    { label: "Rascunho",  cls: "bg-[#fef9c3] text-[#92400e]" },
+  active:   { label: "Ativo",     cls: "bg-[#dcfce7] text-[#166534]" },
+  archived: { label: "Arquivado", cls: "bg-[#f3f4f6] text-[#6b7280]" },
 };
 
 const EVENT_LABELS: Record<EventType, string> = {
@@ -51,7 +54,26 @@ const EVENT_LABELS: Record<EventType, string> = {
   "outro":            "Outro",
 };
 
-type TabId = "minhas" | "times";
+type TabId = "minhas" | "projetos" | "times";
+type StatusFilter = "all" | ProjectStatus;
+
+// Projeto bruto da API (com teamId)
+type RawApiProject = {
+  id: string;
+  name: string;
+  short_description: string | null;
+  status: number;
+  main_department: string | null;
+  team: string;
+  last_update: string | null;
+  areas: string[];
+};
+
+function mapStatusNum(s: number): ProjectStatus {
+  if (s === 2) return "active";
+  if (s === 3) return "archived";
+  return "draft";
+}
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
@@ -62,70 +84,77 @@ export default function AdminProjectsPage() {
   const canCreate = canCreatePresentations(user);
   const isAdmin = canAccessAdminModules(user);
   const [activeTab, setActiveTab] = useState<TabId>("minhas");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [timesStatusFilter, setTimesStatusFilter] = useState<StatusFilter>("all");
 
   const [presentations, setPresentations] = useState<PresentationSummary[]>([]);
   const [allProjects, setAllProjects]     = useState<ProjectSummary[]>([]);
-  const [loading, setLoading]             = useState(true);
+  const [rawApiProjects, setRawApiProjects] = useState<RawApiProject[]>([]);
+  const [loadingPres, setLoadingPres]     = useState(true);
+  const [loadingProj, setLoadingProj]     = useState(true);
+  const [loadingTimes, setLoadingTimes]   = useState(false);
+  const [archivingId, setArchivingId]     = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    setLoading(true);
-    Promise.all([
-      presentationService.getPresentationsByUser(user.id),
-      projectService.getProjects(),
-    ])
-      .then(([pres, projs]) => {
-        setPresentations(pres);
-        setAllProjects(projs);
-      })
-      .finally(() => setLoading(false));
+    setLoadingPres(true);
+    presentationService.getPresentationsByUser(user.id)
+      .then(setPresentations)
+      .finally(() => setLoadingPres(false));
   }, [user]);
+
+  const reloadProjects = useCallback(() => {
+    setLoadingProj(true);
+    projectService.getProjects()
+      .then(setAllProjects)
+      .finally(() => setLoadingProj(false));
+  }, []);
+
+  useEffect(() => { reloadProjects(); }, [reloadProjects]);
+
+  useEffect(() => {
+    if (activeTab !== "times" || !user) return;
+    if (rawApiProjects.length > 0) return; // já carregado
+    setLoadingTimes(true);
+    authFetch("/api/projects")
+      .then((r) => r.ok ? r.json() as Promise<RawApiProject[]> : Promise.resolve([]))
+      .then(setRawApiProjects)
+      .catch(() => {})
+      .finally(() => setLoadingTimes(false));
+  }, [activeTab, user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loading = loadingPres;
 
   const projectMap = useMemo(
     () => new Map(allProjects.map((p) => [p.id, p.name])),
     [allProjects],
   );
 
-  // Times do usuário atual (da sessão)
-  const userTeamNames = useMemo(
-    () => (user?.teams ?? []).map((t) => t.name).filter(Boolean),
-    [user],
-  );
+  const filteredProjects = useMemo(() => {
+    if (statusFilter === "all") return allProjects;
+    return allProjects.filter((p) => p.status === statusFilter);
+  }, [allProjects, statusFilter]);
 
-  // Dados para aba Times
-  const teamPresentations = useMemo(() => {
-    if (!user) return [];
-    const teamFilter = searchParams.get("time");
-    const sectorFilter = searchParams.get("setor");
-
-    if (user.master_admin) {
-      // Master admin: vê todos, com filtro opcional por setor/time via URL params
-      return presentationsMock.filter((p) => {
-        if (teamFilter && !p.team.toLowerCase().includes(teamFilter.toLowerCase())) return false;
-        if (sectorFilter && !p.department.toLowerCase().includes(sectorFilter.toLowerCase())) return false;
-        return true;
-      });
+  async function handleArchive(id: string) {
+    setArchivingId(id);
+    try {
+      await projectService.archiveProject(id);
+      reloadProjects();
+    } catch {
+      // silent — reload anyway to show current state
+      reloadProjects();
+    } finally {
+      setArchivingId(null);
     }
+  }
 
-    if (isAdmin) {
-      // Admin de time: vê todos os projetos do seu time
-      return presentationsMock.filter((p) => p.team === user.team);
-    }
-
-    // Usuário comum: apresentações dos times em que está (via user.teams)
-    if (userTeamNames.length > 0) {
-      return presentationsMock.filter((p) => userTeamNames.includes(p.team));
-    }
-
-    // Fallback: apenas os próprios projetos
-    return presentationsMock.filter(
-      (p) => p.ownerUserId === user.id || p.ownerName === user.name,
-    );
-  }, [user, isAdmin, userTeamNames, searchParams]);
+  const userTeams = user?.teams ?? [];
+  const userTeamCount = userTeams.length || (user?.team ? 1 : 0);
 
   const tabs: { id: TabId; label: string; count?: number }[] = [
-    { id: "minhas", label: "Minhas", count: presentations.length },
-    { id: "times", label: "Times", count: teamPresentations.length },
+    { id: "minhas",   label: "Minhas",   count: presentations.length },
+    ...(!isAdmin ? [{ id: "projetos" as TabId, label: "Projetos", count: allProjects.length }] : []),
+    { id: "times",    label: "Times",    count: userTeamCount || undefined },
   ];
 
   return (
@@ -167,8 +196,10 @@ export default function AdminProjectsPage() {
           >
             {tab.id === "minhas" ? (
               <FiMonitor className="h-4 w-4" />
-            ) : (
+            ) : tab.id === "times" ? (
               <FiUsers className="h-4 w-4" />
+            ) : (
+              <FiFolder className="h-4 w-4" />
             )}
             {tab.label}
             {tab.count !== undefined && tab.count > 0 && (
@@ -234,137 +265,378 @@ export default function AdminProjectsPage() {
         </>
       )}
 
+      {/* Aba Projetos */}
+      {activeTab === "projetos" && (
+        <ProjectsTab
+          projects={filteredProjects}
+          allCount={allProjects.length}
+          loading={loadingProj}
+          statusFilter={statusFilter}
+          onStatusFilter={setStatusFilter}
+          archivingId={archivingId}
+          onArchive={handleArchive}
+          canArchive={!!user?.approver}
+        />
+      )}
+
       {/* Aba Times */}
       {activeTab === "times" && (
-        <TeamsPresentationsTab
-          presentations={teamPresentations}
-          userTeam={user?.team ?? ""}
-          isMasterAdmin={!!user?.master_admin}
-          isAdmin={isAdmin}
-          userTeamNames={userTeamNames}
+        <TimesTab
+          user={user}
+          rawProjects={rawApiProjects}
+          loading={loadingTimes}
+          statusFilter={timesStatusFilter}
+          onStatusFilter={setTimesStatusFilter}
         />
       )}
     </section>
   );
 }
 
+// ─── Filtro de status (compartilhado) ────────────────────────────────────────
+
+const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
+  { value: "all",      label: "Todos"     },
+  { value: "draft",    label: "Rascunho"  },
+  { value: "active",   label: "Ativo"     },
+  { value: "archived", label: "Arquivado" },
+];
+
 // ─── Aba Times ────────────────────────────────────────────────────────────────
 
-function TeamsPresentationsTab({
-  presentations,
-  userTeam,
-  isMasterAdmin,
-  isAdmin,
-  userTeamNames,
+function TimesTab({
+  user,
+  rawProjects,
+  loading,
+  statusFilter,
+  onStatusFilter,
 }: {
-  presentations: AdminPresentationSummary[];
-  userTeam: string;
-  isMasterAdmin: boolean;
-  isAdmin: boolean;
-  userTeamNames: string[];
+  user: AuthSessionUser | null;
+  rawProjects: RawApiProject[];
+  loading: boolean;
+  statusFilter: StatusFilter;
+  onStatusFilter: (s: StatusFilter) => void;
 }) {
-  const showTeamHeader = isMasterAdmin || !isAdmin || userTeamNames.length > 0;
+  const teams = user?.teams ?? [];
+  const hasTeams = teams.length > 0;
 
-  // Agrupa por time; para usuários comuns, garante que todos os seus times apareçam
-  const grouped = useMemo(() => {
-    const map = new Map<string, AdminPresentationSummary[]>();
+  // Projetos filtrados por status
+  const filtered = useMemo(
+    () => statusFilter === "all" ? rawProjects : rawProjects.filter((p) => mapStatusNum(p.status) === statusFilter),
+    [rawProjects, statusFilter],
+  );
 
-    // Garante que os times do usuário aparecem mesmo com 0 apresentações
-    const seedTeams = !isMasterAdmin && !isAdmin && userTeamNames.length > 0
-      ? userTeamNames
-      : userTeam ? [userTeam] : [];
-    for (const name of seedTeams) map.set(name, []);
-
-    for (const p of presentations) {
+  // Projetos agrupados por teamId
+  const byTeam = useMemo(() => {
+    const map = new Map<string, RawApiProject[]>();
+    for (const p of filtered) {
+      if (!p.team) continue;
       const list = map.get(p.team) ?? [];
       list.push(p);
       map.set(p.team, list);
     }
     return map;
-  }, [presentations, isMasterAdmin, isAdmin, userTeamNames, userTeam]);
+  }, [filtered]);
 
-  if (grouped.size === 0) {
+  if (loading) {
     return (
-      <div className="flex flex-col items-center gap-5 rounded-[24px] border border-dashed border-[#d1d5db] bg-[#f9fafb] py-20 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f0fdf4]">
-          <FiUsers className="h-7 w-7 text-[#16a34a]" />
+      <div className="flex items-center justify-center py-20">
+        <FiLoader className="h-8 w-8 animate-spin text-[#1675b8]" />
+      </div>
+    );
+  }
+
+  if (!hasTeams) {
+    return (
+      <div className="flex flex-col items-center gap-4 rounded-[24px] border border-dashed border-[#d1d5db] bg-[#f9fafb] py-20 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f3f4f6]">
+          <FiUsers className="h-7 w-7 text-[#9ca3af]" />
         </div>
         <div>
           <p className="text-[1.05rem] font-semibold text-[#374151]">
-            {isAdmin && !isMasterAdmin ? "Nenhuma apresentação do time" : "Nenhum projeto nos seus times"}
+            Você não está associado a nenhum time
           </p>
           <p className="mt-1 text-[0.9rem] text-[#9ca3af]">
-            {isMasterAdmin
-              ? "Nenhuma apresentação encontrada para os filtros selecionados."
-              : isAdmin
-              ? `Nenhuma apresentação do time "${userTeam}" ainda.`
-              : "Você ainda não está em nenhum time."}
+            {user?.department
+              ? `Secretaria: ${user.department}`
+              : "Entre em contato com seu administrador para ser incluído em um time."}
           </p>
         </div>
       </div>
     );
   }
 
+  const totalProjectsInUserTeams = teams.reduce(
+    (acc, t) => acc + (byTeam.get(t.id)?.length ?? 0), 0
+  );
+
   return (
-    <div className="space-y-8">
-      {[...grouped.entries()].map(([teamName, items]) => (
-        <div key={teamName}>
-          {showTeamHeader && (
-            <div className="mb-4 flex items-center gap-2">
-              <FiUsers className="h-4 w-4 text-[#9ca3af]" />
-              <h2 className="text-[0.92rem] font-bold uppercase tracking-wider text-[#9ca3af]">
-                {teamName}
-              </h2>
-              <span className="rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[0.72rem] font-semibold text-[#6b7280]">
-                {items.length} apresentaç{items.length !== 1 ? "ões" : "ão"}
-              </span>
-            </div>
-          )}
-          {items.length === 0 ? (
-            <p className="text-[0.88rem] text-[#9ca3af] italic">
-              Nenhuma apresentação neste time ainda.
-            </p>
-          ) : (
-            <div className="grid gap-4 xl:grid-cols-2">
-              {items.map((p) => (
-                <TeamPresentationCard key={p.id} presentation={p} />
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
+    <div className="space-y-6">
+      {/* Filtro de status */}
+      <div className="flex flex-wrap gap-2">
+        {STATUS_FILTER_OPTIONS.map((opt) => {
+          const count = opt.value === "all"
+            ? totalProjectsInUserTeams
+            : teams.reduce((acc, t) => acc + (byTeam.get(t.id)?.filter((p) => mapStatusNum(p.status) === opt.value).length ?? 0), 0);
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onStatusFilter(opt.value)}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[0.8rem] font-semibold transition ${
+                statusFilter === opt.value
+                  ? "bg-[#1e3a52] text-white"
+                  : "bg-[#f0f2f4] text-[#6a7a88] hover:bg-[#e4e8ec]"
+              }`}
+            >
+              {opt.label}
+              {opt.value !== "all" && (
+                <span className={`rounded-full px-1.5 py-0.5 text-[0.68rem] font-bold ${
+                  statusFilter === opt.value ? "bg-white/20 text-white" : "bg-white text-[#6a7a88]"
+                }`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Seções por time */}
+      {teams.map((team) => {
+        const projects = byTeam.get(team.id) ?? [];
+        return (
+          <TeamSection
+            key={team.id}
+            team={team}
+            projects={projects}
+          />
+        );
+      })}
     </div>
   );
 }
 
-function TeamPresentationCard({ presentation: p }: { presentation: AdminPresentationSummary }) {
-  const statusCls =
-    p.status === "active"
-      ? "bg-[#dcfce7] text-[#166534]"
-      : "bg-[#fef9c3] text-[#92400e]";
-  const statusLabel = p.status === "active" ? "Ativo" : "Rascunho";
+function TeamSection({
+  team,
+  projects,
+}: {
+  team: { id: string; name: string; sectorId: string; sectorName: string };
+  projects: RawApiProject[];
+}) {
+  return (
+    <section className="rounded-[20px] border border-[#e5e7eb] bg-white shadow-[0_2px_12px_rgba(20,33,51,0.05)]">
+      {/* Cabeçalho do time */}
+      <div className="flex items-center gap-3 border-b border-[#f3f4f6] px-5 py-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eff6ff]">
+          <FiUsers className="h-5 w-5 text-[#1675b8]" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-[1rem] font-bold text-[#1e1e1e]">{team.name}</h2>
+          <p className="text-[0.8rem] text-[#9ca3af]">{team.sectorName}</p>
+        </div>
+        <span className="shrink-0 rounded-full bg-[#eff6ff] px-3 py-1 text-[0.76rem] font-bold text-[#1675b8]">
+          {projects.length} {projects.length !== 1 ? "projetos" : "projeto"}
+        </span>
+      </div>
+
+      {/* Projetos do time */}
+      {projects.length === 0 ? (
+        <div className="flex items-center justify-center gap-3 py-8 text-[0.88rem] text-[#9ca3af]">
+          <FiFolder className="h-5 w-5" />
+          Nenhum projeto neste time com o filtro selecionado
+        </div>
+      ) : (
+        <div className="grid gap-4 p-5 xl:grid-cols-2">
+          {projects.map((p) => (
+            <TeamProjectCard key={p.id} project={p} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function TeamProjectCard({ project: p }: { project: RawApiProject }) {
+  const status = mapStatusNum(p.status);
+  const st = STATUS_CONFIG[status] ?? STATUS_CONFIG.draft;
+  return (
+    <div className="flex flex-col gap-2 rounded-[14px] border border-[#f0f2f4] bg-[#f9fafb] p-4">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.72rem] font-bold ${st.cls}`}>
+          {st.label}
+        </span>
+        {p.areas[0] && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-[0.72rem] font-semibold text-[#475569]">
+            <FiTag className="h-3 w-3" />
+            {p.areas[0]}
+          </span>
+        )}
+      </div>
+      <h3 className="text-[0.95rem] font-bold leading-snug text-[#1e1e1e]">{p.name}</h3>
+      {p.short_description && (
+        <p className="line-clamp-2 text-[0.82rem] text-[#6b7280] leading-snug">{p.short_description}</p>
+      )}
+      <div className="flex items-center gap-3 pt-1 text-[0.76rem] text-[#9ca3af]">
+        {p.main_department && (
+          <span className="flex items-center gap-1.5">
+            <FiUsers className="h-3.5 w-3.5" />
+            {p.main_department}
+          </span>
+        )}
+        {p.last_update && (
+          <span className="flex items-center gap-1.5">
+            <FiCalendar className="h-3.5 w-3.5" />
+            {formatShortDate(p.last_update)}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Aba Projetos ─────────────────────────────────────────────────────────────
+
+function ProjectsTab({
+  projects,
+  allCount,
+  loading,
+  statusFilter,
+  onStatusFilter,
+  archivingId,
+  onArchive,
+  canArchive,
+}: {
+  projects: ProjectSummary[];
+  allCount: number;
+  loading: boolean;
+  statusFilter: StatusFilter;
+  onStatusFilter: (s: StatusFilter) => void;
+  archivingId: string | null;
+  onArchive: (id: string) => void;
+  canArchive: boolean;
+}) {
+  return (
+    <div className="space-y-5">
+      {/* Filtro de status */}
+      <div className="flex flex-wrap gap-2">
+        {STATUS_FILTER_OPTIONS.map((opt) => {
+          const count = opt.value === "all"
+            ? allCount
+            : projects.filter((p) => p.status === opt.value).length;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onStatusFilter(opt.value)}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[0.8rem] font-semibold transition ${
+                statusFilter === opt.value
+                  ? "bg-[#1e3a52] text-white"
+                  : "bg-[#f0f2f4] text-[#6a7a88] hover:bg-[#e4e8ec]"
+              }`}
+            >
+              {opt.label}
+              {opt.value !== "all" && (
+                <span className={`rounded-full px-1.5 py-0.5 text-[0.68rem] font-bold ${
+                  statusFilter === opt.value ? "bg-white/20 text-white" : "bg-white text-[#6a7a88]"
+                }`}>
+                  {projects.filter((p) => p.status === opt.value).length}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <FiLoader className="h-8 w-8 animate-spin text-[#1675b8]" />
+        </div>
+      ) : projects.length === 0 ? (
+        <div className="flex flex-col items-center gap-5 rounded-[24px] border border-dashed border-[#d1d5db] bg-[#f9fafb] py-20 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#eff6ff]">
+            <FiLayers className="h-7 w-7 text-[#1675b8]" />
+          </div>
+          <p className="text-[1.05rem] font-semibold text-[#374151]">Nenhum projeto encontrado</p>
+          <p className="text-[0.9rem] text-[#9ca3af]">
+            {statusFilter !== "all" ? "Tente selecionar outro filtro de status." : "Nenhum projeto cadastrado ainda."}
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4 xl:grid-cols-2">
+          {projects.map((p) => (
+            <ProjectCard
+              key={p.id}
+              project={p}
+              archiving={archivingId === p.id}
+              canArchive={canArchive && p.status === "active"}
+              onArchive={() => onArchive(p.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProjectCard({
+  project: p,
+  archiving,
+  canArchive,
+  onArchive,
+}: {
+  project: ProjectSummary;
+  archiving: boolean;
+  canArchive: boolean;
+  onArchive: () => void;
+}) {
+  const st = STATUS_CONFIG[p.status] ?? STATUS_CONFIG.draft;
 
   return (
     <div className="flex flex-col gap-3 rounded-[18px] border border-[#e5e7eb] bg-white p-5 shadow-[0_2px_10px_rgba(20,33,51,0.06)]">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.72rem] font-bold ${statusCls}`}>
-          {statusLabel}
-        </span>
-        <span className="inline-flex items-center gap-1 rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-[0.72rem] font-semibold text-[#475569]">
-          <FiTag className="h-3 w-3" />
-          {p.category}
-        </span>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.72rem] font-bold ${st.cls}`}>
+            {st.label}
+          </span>
+          {p.governmentArea && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-[0.72rem] font-semibold text-[#475569]">
+              <FiTag className="h-3 w-3" />
+              {p.governmentArea}
+            </span>
+          )}
+        </div>
+        {canArchive && (
+          <button
+            type="button"
+            onClick={onArchive}
+            disabled={archiving}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#fff7ed] px-3 py-1 text-[0.76rem] font-semibold text-[#c2410c] transition hover:bg-[#ffedd5] disabled:opacity-50"
+          >
+            {archiving ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiArchive className="h-3.5 w-3.5" />}
+            Arquivar
+          </button>
+        )}
       </div>
-      <h3 className="text-[1rem] font-bold text-[#1e1e1e] leading-tight">{p.title}</h3>
-      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[0.82rem] text-[#9ca3af]">
-        <span className="flex items-center gap-1.5">
-          <FiUser className="h-3.5 w-3.5" />
-          {p.ownerName}
-        </span>
-        <span className="flex items-center gap-1.5">
-          <FiCalendar className="h-3.5 w-3.5" />
-          {formatShortDate(p.date)}
-        </span>
+
+      <h3 className="text-[1rem] font-bold text-[#1e1e1e] leading-tight">{p.name}</h3>
+      {p.shortDescription && (
+        <p className="text-[0.85rem] text-[#6b7280] leading-snug line-clamp-2">{p.shortDescription}</p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-3 pt-1 text-[0.8rem] text-[#9ca3af]">
+        {p.mainDepartment && (
+          <span className="flex items-center gap-1.5">
+            <FiUsers className="h-3.5 w-3.5" />
+            {p.mainDepartment}
+          </span>
+        )}
+        {p.lastUpdatedAt && (
+          <span className="flex items-center gap-1.5">
+            <FiCalendar className="h-3.5 w-3.5" />
+            {formatShortDate(p.lastUpdatedAt)}
+          </span>
+        )}
       </div>
     </div>
   );

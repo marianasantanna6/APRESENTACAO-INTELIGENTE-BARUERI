@@ -444,10 +444,11 @@ export default function TeamsPage() {
   useEffect(() => {
     async function load() {
       try {
+        const headers = authHeader();
         const [projectsRes, teamsRes, usersRes] = await Promise.all([
-          fetch("/api/projects?status=1"),
-          fetch("/api/teams"),
-          fetch("/api/management"),
+          fetch("/api/projects?status=1", { headers }),
+          fetch("/api/teams", { headers }),
+          fetch("/api/management", { headers }),
         ]);
 
         if (!projectsRes.ok) throw new Error("backend indisponível");

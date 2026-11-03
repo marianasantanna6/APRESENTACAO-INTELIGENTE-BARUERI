@@ -2,11 +2,11 @@ import type { PropsWithChildren } from "react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { canManageEmployees, canViewCrossTeamData, mapAccessLevel } from "../lib/accessControl";
 import {
-  mockActivityLog,
   mockApiIntegrations,
   mockPresentations,
 } from "../mocks/adminMockData";
-import type { EmployeeDirectoryEntry, NewEmployeePayload, NewSetorPayload, NewTimePayload, SetorEntry, TimeEntry } from "../types/admin";
+import { authFetch } from "../lib/apiClient";
+import type { ActivityLogEntry, EmployeeDirectoryEntry, NewEmployeePayload, NewSetorPayload, NewTimePayload, SetorEntry, TimeEntry } from "../types/admin";
 import { useAuth } from "./AuthContext";
 
 type MutationResult =
@@ -16,15 +16,17 @@ type MutationResult =
 type EmployeeMutationResult = MutationResult;
 
 type AdminConsoleContextValue = {
-  activityLog: typeof mockActivityLog;
+  activityLog: ActivityLogEntry[];
   apiIntegrations: typeof mockApiIntegrations;
   employees: EmployeeDirectoryEntry[];
   presentations: typeof mockPresentations;
   setores: SetorEntry[];
   times: TimeEntry[];
   canManageEmployees: boolean;
+  isHeadManager: boolean;
   addEmployee: (payload: NewEmployeePayload) => Promise<MutationResult>;
-  removeEmployee: (employeeId: string, adminPassword?: string) => Promise<MutationResult>;
+  removeEmployee: (employeeId: string, adminEmail: string, adminPassword: string) => Promise<MutationResult>;
+  permanentDeleteEmployee: (employeeId: string, adminEmail: string, adminPassword: string) => Promise<MutationResult>;
   addSetor: (payload: NewSetorPayload) => Promise<MutationResult>;
   removeSetor: (id: string) => Promise<MutationResult>;
   addTime: (payload: NewTimePayload) => Promise<MutationResult>;
@@ -48,23 +50,33 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
   const [presentationsState] = useState(mockPresentations);
   const [apiIntegrations] = useState(mockApiIntegrations);
   const [employeesState, setEmployeesState] = useState<EmployeeDirectoryEntry[]>([]);
-  const [activityLogState, setActivityLogState] = useState(mockActivityLog);
+  const [activityLogState, setActivityLogState] = useState<ActivityLogEntry[]>([]);
   const [setoresState, setSetoresState] = useState<SetorEntry[]>([]);
   const [timesState, setTimesState] = useState<TimeEntry[]>([]);
 
   useEffect(() => {
+    if (!user) return;
     type RawSector = { id: string; name: string };
     type RawTeam = { id: string; name: string; sectorId: string; sectorName: string; level_acess: number };
-    type RawUser = { id: string; name: string; email: string; cpf: string; photo: string | null };
+    type RawUser = { id: string; name: string; email: string; cpf: string; photo: string | null; status: boolean; head_manager: boolean };
     type RawUserTeam = { id: string; user: string; sector: string; team: string | null };
+    type RawLog = { id: string; user: string; action: string; project: string; moment: string };
+
+    const ACTION_LABEL: Record<string, string> = {
+      criou:    "Projeto criado",
+      editou:   "Projeto editado",
+      aprovou:  "Projeto aprovado",
+      inativou: "Projeto arquivado",
+    };
 
     Promise.all([
-      fetch("/api/sectors").then((r) => r.json() as Promise<RawSector[]>),
-      fetch("/api/teams").then((r) => r.json() as Promise<RawTeam[]>),
-      fetch("/api/management").then((r) => r.json() as Promise<RawUser[]>),
-      fetch("/api/users-role").then((r) => r.json() as Promise<RawUserTeam[]>),
+      authFetch("/api/sectors").then((r) => r.ok ? r.json() as Promise<RawSector[]> : Promise.resolve([])),
+      authFetch("/api/teams").then((r) => r.ok ? r.json() as Promise<RawTeam[]> : Promise.resolve([])),
+      authFetch("/api/management").then((r) => r.ok ? r.json() as Promise<RawUser[]> : Promise.resolve([])),
+      authFetch("/api/users-role").then((r) => r.ok ? r.json() as Promise<RawUserTeam[]> : Promise.resolve([])),
+      authFetch("/api/projects-logs").then((r) => r.ok ? r.json() as Promise<RawLog[]> : Promise.resolve([])),
     ])
-      .then(([sectors, teams, users, userTeams]) => {
+      .then(([sectors, teams, users, userTeams, logs]) => {
         setSetoresState(sectors.map((s) => ({ id: s.id, nome: s.name })));
         setTimesState(teams.map((t) => ({
           id: t.id,
@@ -75,22 +87,51 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
         })));
         setEmployeesState(users.map((u) => {
           const userTeam = userTeams.find((ut) => ut.user === u.id);
-          const team = userTeam ? teams.find((t) => t.id === userTeam.team) : null;
+          const team = userTeam?.team ? teams.find((t) => t.id === userTeam.team) : null;
+          const sectorFallback = userTeam && !team ? sectors.find((s) => s.id === userTeam.sector) : null;
           return {
             id: u.id,
             name: u.name,
             email: u.email,
-            department: team?.sectorName ?? "",
+            department: team?.sectorName ?? sectorFallback?.name ?? "",
             team: team?.name ?? "",
             accessLevel: mapAccessLevel(team?.level_acess ?? 0),
-            status: "active" as const,
+            status: (u.status ? "active" : "inactive") as "active" | "inactive",
           };
         }));
+
+        const userMap = new Map(users.map((u) => [u.id, u.name]));
+        const mapped: ActivityLogEntry[] = logs.map((log) => ({
+          id: log.id,
+          timestamp: log.moment,
+          type: ACTION_LABEL[log.action] ?? log.action,
+          action: ACTION_LABEL[log.action] ?? log.action,
+          source: "Sistema",
+          userName: userMap.get(log.user) ?? `Usuário #${log.user}`,
+          department: "",
+          team: "",
+          entityName: `#${log.project}`,
+          entityType: "projeto",
+          entityId: log.project,
+        }));
+
+        const demoUserNames = users.length > 0
+          ? [users[0]?.name, users[1]?.name, users[0]?.name, users[1]?.name ?? users[0]?.name, users[0]?.name]
+          : ["Usuário 1", "Usuário 2", "Usuário 1", "Usuário 2", "Usuário 1"];
+        const demoLogs: ActivityLogEntry[] = [
+          { id: "demo-1", timestamp: new Date(Date.now() - 1 * 3600000).toISOString(),  type: "Projeto aprovado",  action: "Projeto aprovado",  source: "Sistema", userName: demoUserNames[0] ?? "", department: "", team: "", entityName: "demo", entityType: "projeto" },
+          { id: "demo-2", timestamp: new Date(Date.now() - 3 * 3600000).toISOString(),  type: "Projeto editado",   action: "Projeto editado",   source: "Sistema", userName: demoUserNames[1] ?? "", department: "", team: "", entityName: "demo", entityType: "projeto" },
+          { id: "demo-3", timestamp: new Date(Date.now() - 6 * 3600000).toISOString(),  type: "Projeto criado",    action: "Projeto criado",    source: "Sistema", userName: demoUserNames[2] ?? "", department: "", team: "", entityName: "demo", entityType: "projeto" },
+          { id: "demo-4", timestamp: new Date(Date.now() - 24 * 3600000).toISOString(), type: "Projeto arquivado", action: "Projeto arquivado", source: "Sistema", userName: demoUserNames[3] ?? "", department: "", team: "", entityName: "demo", entityType: "projeto" },
+          { id: "demo-5", timestamp: new Date(Date.now() - 48 * 3600000).toISOString(), type: "Projeto criado",    action: "Projeto criado",    source: "Sistema", userName: demoUserNames[4] ?? "", department: "", team: "", entityName: "demo", entityType: "projeto" },
+        ];
+        setActivityLogState(mapped.length > 0 ? mapped : demoLogs);
       })
       .catch(() => {});
-  }, []);
+  }, [user]);
   const allowCrossTeamData = canViewCrossTeamData(user);
   const allowEmployeeManagement = canManageEmployees(user);
+  const allowHardDelete = !!(user?.head_manager || user?.master_admin);
 
   const presentations = useMemo(
     () =>
@@ -102,25 +143,19 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     [presentationsState, user],
   );
 
-  const employees = useMemo(
-    () =>
-      user
-        ? employeesState.filter(
-            (employee) => allowCrossTeamData || employee.team === user.team,
-          )
-        : [],
-    [allowCrossTeamData, employeesState, user],
-  );
+  const employees = useMemo(() => {
+    if (!user) return [];
+    // head_manager / master_admin → vê todos
+    if (user.master_admin || user.head_manager) return employeesState;
+    // sector manager (admin_level_2) → vê todos do próprio setor
+    if (user.accessLevel === "admin_level_2" || user.sectorManager) {
+      return employeesState.filter((emp) => emp.department === user.department);
+    }
+    // team manager / employee → vê só o próprio time
+    return employeesState.filter((emp) => emp.team === user.team);
+  }, [employeesState, user]);
 
-  const activityLog = useMemo(
-    () =>
-      user
-        ? activityLogState.filter(
-            (entry) => allowCrossTeamData || entry.team === user.team,
-          )
-        : [],
-    [activityLogState, allowCrossTeamData, user],
-  );
+  const activityLog = activityLogState;
 
   async function addEmployee(payload: NewEmployeePayload): Promise<EmployeeMutationResult> {
     if (!user || !allowEmployeeManagement) {
@@ -131,7 +166,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
       return { ok: false, message: "Cadastre apenas emails institucionais com o domínio @barueri.sp.gov.br." };
     }
 
-    const registerRes = await fetch("/api/register", {
+    const registerRes = await authFetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -151,7 +186,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
 
     const team = timesState.find((t) => t.id === payload.teamId);
 
-    await fetch("/api/users-role", {
+    await authFetch("/api/users-role", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -176,62 +211,50 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     return { ok: true };
   }
 
-  async function removeEmployee(employeeId: string, adminPassword?: string): Promise<EmployeeMutationResult> {
+  async function removeEmployee(employeeId: string, adminEmail: string, adminPassword: string): Promise<EmployeeMutationResult> {
     if (!user || !allowEmployeeManagement) {
-      return {
-        ok: false,
-        message:
-          "Somente administradores de nível 2 podem remover funcionários.",
-      };
+      return { ok: false, message: "Sem permissão para inativar funcionários." };
     }
 
-    const targetEmployee = employeesState.find(
-      (employee) => employee.id === employeeId,
-    );
+    const res = await authFetch(`/api/management/${employeeId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adminEmail, adminPassword }),
+    }).catch(() => null);
 
-    if (!targetEmployee) {
-      return {
-        ok: false,
-        message: "Funcionário não encontrado para remoção.",
-      };
-    }
-
-    if (adminPassword) {
-      const res = await fetch(`/api/management/${employeeId}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: adminPassword }),
-      }).catch(() => null);
-
-      if (res && !res.ok) {
-        const err = await res.json().catch(() => ({})) as { message?: string };
-        return { ok: false, message: err.message ?? "Erro ao remover funcionário." };
-      }
+    if (!res || !res.ok) {
+      const err = res ? await res.json().catch(() => ({})) as { message?: string } : {};
+      return { ok: false, message: err.message ?? "Erro ao inativar funcionário." };
     }
 
     setEmployeesState((current) =>
-      current.filter((employee) => employee.id !== employeeId),
+      current.map((employee) =>
+        employee.id === employeeId
+          ? { ...employee, status: "inactive" as const }
+          : employee,
+      ),
     );
-    setActivityLogState((current) => [
-      {
-        id: createId("log"),
-        timestamp: new Date().toISOString(),
-        source: "Administração",
-        type: "Funcionário removido",
-        category: "Usuários" as const,
-        action: "Usuário removido da plataforma",
-        entityName: targetEmployee.name,
-        entityType: "usuário",
-        userName: user.name,
-        userRole: "Administrador Geral",
-        department: targetEmployee.department,
-        team: targetEmployee.team,
-        status: "warning" as const,
-        updateType: "manual" as const,
-      },
-      ...current,
-    ]);
 
+    return { ok: true };
+  }
+
+  async function permanentDeleteEmployee(employeeId: string, adminEmail: string, adminPassword: string): Promise<MutationResult> {
+    if (!user || !allowHardDelete) {
+      return { ok: false, message: "Apenas head-manager pode excluir funcionários permanentemente." };
+    }
+
+    const res = await authFetch(`/api/management/${employeeId}/permanent`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adminEmail, adminPassword }),
+    }).catch(() => null);
+
+    if (res && !res.ok) {
+      const err = await res.json().catch(() => ({})) as { message?: string };
+      return { ok: false, message: err.message ?? "Erro ao excluir funcionário." };
+    }
+
+    setEmployeesState((current) => current.filter((emp) => emp.id !== employeeId));
     return { ok: true };
   }
 
@@ -242,7 +265,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     if (!payload.nome.trim()) {
       return { ok: false, message: "Preencha o nome do setor." };
     }
-    const res = await fetch("/api/sectors", {
+    const res = await authFetch("/api/sectors", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: payload.nome.trim() }),
@@ -260,7 +283,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     if (!user || !allowEmployeeManagement) {
       return { ok: false, message: "Somente administradores de nível 2 podem remover setores." };
     }
-    const res = await fetch(`/api/sectors/${id}`, { method: "DELETE" });
+    const res = await authFetch(`/api/sectors/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const err = await res.json().catch(() => ({})) as { message?: string };
       return { ok: false, message: err.message ?? "Erro ao remover setor." };
@@ -279,7 +302,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     }
     const secretaria = setoresState.find((s) => s.id === payload.secretariaId);
     if (!secretaria) return { ok: false, message: "Secretaria selecionada não encontrada." };
-    const res = await fetch("/api/teams", {
+    const res = await authFetch("/api/teams", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -304,7 +327,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     if (!user || !allowEmployeeManagement) {
       return { ok: false, message: "Somente administradores de nível 2 podem remover times." };
     }
-    const res = await fetch(`/api/teams/${id}`, { method: "DELETE" });
+    const res = await authFetch(`/api/teams/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const err = await res.json().catch(() => ({})) as { message?: string };
       return { ok: false, message: err.message ?? "Erro ao remover time." };
@@ -323,8 +346,10 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
         setores: setoresState,
         times: timesState,
         canManageEmployees: allowEmployeeManagement,
+        isHeadManager: allowHardDelete,
         addEmployee,
         removeEmployee,
+        permanentDeleteEmployee,
         addSetor,
         removeSetor,
         addTime,

@@ -10,9 +10,7 @@ import { useAdminConsole, useAuth } from "../../context";
 import { useModalAccessibility } from "../../hooks";
 import { formatDateTime } from "../../lib/formatters";
 import type {
-  ActivityLogCategory,
   ActivityLogEntry,
-  ActivityLogStatus,
   EmployeeDirectoryEntry,
   NewEmployeePayload,
   NewSetorPayload,
@@ -21,35 +19,6 @@ import type {
   TimeEntry,
 } from "../../types/admin";
 import type { AccountStatus } from "../../types/auth";
-
-// ── Configuração visual do Log de Atividades ──────────────────────────────────
-
-const ALL_LOG_CATEGORIES: ActivityLogCategory[] = [
-  "Apresentações", "Projetos", "Templates",
-  "Usuários", "Integrações", "Aprovações", "Compartilhamentos",
-];
-
-const CATEGORY_CHIP: Record<ActivityLogCategory, string> = {
-  "Apresentações":     "bg-[#dcebfa] text-[#3d83bc]",
-  "Projetos":          "bg-[#d9f0e4] text-[#2a8a5c]",
-  "Templates":         "bg-[#ece8f9] text-[#6b54c7]",
-  "Usuários":          "bg-[#fef3dc] text-[#a07018]",
-  "Integrações":       "bg-[#e8ecf0] text-[#4f6475]",
-  "Aprovações":        "bg-[#d8f0ed] text-[#2a7a72]",
-  "Compartilhamentos": "bg-[#fce8f2] text-[#c24b7a]",
-};
-
-const STATUS_DOT: Record<ActivityLogStatus, string> = {
-  success: "bg-[#3ab879]",
-  warning: "bg-[#e8a330]",
-  error:   "bg-[#d65d5d]",
-};
-
-const STATUS_LABEL: Record<ActivityLogStatus, string> = {
-  success: "Concluído",
-  warning: "Atenção",
-  error:   "Erro",
-};
 
 type LogPeriodFilter = "today" | "7d" | "30d" | "all";
 
@@ -117,12 +86,16 @@ function MobileInfoField({
 
 function EmployeeMobileCard({
   canManageEmployees,
+  isHeadManager,
   employee,
   onRemove,
+  onHardDelete,
 }: {
   canManageEmployees: boolean;
+  isHeadManager: boolean;
   employee: EmployeeDirectoryEntry;
   onRemove: (employee: EmployeeDirectoryEntry) => void;
+  onHardDelete: (employee: EmployeeDirectoryEntry) => void;
 }) {
   return (
     <article className="rounded-[22px] border border-[#e4ebf2] bg-white/88 p-4 shadow-[0_16px_40px_-28px_rgba(20,33,51,0.28)] md:hidden">
@@ -144,12 +117,23 @@ function EmployeeMobileCard({
           </div>
         </div>
 
-        {canManageEmployees ? (
+        {canManageEmployees && employee.status === "active" ? (
           <button
             type="button"
             onClick={() => onRemove(employee)}
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
-            aria-label={`Remover ${employee.name}`}
+            aria-label={`Inativar ${employee.name}`}
+            title="Inativar funcionário"
+          >
+            <FiTrash2 className="h-4.5 w-4.5" />
+          </button>
+        ) : canManageEmployees && isHeadManager && employee.status === "inactive" ? (
+          <button
+            type="button"
+            onClick={() => onHardDelete(employee)}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fef2f2] text-[#991b1b] transition hover:bg-[#fee2e2]"
+            aria-label={`Excluir permanentemente ${employee.name}`}
+            title="Excluir permanentemente"
           >
             <FiTrash2 className="h-4.5 w-4.5" />
           </button>
@@ -171,69 +155,26 @@ function EmployeeMobileCard({
 }
 
 function ActivityLogMobileCard({ entry }: { entry: ActivityLogEntry }) {
-  const categoryStyle = entry.category ? CATEGORY_CHIP[entry.category] : "bg-[#dcebfa] text-[#3d83bc]";
-  const statusKey = (entry.status ?? "success") as ActivityLogStatus;
   const displayAction = entry.action ?? entry.type;
-  const displayEntity = entry.entityName ?? entry.source;
 
   return (
     <article className="rounded-[22px] border border-[#e4ebf2] bg-white/88 p-4 shadow-[0_16px_40px_-28px_rgba(20,33,51,0.28)] md:hidden">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-[0.78rem] font-semibold text-[#8f9aa6]">
-            {formatDateTime(entry.timestamp)}
-          </p>
-          <p className="mt-1 text-[0.97rem] font-bold text-[#3a4651] leading-snug">
-            {displayAction}
-          </p>
-          {displayEntity && displayEntity !== displayAction && (
-            <p className="mt-0.5 text-[0.82rem] text-[#8a96a2]">{displayEntity}</p>
+      <div className="min-w-0">
+        <p className="text-[0.78rem] font-semibold text-[#8f9aa6]">
+          {formatDateTime(entry.timestamp)}
+        </p>
+        <p className="mt-1 text-[0.97rem] font-bold text-[#3a4651] leading-snug">
+          {displayAction}
+        </p>
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+          {entry.userName && (
+            <p className="text-[0.82rem] text-[#5d6c78]">{entry.userName}</p>
           )}
-        </div>
-
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
-          {entry.category && (
-            <span className={`rounded-full px-2.5 py-0.5 text-[0.72rem] font-semibold ${categoryStyle}`}>
-              {entry.category}
-            </span>
-          )}
-          {entry.status && (
-            <span className="flex items-center gap-1.5 text-[0.72rem] font-medium text-[#7a8694]">
-              <span className={`inline-block h-1.5 w-1.5 rounded-full ${STATUS_DOT[statusKey]}`} />
-              {STATUS_LABEL[statusKey]}
-            </span>
+          {entry.entityName && (
+            <p className="text-[0.82rem] text-[#9aa5b0]">Projeto {entry.entityName}</p>
           )}
         </div>
       </div>
-
-      <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-        <MobileInfoField label="Responsável">
-          <span>{entry.userName}</span>
-          {entry.userRole && (
-            <span className="ml-1 text-[0.74rem] text-[#ababab]">({entry.userRole})</span>
-          )}
-        </MobileInfoField>
-        <MobileInfoField label="Setor">{entry.department}</MobileInfoField>
-      </div>
-
-      {(entry.previousValue || entry.newValue) && (
-        <div className="mt-3 rounded-[14px] bg-[#f6f8fa] px-3 py-2.5 text-[0.78rem]">
-          {entry.previousValue && (
-            <p className="text-[#9aa5b0]">
-              <span className="font-semibold">Antes:</span> {entry.previousValue}
-            </p>
-          )}
-          {entry.newValue && (
-            <p className={`${entry.previousValue ? "mt-1" : ""} text-[#4f6475]`}>
-              <span className="font-semibold">Depois:</span> {entry.newValue}
-            </p>
-          )}
-        </div>
-      )}
-
-      {entry.notes && (
-        <p className="mt-2 text-[0.76rem] text-[#9aa5b0] italic">{entry.notes}</p>
-      )}
     </article>
   );
 }
@@ -260,21 +201,23 @@ export default function AdminAdministrationPage() {
     addSetor,
     addTime,
     canManageEmployees,
+    isHeadManager,
     employees,
     removeEmployee,
+    permanentDeleteEmployee,
     removeSetor,
     removeTime,
     setores,
     times,
   } = useAdminConsole();
-  const { user, verifyCurrentUser } = useAuth();
+  const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [setorFilter, setSetorFilter] = useState<string>("all");
+  const [timeFilter, setTimeFilter] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // ── Filtros do Log de Atividades ───────────────────────────────────────────
-  const [logCategory, setLogCategory] = useState<ActivityLogCategory | "all">("all");
   const [logPeriod, setLogPeriod] = useState<LogPeriodFilter>("all");
-  const [logDepartment, setLogDepartment] = useState<string>("all");
   const [logSearch, setLogSearch] = useState("");
   const [employeePendingRemoval, setEmployeePendingRemoval] =
     useState<EmployeeDirectoryEntry | null>(null);
@@ -309,29 +252,47 @@ export default function AdminAdministrationPage() {
     initialDeleteConfirmationForm,
   );
   const [deleteConfirmationError, setDeleteConfirmationError] = useState("");
+  const [employeePendingHardDelete, setEmployeePendingHardDelete] =
+    useState<EmployeeDirectoryEntry | null>(null);
+  const [hardDeleteEmail, setHardDeleteEmail] = useState("");
+  const [hardDeletePassword, setHardDeletePassword] = useState("");
+  const [hardDeleteError, setHardDeleteError] = useState("");
 
-  const filteredEmployees = statusFilter === "all"
-    ? employees
-    : employees.filter((employee) => employee.status === statusFilter);
+  const isSectorManager = !user?.master_admin && !user?.head_manager && (user?.accessLevel === "admin_level_2" || !!user?.sectorManager);
+  const isTeamManager = !user?.master_admin && !user?.head_manager && !isSectorManager && user?.accessLevel === "admin_level_1";
+
+  // times disponíveis para o filtro do sector manager (só os times do seu setor)
+  const timesInMySetor = useMemo(
+    () => times.filter((t) => t.secretariaNome === user?.department),
+    [times, user],
+  );
+
+  const filteredEmployees = useMemo(() =>
+    employees.filter((emp) => {
+      if (statusFilter !== "all" && emp.status !== statusFilter) return false;
+      // head_manager vê filtro de setor
+      if (setorFilter !== "all" && emp.department !== setorFilter) return false;
+      // sector_manager vê filtro de time dentro do seu setor
+      if (timeFilter !== "all" && emp.team !== timeFilter) return false;
+      return true;
+    }),
+  [employees, statusFilter, setorFilter, timeFilter]);
 
   const filteredActivityLog = useMemo(() => {
     const query = logSearch.trim().toLowerCase();
     return activityLog.filter((entry) => {
-      if (logCategory !== "all" && entry.category !== logCategory) return false;
       if (!isPeriodMatch(entry.timestamp, logPeriod)) return false;
-      if (logDepartment !== "all" && entry.department !== logDepartment) return false;
       if (query) {
-        const haystack = [
-          entry.action, entry.type, entry.entityName,
-          entry.userName, entry.userRole, entry.notes, entry.source,
-        ].filter(Boolean).join(" ").toLowerCase();
+        const haystack = [entry.action, entry.type].filter(Boolean).join(" ").toLowerCase();
         if (!haystack.includes(query)) return false;
       }
       return true;
     });
-  }, [activityLog, logCategory, logPeriod, logDepartment, logSearch]);
-  const scopeDescription = (user?.master_admin || user?.head_manager || user?.accessLevel === "admin_level_2")
-    ? "Você está visualizando funcionários e logs de todas as equipes."
+  }, [activityLog, logPeriod, logSearch]);
+  const scopeDescription = (user?.master_admin || user?.head_manager)
+    ? "Você está visualizando funcionários de todos os setores."
+    : isSectorManager
+    ? `Você está visualizando todos os times do setor ${user?.department ?? ""}.`
     : `Você está visualizando somente a equipe ${user?.team ?? ""}.`;
 
   function resetForm() {
@@ -421,31 +382,18 @@ export default function AdminAdministrationPage() {
   async function handleRemoveEmployee(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!employeePendingRemoval) {
+    if (!employeePendingRemoval) return;
+
+    if (!deleteConfirmationForm.email.trim() || !deleteConfirmationForm.password.trim()) {
+      setDeleteConfirmationError("Informe o e-mail e senha do head-manager.");
       return;
     }
 
-    if (
-      !deleteConfirmationForm.email.trim()
-      || !deleteConfirmationForm.password.trim()
-    ) {
-      setDeleteConfirmationError(
-        "Confirme e-mail institucional e senha antes de excluir o funcionário.",
-      );
-      return;
-    }
-
-    const verificationResult = verifyCurrentUser({
-      email: deleteConfirmationForm.email,
-      password: deleteConfirmationForm.password,
-    });
-
-    if ("message" in verificationResult) {
-      setDeleteConfirmationError(verificationResult.message);
-      return;
-    }
-
-    const result = await removeEmployee(employeePendingRemoval.id, deleteConfirmationForm.password);
+    const result = await removeEmployee(
+      employeePendingRemoval.id,
+      deleteConfirmationForm.email,
+      deleteConfirmationForm.password,
+    );
 
     if ("message" in result) {
       setDeleteConfirmationError(result.message);
@@ -453,6 +401,24 @@ export default function AdminAdministrationPage() {
     }
 
     closeDeleteConfirmationModal();
+  }
+
+  async function handleHardDeleteEmployee(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!employeePendingHardDelete) return;
+    if (!hardDeleteEmail.trim() || !hardDeletePassword.trim()) {
+      setHardDeleteError("Informe o e-mail e senha do head-manager.");
+      return;
+    }
+    const result = await permanentDeleteEmployee(employeePendingHardDelete.id, hardDeleteEmail, hardDeletePassword);
+    if ("message" in result) {
+      setHardDeleteError(result.message);
+      return;
+    }
+    setEmployeePendingHardDelete(null);
+    setHardDeleteEmail("");
+    setHardDeletePassword("");
+    setHardDeleteError("");
   }
 
   // ── Handlers: Setores ─────────────────────────────────────────────────────
@@ -496,6 +462,11 @@ export default function AdminAdministrationPage() {
     isOpen: employeePendingRemoval !== null,
     onClose: closeDeleteConfirmationModal,
     initialFocusSelector: "[data-modal-initial-focus]",
+  });
+  const hardDeleteEmployeeModalRef = useModalAccessibility({
+    isOpen: employeePendingHardDelete !== null,
+    onClose: () => { setEmployeePendingHardDelete(null); setHardDeleteEmail(""); setHardDeletePassword(""); setHardDeleteError(""); },
+    initialFocusSelector: "[data-hard-delete-focus]",
   });
   const setorModalRef = useModalAccessibility({
     isOpen: isSetorModalOpen,
@@ -549,21 +520,46 @@ export default function AdminAdministrationPage() {
               </button>
             ) : null}
 
-            <div className="relative w-full sm:w-auto">
+            <div className="flex flex-wrap gap-2">
               <select
                 value={statusFilter}
                 onChange={(event) =>
                   setStatusFilter(event.target.value as StatusFilter)
                 }
-                className="h-11 w-full appearance-none rounded-full bg-[#f1f1f4] px-4 pr-10 text-[0.9rem] font-medium text-[#818181] outline-none sm:w-auto"
+                className="h-11 appearance-none rounded-full bg-[#f1f1f4] px-4 pr-8 text-[0.9rem] font-medium text-[#818181] outline-none"
               >
                 <option value="all">Todos</option>
                 <option value="active">Ativos</option>
                 <option value="inactive">Inativos</option>
               </select>
-              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#9a9a9a]">
-                v
-              </span>
+
+              {/* head_manager / master_admin: filtro por setor */}
+              {(user?.master_admin || user?.head_manager) ? (
+                <select
+                  value={setorFilter}
+                  onChange={(event) => setSetorFilter(event.target.value)}
+                  className="h-11 appearance-none rounded-full bg-[#f1f1f4] px-4 pr-8 text-[0.9rem] font-medium text-[#818181] outline-none"
+                >
+                  <option value="all">Todos os setores</option>
+                  {setoresSorted.map((s) => (
+                    <option key={s.id} value={s.nome}>{s.nome}</option>
+                  ))}
+                </select>
+              ) : null}
+
+              {/* sector_manager: filtro por time dentro do seu setor */}
+              {isSectorManager && timesInMySetor.length > 0 ? (
+                <select
+                  value={timeFilter}
+                  onChange={(event) => setTimeFilter(event.target.value)}
+                  className="h-11 appearance-none rounded-full bg-[#f1f1f4] px-4 pr-8 text-[0.9rem] font-medium text-[#818181] outline-none"
+                >
+                  <option value="all">Todos os times</option>
+                  {timesInMySetor.map((t) => (
+                    <option key={t.id} value={t.nome}>{t.nome}</option>
+                  ))}
+                </select>
+              ) : null}
             </div>
           </div>
         </div>
@@ -575,8 +571,10 @@ export default function AdminAdministrationPage() {
                 <EmployeeMobileCard
                   key={employee.id}
                   canManageEmployees={canManageEmployees}
+                  isHeadManager={isHeadManager}
                   employee={employee}
                   onRemove={handleOpenDeleteConfirmation}
+                  onHardDelete={(emp) => { setEmployeePendingHardDelete(emp); setHardDeleteEmail(""); setHardDeletePassword(""); setHardDeleteError(""); }}
                 />
               ))}
             </div>
@@ -624,14 +622,27 @@ export default function AdminAdministrationPage() {
                         </td>
                         {canManageEmployees ? (
                           <td className="rounded-r-[18px] bg-white/72 px-5 py-2.5 text-right">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenDeleteConfirmation(employee)}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
-                              aria-label={`Remover ${employee.name}`}
-                            >
-                              <FiTrash2 className="h-4.5 w-4.5" />
-                            </button>
+                            {employee.status === "active" ? (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDeleteConfirmation(employee)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
+                                aria-label={`Inativar ${employee.name}`}
+                                title="Inativar funcionário"
+                              >
+                                <FiTrash2 className="h-4.5 w-4.5" />
+                              </button>
+                            ) : isHeadManager ? (
+                              <button
+                                type="button"
+                                onClick={() => { setEmployeePendingHardDelete(employee); setHardDeleteEmail(""); setHardDeletePassword(""); setHardDeleteError(""); }}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fef2f2] text-[#991b1b] transition hover:bg-[#fee2e2]"
+                                aria-label={`Excluir permanentemente ${employee.name}`}
+                                title="Excluir permanentemente"
+                              >
+                                <FiTrash2 className="h-4.5 w-4.5" />
+                              </button>
+                            ) : null}
                           </td>
                         ) : null}
                       </tr>
@@ -649,7 +660,7 @@ export default function AdminAdministrationPage() {
         )}
       </AdminPanel>
 
-      {/* ── Painel Setores (somente admin_level_2) ─────────────────────────── */}
+      {/* ── Painel Setores + Times agrupados ───────────────────────────────── */}
       {canManageEmployees ? (
         <AdminPanel className="space-y-5 px-5 py-5 sm:px-7">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -658,7 +669,7 @@ export default function AdminAdministrationPage() {
                 Setores
               </h2>
               <p className="mt-1 text-[0.9rem] font-medium text-[#8f8f8f]">
-                Registro dos setores e secretarias da organização.
+                Cada setor agrupa os seus times de trabalho.
               </p>
             </div>
             {user?.master_admin && (
@@ -674,166 +685,90 @@ export default function AdminAdministrationPage() {
           </div>
 
           {setoresSorted.length ? (
-            <>
-              {/* Mobile */}
-              <div className="space-y-3 md:hidden">
-                {setoresSorted.map((sec) => (
-                  <article key={sec.id} className="rounded-[22px] border border-[#e4ebf2] bg-white/88 p-4 shadow-[0_16px_40px_-28px_rgba(20,33,51,0.28)]">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#e8f0f8] text-[#3d83bc]">
-                          <FiBriefcase className="h-4.5 w-4.5" />
+            <div className="space-y-4">
+              {setoresSorted.map((sec) => {
+                const timesDoSetor = timesSorted.filter((t) => t.secretariaId === sec.id);
+                return (
+                  <div
+                    key={sec.id}
+                    className="rounded-[20px] border border-[#dde6f0] bg-[#f6f9fc] p-4 sm:p-5"
+                  >
+                    {/* Cabeçalho do setor */}
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#ddeaf6] text-[#3d83bc]">
+                          <FiBriefcase className="h-4 w-4" />
                         </span>
-                        <div className="min-w-0">
-                          <p className="truncate text-[1rem] font-semibold text-[#3a4651]">{sec.nome}</p>
-                        </div>
+                        <span className="text-[1rem] font-bold text-[#1e3a52] truncate">{sec.nome}</span>
+                        <span className="shrink-0 rounded-full bg-[#ddeaf6] px-2.5 py-0.5 text-[0.72rem] font-semibold text-[#3d83bc]">
+                          {timesDoSetor.length} {timesDoSetor.length === 1 ? "time" : "times"}
+                        </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setSetorPendingRemoval(sec)}
-                        aria-label={`Remover ${sec.nome}`}
-                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
-                      >
-                        <FiTrash2 className="h-4.5 w-4.5" />
-                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {user?.master_admin && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTimeFormError("");
+                              setTimeForm({ nome: "", secretariaId: sec.id, levelAcess: 1 });
+                              setIsTimeModalOpen(true);
+                            }}
+                            className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#e8f2fb] px-3 text-[0.78rem] font-semibold text-[#3d83bc] transition hover:bg-[#d4e8f7]"
+                          >
+                            <FiPlus className="h-3.5 w-3.5" />
+                            Novo time
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setSetorPendingRemoval(sec)}
+                          aria-label={`Remover ${sec.nome}`}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
+                        >
+                          <FiTrash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </div>
-                  </article>
-                ))}
-              </div>
-              {/* Desktop */}
-              <div className="hidden md:block">
-                <div className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
-                  <table className="min-w-[560px] w-full border-separate border-spacing-y-4 text-left">
-                    <thead>
-                      <tr className="text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-[#b1b1b1]">
-                        <th className="w-[88%] pb-2 pr-4">Nome</th>
-                        <th className="pb-1">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {setoresSorted.map((sec) => (
-                        <tr key={sec.id} className="text-[0.95rem] font-medium text-[#7a7a7a]">
-                          <td className="rounded-l-[18px] bg-white/72 px-5 py-2.5">
-                            <div className="flex items-center gap-3">
-                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e8f0f8] text-[#3d83bc]">
-                                <FiBriefcase className="h-4 w-4" />
-                              </span>
-                              <span className="text-[0.96rem] text-[#3a4651] font-semibold">{sec.nome}</span>
-                            </div>
-                          </td>
-                          <td className="rounded-r-[18px] bg-white/72 px-5 py-2.5 text-right">
-                            <button
-                              type="button"
-                              onClick={() => setSetorPendingRemoval(sec)}
-                              aria-label={`Remover ${sec.nome}`}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
-                            >
-                              <FiTrash2 className="h-4.5 w-4.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </>
+
+                    {/* Times do setor */}
+                    {timesDoSetor.length ? (
+                      <div className="space-y-2 pl-0 sm:pl-12">
+                        {timesDoSetor.map((time) => (
+                          <div
+                            key={time.id}
+                            className="flex items-center justify-between gap-3 rounded-[14px] border border-[#e4ebf2] bg-white px-4 py-2.5"
+                          >
+                            <span className="text-[0.92rem] font-semibold text-[#3a4651] truncate">
+                              {time.nome}
+                            </span>
+                            {user?.master_admin && (
+                              <button
+                                type="button"
+                                onClick={() => setTimePendingRemoval(time)}
+                                aria-label={`Remover ${time.nome}`}
+                                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
+                              >
+                                <FiTrash2 className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="pl-0 sm:pl-12">
+                        <p className="rounded-[14px] border border-dashed border-[#d6dee7] bg-white/60 px-4 py-3 text-center text-[0.82rem] text-[#9aa5b0]">
+                          Nenhum time neste setor ainda.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <EmptyMobileState
               title="Nenhum setor cadastrado"
               description="Clique em Novo setor para começar o registro."
-            />
-          )}
-        </AdminPanel>
-      ) : null}
-
-      {/* ── Painel Times (somente admin_level_2) ───────────────────────────── */}
-      {canManageEmployees ? (
-        <AdminPanel className="space-y-5 px-5 py-5 sm:px-7">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <h2 className="text-[1.6rem] font-bold tracking-[-0.03em] text-[#262626]">
-                Times
-              </h2>
-              <p className="mt-1 text-[0.9rem] font-medium text-[#8f8f8f]">
-                Equipes de trabalho vinculadas aos setores.
-              </p>
-            </div>
-            {user?.master_admin && (
-              <button
-                type="button"
-                onClick={() => { setTimeFormError(""); setIsTimeModalOpen(true); }}
-                disabled={setores.length === 0}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-4 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(103,156,203,0.24)] transition hover:-translate-y-0.5 self-start disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <FiPlus className="h-4.5 w-4.5" />
-                Novo time
-              </button>
-            )}
-          </div>
-
-          {timesSorted.length ? (
-            <>
-              {/* Mobile */}
-              <div className="space-y-3 md:hidden">
-                {timesSorted.map((time) => (
-                  <article key={time.id} className="rounded-[22px] border border-[#e4ebf2] bg-white/88 p-4 shadow-[0_16px_40px_-28px_rgba(20,33,51,0.28)]">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-[1rem] font-semibold text-[#3a4651]">{time.nome}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setTimePendingRemoval(time)}
-                        aria-label={`Remover ${time.nome}`}
-                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
-                      >
-                        <FiTrash2 className="h-4.5 w-4.5" />
-                      </button>
-                    </div>
-                    <div className="mt-3">
-                      <MobileInfoField label="Setor responsável">{time.secretariaNome}</MobileInfoField>
-                    </div>
-                  </article>
-                ))}
-              </div>
-              {/* Desktop */}
-              <div className="hidden md:block">
-                <div className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
-                  <table className="min-w-[560px] w-full border-separate border-spacing-y-4 text-left">
-                    <thead>
-                      <tr className="text-[0.78rem] font-semibold uppercase tracking-[0.08em] text-[#b1b1b1]">
-                        <th className="w-[45%] pb-2 pr-4">Nome do Time</th>
-                        <th className="w-[45%] pb-2 px-4">Setor Responsável</th>
-                        <th className="pb-1">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {timesSorted.map((time) => (
-                        <tr key={time.id} className="text-[0.95rem] font-medium text-[#7a7a7a]">
-                          <td className="rounded-l-[18px] bg-white/72 px-5 py-2.5 font-semibold text-[#3a4651]">{time.nome}</td>
-                          <td className="bg-white/72 px-5 py-2.5 text-[0.88rem] text-[#7a8694]">{time.secretariaNome}</td>
-                          <td className="rounded-r-[18px] bg-white/72 px-5 py-2.5 text-right">
-                            <button
-                              type="button"
-                              onClick={() => setTimePendingRemoval(time)}
-                              aria-label={`Remover ${time.nome}`}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#fff3f3] text-[#c45b5b] transition hover:bg-[#ffe9e9]"
-                            >
-                              <FiTrash2 className="h-4.5 w-4.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </>
-          ) : (
-            <EmptyMobileState
-              title="Nenhum time cadastrado"
-              description={setores.length === 0 ? "Cadastre um setor antes de criar times." : "Clique em Novo time para começar."}
             />
           )}
         </AdminPanel>
@@ -850,36 +785,7 @@ export default function AdminAdministrationPage() {
           </p>
         </div>
 
-        {/* Filtros — categorias */}
-        <div className="-mx-1 flex flex-wrap gap-2 px-1">
-          <button
-            type="button"
-            onClick={() => setLogCategory("all")}
-            className={`rounded-full px-3.5 py-1.5 text-[0.78rem] font-semibold transition ${
-              logCategory === "all"
-                ? "bg-[#1e3a52] text-white"
-                : "bg-[#f0f2f4] text-[#6a7a88] hover:bg-[#e4e8ec]"
-            }`}
-          >
-            Todos
-          </button>
-          {ALL_LOG_CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setLogCategory(cat)}
-              className={`rounded-full px-3.5 py-1.5 text-[0.78rem] font-semibold transition ${
-                logCategory === cat
-                  ? "bg-[#1e3a52] text-white"
-                  : "bg-[#f0f2f4] text-[#6a7a88] hover:bg-[#e4e8ec]"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        {/* Filtros — busca + período + setor */}
+        {/* Filtros — busca + período */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <FiSearch className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9aa5b0]" />
@@ -887,36 +793,21 @@ export default function AdminAdministrationPage() {
               type="text"
               value={logSearch}
               onChange={(e) => setLogSearch(e.target.value)}
-              placeholder="Buscar ação, entidade, usuário…"
+              placeholder="Buscar ação…"
               className="h-10 w-full rounded-full bg-[#f1f1f4] pl-10 pr-4 text-[0.88rem] font-medium text-[#1e1e1e] outline-none placeholder:text-[#ababab]"
             />
           </div>
 
-          <div className="flex gap-2">
-            <select
-              value={logPeriod}
-              onChange={(e) => setLogPeriod(e.target.value as LogPeriodFilter)}
-              className="h-10 appearance-none rounded-full bg-[#f1f1f4] px-4 pr-8 text-[0.85rem] font-medium text-[#6a7a88] outline-none"
-            >
-              <option value="today">Hoje</option>
-              <option value="7d">Últimos 7 dias</option>
-              <option value="30d">Últimos 30 dias</option>
-              <option value="all">Todo o período</option>
-            </select>
-
-            <select
-              value={logDepartment}
-              onChange={(e) => setLogDepartment(e.target.value)}
-              className="h-10 appearance-none rounded-full bg-[#f1f1f4] px-4 pr-8 text-[0.85rem] font-medium text-[#6a7a88] outline-none"
-            >
-              <option value="all">Todos os setores</option>
-              {setoresSorted.map((s) => (
-                <option key={s.id} value={s.nome}>
-                  {s.nome}
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            value={logPeriod}
+            onChange={(e) => setLogPeriod(e.target.value as LogPeriodFilter)}
+            className="h-10 appearance-none rounded-full bg-[#f1f1f4] px-4 pr-8 text-[0.85rem] font-medium text-[#6a7a88] outline-none"
+          >
+            <option value="today">Hoje</option>
+            <option value="7d">Últimos 7 dias</option>
+            <option value="30d">Últimos 30 dias</option>
+            <option value="all">Todo o período</option>
+          </select>
         </div>
 
         {/* Contagem de resultados */}
@@ -938,89 +829,31 @@ export default function AdminAdministrationPage() {
             {/* Desktop */}
             <div className="hidden md:block">
               <div className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
-                <table className="min-w-[900px] w-full border-separate border-spacing-y-3 text-left">
+                <table className="w-full border-separate border-spacing-y-3 text-left">
                   <thead>
                     <tr className="text-[0.75rem] font-semibold uppercase tracking-[0.08em] text-[#b1b1b1]">
-                      <th className="w-[14%] pb-2 pr-4">Data / Hora</th>
-                      <th className="w-[14%] pb-2 px-4">Categoria</th>
-                      <th className="w-[28%] pb-2 px-4">Ação / Entidade</th>
-                      <th className="w-[18%] pb-2 px-4">Responsável</th>
-                      <th className="w-[16%] pb-2 px-4">Setor</th>
-                      <th className="pb-1">Status</th>
+                      <th className="w-[16%] pb-2 pr-4">Data / Hora</th>
+                      <th className="w-[32%] pb-2 px-4">Ação</th>
+                      <th className="w-[28%] pb-2 px-4">Usuário</th>
+                      <th className="pb-2 px-4">Projeto</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredActivityLog.map((entry) => {
-                      const catStyle = entry.category
-                        ? CATEGORY_CHIP[entry.category]
-                        : "bg-[#dcebfa] text-[#3d83bc]";
-                      const statusKey = (entry.status ?? "success") as ActivityLogStatus;
                       const displayAction = entry.action ?? entry.type;
-                      const displayEntity = entry.entityName ?? entry.source;
-
                       return (
                         <tr key={entry.id} className="text-[0.88rem] font-medium text-[#7a7a7a]">
-                          {/* Data */}
-                          <td className="rounded-l-[18px] bg-white/72 px-5 py-3 text-[0.8rem] text-[#9b9b9b] leading-snug">
+                          <td className="rounded-l-[18px] bg-white/72 px-5 py-3 text-[0.8rem] text-[#9b9b9b] leading-snug whitespace-nowrap">
                             {formatDateTime(entry.timestamp)}
                           </td>
-
-                          {/* Categoria */}
-                          <td className="bg-white/72 px-4 py-3">
-                            {entry.category ? (
-                              <span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-[0.73rem] font-semibold ${catStyle}`}>
-                                {entry.category}
-                              </span>
-                            ) : (
-                              <span className="text-[0.8rem] text-[#b1b1b1]">{entry.type}</span>
-                            )}
-                          </td>
-
-                          {/* Ação / Entidade */}
                           <td className="bg-white/72 px-4 py-3">
                             <p className="font-semibold text-[#353535] leading-snug">{displayAction}</p>
-                            {displayEntity && (
-                              <p className="mt-0.5 text-[0.78rem] text-[#9aa5b0] leading-snug">{displayEntity}</p>
-                            )}
-                            {(entry.previousValue || entry.newValue) && (
-                              <div className="mt-1.5 rounded-[10px] bg-[#f6f8fa] px-2.5 py-1.5 text-[0.72rem] leading-snug">
-                                {entry.previousValue && (
-                                  <p className="text-[#9aa5b0]">
-                                    <span className="font-semibold">Antes:</span> {entry.previousValue}
-                                  </p>
-                                )}
-                                {entry.newValue && (
-                                  <p className="text-[#4f6475]">
-                                    <span className="font-semibold">Depois:</span> {entry.newValue}
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                            {entry.notes && (
-                              <p className="mt-1 text-[0.72rem] text-[#ababab] italic">{entry.notes}</p>
-                            )}
                           </td>
-
-                          {/* Responsável */}
-                          <td className="bg-white/72 px-4 py-3">
-                            <p className="text-[#5d6c78]">{entry.userName}</p>
-                            {entry.userRole && (
-                              <p className="mt-0.5 text-[0.75rem] text-[#ababab]">{entry.userRole}</p>
-                            )}
+                          <td className="bg-white/72 px-4 py-3 text-[0.85rem] text-[#5d6c78]">
+                            {entry.userName || "—"}
                           </td>
-
-                          {/* Setor */}
-                          <td className="bg-white/72 px-4 py-3">
-                            <p className="text-[#9b9b9b]">{entry.department}</p>
-                            <p className="mt-0.5 text-[0.75rem] text-[#c1c1c1]">{entry.team}</p>
-                          </td>
-
-                          {/* Status */}
-                          <td className="rounded-r-[18px] bg-white/72 px-4 py-3">
-                            <span className="flex items-center gap-1.5 text-[0.78rem] font-medium text-[#7a8694]">
-                              <span className={`inline-block h-2 w-2 rounded-full ${STATUS_DOT[statusKey]}`} />
-                              {STATUS_LABEL[statusKey]}
-                            </span>
+                          <td className="rounded-r-[18px] bg-white/72 px-4 py-3 text-[0.82rem] text-[#9b9b9b]">
+                            {entry.entityName ?? "—"}
                           </td>
                         </tr>
                       );
@@ -1033,12 +866,12 @@ export default function AdminAdministrationPage() {
         ) : (
           <div className="rounded-[22px] border border-dashed border-[#d6dee7] bg-white/80 px-4 py-8 text-center">
             <p className="text-[1rem] font-semibold text-[#3a4651]">
-              {logSearch || logCategory !== "all" || logPeriod !== "all" || logDepartment !== "all"
+              {logSearch || logPeriod !== "all"
                 ? "Nenhum registro encontrado com esses filtros"
                 : "Nenhum log disponível"}
             </p>
             <p className="mt-2 text-[0.88rem] leading-6 text-[#7a8694]">
-              {logSearch || logCategory !== "all" || logPeriod !== "all" || logDepartment !== "all"
+              {logSearch || logPeriod !== "all"
                 ? "Ajuste os filtros para visualizar outros registros."
                 : "Os registros de atividade aparecerão aqui conforme novas ações forem executadas."}
             </p>
@@ -1535,13 +1368,13 @@ export default function AdminAdministrationPage() {
                   id="delete-employee-dialog-title"
                   className="text-[1.65rem] font-extrabold tracking-[-0.04em] text-[#1f1f1f]"
                 >
-                  Confirmar exclusão
+                  Inativar funcionário
                 </h3>
                 <p
                   id="delete-employee-dialog-description"
                   className="mt-1 text-[0.92rem] font-medium text-[#8a8a8a]"
                 >
-                  Confirme seu e-mail e sua senha para evitar remoções por engano.
+                  Confirme com as credenciais do head-manager para prosseguir.
                 </p>
               </div>
 
@@ -1576,7 +1409,7 @@ export default function AdminAdministrationPage() {
 
             <form className="space-y-4" onSubmit={handleRemoveEmployee}>
               <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                E-mail institucional do administrador
+                E-mail do head-manager
                 <input
                   type="email"
                   value={deleteConfirmationForm.email}
@@ -1584,13 +1417,13 @@ export default function AdminAdministrationPage() {
                     handleDeleteConfirmationFieldChange("email", event)
                   }
                   data-modal-initial-focus
-                  placeholder={user?.email ?? "admin@barueri.sp.gov.br"}
+                  placeholder="headmanager@barueri.sp.gov.br"
                   className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
                 />
               </label>
 
               <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
-                Senha
+                Senha do head-manager
                 <input
                   type="password"
                   value={deleteConfirmationForm.password}
@@ -1619,7 +1452,114 @@ export default function AdminAdministrationPage() {
                   type="submit"
                   className="h-11 w-full rounded-full bg-[#d86b6b] px-5 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(216,107,107,0.24)] transition hover:-translate-y-0.5 hover:bg-[#ca5a5a] sm:w-auto"
                 >
-                  Excluir funcionário
+                  Inativar funcionário
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Modal: Excluir permanentemente (head_manager) */}
+      {employeePendingHardDelete !== null ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
+          onClick={() => { setEmployeePendingHardDelete(null); setHardDeleteEmail(""); setHardDeletePassword(""); setHardDeleteError(""); }}
+        >
+          <div
+            ref={hardDeleteEmployeeModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="hard-delete-dialog-title"
+            tabIndex={-1}
+            data-modal-surface="dialog"
+            className="w-full max-w-[540px] rounded-[26px] bg-white p-6 shadow-[0_24px_80px_rgba(20,33,51,0.24)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h3
+                  id="hard-delete-dialog-title"
+                  className="text-[1.65rem] font-extrabold tracking-[-0.04em] text-[#1f1f1f]"
+                >
+                  Excluir permanentemente
+                </h3>
+                <p className="mt-1 text-[0.92rem] font-medium text-[#8a8a8a]">
+                  Esta ação é irreversível. Confirme com as credenciais do head-manager.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setEmployeePendingHardDelete(null); setHardDeleteEmail(""); setHardDeletePassword(""); setHardDeleteError(""); }}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#f2f4f7] text-[#7a7a7a] transition hover:bg-[#e6ecf3]"
+                aria-label="Fechar"
+              >
+                <FiX className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mb-5 rounded-[20px] border border-[#f0dcdc] bg-[#fff7f7] px-4 py-4">
+              <div className="flex items-center gap-3">
+                <AdminAvatar
+                  name={employeePendingHardDelete.name}
+                  sizeClassName="h-11 w-11"
+                  textClassName="text-[0.9rem]"
+                  className="shadow-none"
+                />
+                <div>
+                  <p className="text-[1rem] font-semibold text-[#5d3a3a]">
+                    {employeePendingHardDelete.name}
+                  </p>
+                  <p className="text-[0.82rem] font-medium text-[#b16c6c]">
+                    {employeePendingHardDelete.email}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <form className="space-y-4" onSubmit={handleHardDeleteEmployee}>
+              <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
+                E-mail do head-manager
+                <input
+                  type="email"
+                  value={hardDeleteEmail}
+                  onChange={(e) => { setHardDeleteEmail(e.target.value); setHardDeleteError(""); }}
+                  data-hard-delete-focus
+                  placeholder="headmanager@barueri.sp.gov.br"
+                  className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
+                />
+              </label>
+
+              <label className="flex flex-col gap-2 text-[0.86rem] font-semibold text-[#656565]">
+                Senha do head-manager
+                <input
+                  type="password"
+                  value={hardDeletePassword}
+                  onChange={(e) => { setHardDeletePassword(e.target.value); setHardDeleteError(""); }}
+                  placeholder="Senha"
+                  className="h-12 rounded-[16px] border border-[#dde2e8] bg-[#f9fbfc] px-4 text-[0.95rem] font-medium text-[#1f1f1f] outline-none focus:border-[#72a8d4]"
+                />
+              </label>
+
+              {hardDeleteError ? (
+                <p className="rounded-[16px] bg-[#fff5f5] px-4 py-3 text-[0.9rem] font-medium text-[#be3232]">
+                  {hardDeleteError}
+                </p>
+              ) : null}
+
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => { setEmployeePendingHardDelete(null); setHardDeleteEmail(""); setHardDeletePassword(""); setHardDeleteError(""); }}
+                  className="h-11 w-full rounded-full border border-[#d7dde4] px-5 text-[0.92rem] font-semibold text-[#6a6a6a] transition hover:bg-[#f5f7f9] sm:w-auto"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="h-11 w-full rounded-full bg-[#991b1b] px-5 text-[0.92rem] font-semibold text-white shadow-[0_10px_24px_rgba(153,27,27,0.24)] transition hover:-translate-y-0.5 hover:bg-[#7f1d1d] sm:w-auto"
+                >
+                  Excluir permanentemente
                 </button>
               </div>
             </form>

@@ -7,7 +7,12 @@ import {
   FiBarChart2,
   FiCalendar,
   FiCheck,
+  FiChevronDown,
+  FiChevronUp,
+  FiCopy,
   FiCpu,
+  FiEye,
+  FiEyeOff,
   FiFileText,
   FiFlag,
   FiGlobe,
@@ -20,6 +25,7 @@ import {
   FiPackage,
   FiSave,
   FiShare2,
+  FiSliders,
   FiTag,
   FiTrendingUp,
   FiUser,
@@ -43,7 +49,7 @@ import { getPresentationsRouteForUser } from "../../lib/authRouting";
 import { formatShortDate } from "../../lib/formatters";
 import { presentationService } from "../../services/presentationService";
 import { projectService } from "../../services/projectService";
-import { MODULE_DEFINITIONS } from "../../services/suggestionEngine";
+import { CANONICAL_MODULE_ORDER, MODULE_DEFINITIONS } from "../../services/suggestionEngine";
 import { readPresentationFiltersFromSearchParams } from "../../router/presentationSearchParams";
 import { ROUTE_PATHS } from "../../router/paths";
 import type { PresentationCard } from "../../types/presentation";
@@ -51,6 +57,7 @@ import type {
   EventType,
   InstitutionalPresentation,
   PresentationLanguage,
+  PresentationModuleConfig,
   PresentationModuleId,
   PresentationStatus,
 } from "../../types/institutionalPresentation";
@@ -390,6 +397,11 @@ export default function GeneratedPresentationPage() {
   const [institutionalProjects, setInstitutionalProjects] = useState<ProjectSummary[]>([]);
   const [institutionalLoading, setInstitutionalLoading] = useState(!!presentationId);
 
+  // ── Módulos editáveis (pós-geração) ──
+  const [editModuleConfigs, setEditModuleConfigs] = useState<PresentationModuleConfig[]>([]);
+  const [isSavingModules, setIsSavingModules] = useState(false);
+  const [modulesSaved, setModulesSaved] = useState(false);
+
   useEffect(() => {
     if (!presentationId) return;
     setInstitutionalLoading(true);
@@ -399,9 +411,21 @@ export default function GeneratedPresentationPage() {
     ])
       .then(([pres, allProjects]) => {
         setInstitutionalPresentation(pres);
-        if (pres && pres.selectedProjects.length > 0) {
-          const ids = new Set(pres.selectedProjects);
-          setInstitutionalProjects(allProjects.filter((p) => ids.has(p.id)));
+        if (pres) {
+          setEditModuleConfigs(
+            pres.moduleConfigs.length > 0
+              ? pres.moduleConfigs
+              : CANONICAL_MODULE_ORDER.map((moduleId) => ({
+                  instanceId: `inst-${moduleId}`,
+                  moduleId,
+                  enabled: true,
+                  hidden: false,
+                })),
+          );
+          if (pres.selectedProjects.length > 0) {
+            const ids = new Set(pres.selectedProjects);
+            setInstitutionalProjects(allProjects.filter((p) => ids.has(p.id)));
+          }
         }
       })
       .finally(() => setInstitutionalLoading(false));
@@ -483,6 +507,65 @@ export default function GeneratedPresentationPage() {
       URL.revokeObjectURL(url);
     } catch {
       setToast({ message: "Erro ao baixar o PPTX. Tente novamente." });
+    }
+  }
+
+  // ── Edição de módulos (pós-geração) ──
+  function toggleModuleEnabled(instanceId: string) {
+    setEditModuleConfigs((prev) =>
+      prev.map((m) => (m.instanceId === instanceId ? { ...m, enabled: !m.enabled } : m)),
+    );
+    setModulesSaved(false);
+  }
+
+  function toggleModuleHidden(instanceId: string) {
+    setEditModuleConfigs((prev) =>
+      prev.map((m) => (m.instanceId === instanceId ? { ...m, hidden: !m.hidden } : m)),
+    );
+    setModulesSaved(false);
+  }
+
+  function moveModule(instanceId: string, direction: -1 | 1) {
+    setEditModuleConfigs((prev) => {
+      const idx = prev.findIndex((m) => m.instanceId === instanceId);
+      const target = idx + direction;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[target]] = [next[target], next[idx]];
+      setModulesSaved(false);
+      return next;
+    });
+  }
+
+  function duplicateModule(instanceId: string) {
+    setEditModuleConfigs((prev) => {
+      const idx = prev.findIndex((m) => m.instanceId === instanceId);
+      if (idx === -1) return prev;
+      const source = prev[idx];
+      const copy: PresentationModuleConfig = {
+        ...source,
+        instanceId: `${source.instanceId}-copy-${Date.now()}`,
+        duplicatedFrom: instanceId,
+      };
+      setModulesSaved(false);
+      return [...prev.slice(0, idx + 1), copy, ...prev.slice(idx + 1)];
+    });
+  }
+
+  async function saveModules() {
+    if (!institutionalPresentation) return;
+    setIsSavingModules(true);
+    try {
+      const updated = await presentationService.updatePresentation(institutionalPresentation.id, {
+        moduleConfigs: editModuleConfigs,
+      });
+      setInstitutionalPresentation(updated);
+      setModulesSaved(true);
+      setToast({ message: "Módulos salvos com sucesso!" });
+    } catch {
+      setToast({ message: "Erro ao salvar módulos. Tente novamente." });
+    } finally {
+      setIsSavingModules(false);
     }
   }
 
@@ -660,6 +743,153 @@ export default function GeneratedPresentationPage() {
                     </span>
                   );
                 })}
+              </div>
+            </section>
+          )}
+
+          {/* ── Módulos — ajuste de ordem e visibilidade ── */}
+          {editModuleConfigs.length > 0 && (
+            <section className="mt-12">
+              <div className="mb-6 flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#6fa8d6,#4f84c4)]">
+                  <FiSliders className="h-4.5 w-4.5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-[1.3rem] font-extrabold tracking-[-0.03em] text-[#1e1e1e]">
+                    Ajustar Módulos
+                  </h2>
+                  <p className="text-[0.84rem] text-[#878787]">
+                    Reordene, oculte ou desative módulos da apresentação
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-6 lg:grid-cols-[1fr_260px]">
+                <div className="space-y-2">
+                  {editModuleConfigs.map((config, index) => {
+                    const info = MODULE_DEFINITIONS[config.moduleId];
+                    const Icon = MODULE_ICONS[config.moduleId];
+                    const inactive = !config.enabled || config.hidden;
+                    return (
+                      <div
+                        key={config.instanceId}
+                        className={`flex items-center gap-3 rounded-[16px] border-2 bg-white px-4 py-3 transition-all ${
+                          inactive
+                            ? "border-[#e2e8f0] opacity-50"
+                            : "border-[#1675b8] shadow-[0_2px_10px_rgba(22,117,184,0.08)]"
+                        }`}
+                      >
+                        {/* Reordenar */}
+                        <div className="flex shrink-0 flex-col gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => moveModule(config.instanceId, -1)}
+                            disabled={index === 0}
+                            aria-label="Mover para cima"
+                            className="flex h-6 w-6 items-center justify-center rounded-md text-[#9ca3af] transition hover:bg-[#f3f4f6] hover:text-[#374151] disabled:opacity-30"
+                          >
+                            <FiChevronUp className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveModule(config.instanceId, 1)}
+                            disabled={index === editModuleConfigs.length - 1}
+                            aria-label="Mover para baixo"
+                            className="flex h-6 w-6 items-center justify-center rounded-md text-[#9ca3af] transition hover:bg-[#f3f4f6] hover:text-[#374151] disabled:opacity-30"
+                          >
+                            <FiChevronDown className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+
+                        {/* Ícone */}
+                        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${inactive ? "bg-[#f1f5f9] text-[#94a3b8]" : "bg-[#eff6ff] text-[#1675b8]"}`}>
+                          <Icon className="h-4 w-4" />
+                        </span>
+
+                        {/* Info */}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[0.88rem] font-bold text-[#1e1e1e]">{info.title}</p>
+                          <p className="truncate text-[0.76rem] text-[#9ca3af]">{info.description}</p>
+                        </div>
+
+                        {/* Ações */}
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => toggleModuleHidden(config.instanceId)}
+                            title={config.hidden ? "Exibir" : "Ocultar"}
+                            className={`flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-[#f3f4f6] ${config.hidden ? "text-[#f59e0b]" : "text-[#9ca3af]"}`}
+                          >
+                            {config.hidden ? <FiEyeOff className="h-3.5 w-3.5" /> : <FiEye className="h-3.5 w-3.5" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => duplicateModule(config.instanceId)}
+                            title="Duplicar"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg text-[#9ca3af] transition hover:bg-[#f3f4f6] hover:text-[#374151]"
+                          >
+                            <FiCopy className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleModuleEnabled(config.instanceId)}
+                            title={config.enabled ? "Desativar" : "Ativar"}
+                            className={`flex h-7 w-7 items-center justify-center rounded-lg text-[0.75rem] font-bold transition ${
+                              config.enabled
+                                ? "bg-[#1675b8] text-white hover:bg-[#0d5e96]"
+                                : "border border-[#d1d5db] text-[#9ca3af] hover:border-[#1675b8] hover:text-[#1675b8]"
+                            }`}
+                          >
+                            {config.enabled ? <FiCheck className="h-3.5 w-3.5" /> : <FiX className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Painel de salvar */}
+                <div className="lg:sticky lg:top-24 lg:self-start">
+                  <div className="rounded-[20px] border border-[#e2e8f0] bg-white p-5 shadow-[0_4px_16px_rgba(0,0,0,0.06)]">
+                    <p className="text-[0.78rem] font-bold uppercase tracking-widest text-[#9ca3af]">
+                      Resumo
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      <div className="flex items-center justify-between text-[0.84rem]">
+                        <span className="text-[#6b7280]">Ativos</span>
+                        <span className="font-bold text-[#1675b8]">
+                          {editModuleConfigs.filter((m) => m.enabled && !m.hidden).length}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[0.84rem]">
+                        <span className="text-[#6b7280]">Ocultos</span>
+                        <span className="font-semibold text-[#f59e0b]">
+                          {editModuleConfigs.filter((m) => m.hidden).length}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[0.84rem]">
+                        <span className="text-[#6b7280]">Desativados</span>
+                        <span className="font-semibold text-[#9ca3af]">
+                          {editModuleConfigs.filter((m) => !m.enabled).length}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={saveModules}
+                      disabled={isSavingModules || modulesSaved}
+                      className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(90deg,#1675b8_0%,#1255a0_100%)] py-3 text-[0.9rem] font-bold text-white shadow-[0_8px_20px_-8px_rgba(22,117,184,0.5)] transition hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
+                    >
+                      {isSavingModules ? (
+                        <FiLoader className="h-4 w-4 animate-spin" />
+                      ) : modulesSaved ? (
+                        <><FiCheck className="h-4 w-4" /> Salvo</>
+                      ) : (
+                        <><FiSave className="h-4 w-4" /> Salvar alterações</>
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
             </section>
           )}

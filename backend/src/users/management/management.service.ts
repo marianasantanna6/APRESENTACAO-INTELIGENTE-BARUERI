@@ -197,25 +197,17 @@ export class ManagementService {
     };
   }
 
-  async remove(id: string, password: string, actorId: string) {
-    const actor = await this.prisma.users.findUnique({
-      where: { id: BigInt(actorId) },
+  async remove(id: string, adminEmail: string, adminPassword: string) {
+    const normalizeText = (s: string) => s.trim().toLowerCase();
+    const headManager = await this.prisma.users.findFirst({
+      where: { email: normalizeText(adminEmail), head_manager: true },
     });
 
-    if (!actor) {
-      throw new NotFoundException('Usuário autenticado não encontrado');
+    if (!headManager) {
+      throw new ForbiddenException('Head-manager não encontrado com esse e-mail');
     }
 
-    if (!actor.head_manager) {
-      throw new ForbiddenException(
-        'Apenas head-manager pode desativar usuários',
-      );
-    }
-
-    const passwordValid = await bcrypt.compare(
-      password,
-      actor.password,
-    );
+    const passwordValid = await bcrypt.compare(adminPassword, headManager.password);
 
     if (!passwordValid) {
       throw new UnauthorizedException('Senha inválida');
@@ -233,10 +225,58 @@ export class ManagementService {
 
     await this.prisma.users.update({
       where: { id: userId },
-      data: {
-        status: false,
-      },
+      data: { status: false },
     });
+
+    return { ok: true };
+  }
+
+  async permanentDelete(id: string, adminEmail: string, adminPassword: string, actorId: string) {
+    const actor = await this.prisma.users.findUnique({
+      where: { id: BigInt(actorId) },
+    });
+
+    if (!actor) {
+      throw new NotFoundException('Usuário autenticado não encontrado');
+    }
+
+    if (!actor.head_manager) {
+      throw new ForbiddenException(
+        'Apenas head-manager pode excluir usuários permanentemente',
+      );
+    }
+
+    const normalizeText = (s: string) => s.trim().toLowerCase();
+    if (actor.email !== normalizeText(adminEmail)) {
+      throw new UnauthorizedException('E-mail não corresponde ao head-manager autenticado');
+    }
+
+    const passwordValid = await bcrypt.compare(adminPassword, actor.password);
+
+    if (!passwordValid) {
+      throw new UnauthorizedException('Senha inválida');
+    }
+
+    const userId = BigInt(id);
+
+    const user = await this.prisma.users.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+
+    const projectCount = await this.prisma.projects.count({ where: { user: userId } });
+    if (projectCount > 0) {
+      throw new ForbiddenException(
+        'Não é possível excluir um usuário que possui projetos cadastrados.',
+      );
+    }
+
+    await this.prisma.projects_logs.deleteMany({ where: { user: userId } });
+    await this.prisma.users_logs.updateMany({ where: { user: userId }, data: { user: null } });
+    await this.prisma.users.delete({ where: { id: userId } });
 
     return { ok: true };
   }

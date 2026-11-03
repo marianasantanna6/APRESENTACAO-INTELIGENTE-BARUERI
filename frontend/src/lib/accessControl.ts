@@ -39,7 +39,7 @@ export function canManageEmployees(user: AuthSessionUser | null) {
   if (!user) return false;
   if (user.master_admin) return true;
   if (user.head_manager) return true;
-  return user.accessLevel === "admin_level_2";
+  return user.accessLevel === "admin_level_2" || user.accessLevel === "admin_level_1";
 }
 
 export function canViewCrossTeamData(user: AuthSessionUser | null) {
