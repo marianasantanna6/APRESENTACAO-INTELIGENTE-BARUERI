@@ -153,7 +153,7 @@ export default function AdminProjectsPage() {
 
   const tabs: { id: TabId; label: string; count?: number }[] = [
     { id: "minhas",   label: "Minhas",   count: presentations.length },
-    { id: "projetos", label: "Projetos", count: allProjects.length },
+    ...(!isAdmin ? [{ id: "projetos" as TabId, label: "Projetos", count: allProjects.length }] : []),
     { id: "times",    label: "Times",    count: userTeamCount || undefined },
   ];
 
