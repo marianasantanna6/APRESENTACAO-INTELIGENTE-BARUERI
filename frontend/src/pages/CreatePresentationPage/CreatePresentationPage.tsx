@@ -277,7 +277,7 @@ function CreatePresentationPage() {
         year:     DEFAULT_PRESENTATION_FILTERS.year,
       });
       params.set("pid", project.id);
-      if (project.slides_url) params.set("dlUrl", project.slides_url);
+      if (project.slides_url) params.set("dlUrl", `/projects/${project.id}/pptx`);
       navigate(`${ROUTE_PATHS.generatedPresentation}?${params.toString()}`);
     } catch {
       setSaveError("Erro ao salvar o projeto. Tente novamente.");
@@ -594,6 +594,12 @@ function CreatePresentationPage() {
                     <p className="flex items-center gap-2 text-[0.84rem] font-medium text-[#b91c1c]">
                       <FiAlertCircle className="h-4 w-4 shrink-0" />
                       {step1Error}
+                    </p>
+                  )}
+                  {saveError && (
+                    <p className="flex items-center gap-2 text-[0.84rem] font-medium text-[#b91c1c]">
+                      <FiAlertCircle className="h-4 w-4 shrink-0" />
+                      {saveError}
                     </p>
                   )}
                   <button

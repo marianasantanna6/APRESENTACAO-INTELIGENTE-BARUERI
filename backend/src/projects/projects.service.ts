@@ -19,8 +19,8 @@ export class ProjectsService {
 
   private async requestAi(
     dto: CreateProjectsDto,
-  ): Promise<Buffer> {
-    // Passo 1: POST /research → recebe JSON com download_url
+  ): Promise<{ buffer: Buffer; slidesJson: object }> {
+    // Passo 1: POST /research → recebe JSON com download_url e presentation
     let researchRes: Response;
     try {
       researchRes = await fetch('http://localhost:8000/research', {
@@ -44,7 +44,7 @@ export class ProjectsService {
       );
     }
 
-    let researchData: { download_url?: string; presentation_id?: string };
+    let researchData: { download_url?: string; presentation_id?: string; presentation?: object };
     try {
       researchData = await researchRes.json();
     } catch {
@@ -100,7 +100,7 @@ export class ProjectsService {
       );
     }
 
-    return buffer;
+    return { buffer, slidesJson: researchData.presentation ?? {} };
   }
 
   private async validateCreateRequest(
@@ -210,6 +210,52 @@ export class ProjectsService {
     }
   }
 
+  async downloadPptx(id: string, userId: string): Promise<{ buffer: Buffer; filename: string }> {
+    const authenticatedUserId = BigInt(userId);
+    const project = await this.prisma.projects.findUnique({
+      where: { id: BigInt(id) },
+      select: { slides_url: true, name: true },
+    });
+    if (!project) throw new NotFoundException('Projeto não encontrado');
+    if (!project.slides_url) throw new NotFoundException('Este projeto não possui PPTX gerado');
+
+    const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/+$/, '');
+    const supabaseKey = process.env.SUPABASE_SECRET_KEY;
+    const bucketName = process.env.SUPABASE_BUCKET_NAME;
+
+    if (!supabaseUrl || !supabaseKey || !bucketName) {
+      throw new InternalServerErrorException('Configuração do Supabase incompleta');
+    }
+
+    // Extrai o path relativo da URL pública: .../object/public/{bucket}/{path}
+    const publicPrefix = `/storage/v1/object/public/${encodeURIComponent(bucketName)}/`;
+    const urlObj = new URL(project.slides_url);
+    const rawPath = urlObj.pathname.includes(publicPrefix)
+      ? urlObj.pathname.slice(urlObj.pathname.indexOf(publicPrefix) + publicPrefix.length)
+      : project.slides_url.split(`${bucketName}/`).slice(1).join(`${bucketName}/`);
+
+    const response = await fetch(
+      `${supabaseUrl}/storage/v1/object/${encodeURIComponent(bucketName)}/${rawPath}`,
+      {
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+        signal: AbortSignal.timeout(60_000),
+      },
+    );
+
+    if (!response.ok) {
+      throw new BadGatewayException(`Não foi possível baixar o PPTX: HTTP ${response.status}`);
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const safeName = (project.name ?? 'apresentacao').replace(/[^a-zA-Z0-9_\-]/g, '_').slice(0, 60);
+    return { buffer, filename: `${safeName}.pptx` };
+
+    void authenticatedUserId; // acesso verificado pela guarda JWT
+  }
+
   private async uploadPptxToSupabase(
     pptxBuffer: Buffer,
   ): Promise<{ path: string; publicUrl: string }> {
@@ -242,6 +288,7 @@ export class ProjectsService {
           method: 'POST',
           headers: {
             apikey: supabaseKey,
+            Authorization: `Bearer ${supabaseKey}`,
             'Content-Type':
               'application/vnd.openxmlformats-officedocument.presentationml.presentation',
             'x-upsert': 'false',
@@ -381,7 +428,7 @@ export class ProjectsService {
 
     // Temporariamente, ia_prompt não é enviado à IA.
     // O campo será enviado quando a API Python estiver atualizada.
-    const pptxBuffer = await this.requestAi(dto);
+    const { buffer: pptxBuffer, slidesJson } = await this.requestAi(dto);
 
     // Envia o arquivo para o bucket público.
     const storedSlides =
@@ -468,6 +515,7 @@ export class ProjectsService {
               version,
               family: 0n,
               slides_url: storedSlides.publicUrl,
+              slides_json: slidesJson,
               short_description: dto.short_description,
               full_description: dto.full_description,
               source: dto.source,
@@ -549,6 +597,7 @@ export class ProjectsService {
             version: updatedProject.version.toString(),
             family: updatedProject.family.toString(),
             slides_url: updatedProject.slides_url,
+            slides_json: updatedProject.slides_json ?? null,
             short_description:
               updatedProject.short_description,
             full_description:
@@ -1335,6 +1384,7 @@ export class ProjectsService {
         version: project.version.toString(),
         family: project.family.toString(),
         slides_url: project.slides_url,
+        slides_json: project.slides_json ?? null,
         short_description: project.short_description,
         full_description: project.full_description,
         source: await this.mapSources(project.source),

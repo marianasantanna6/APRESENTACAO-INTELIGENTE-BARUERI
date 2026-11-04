@@ -41,6 +41,7 @@ type ApiProject = {
   team: string;
   version: string;
   family: string;
+  slides_url?: string | null;
 };
 
 function toSummary(p: ApiProject): ProjectSummary {
@@ -53,6 +54,7 @@ function toSummary(p: ApiProject): ProjectSummary {
     governmentArea: (p.theme ?? "Administração") as GovernmentArea,
     mainDepartment: p.main_department ?? "",
     lastUpdatedAt: p.last_update ?? new Date().toISOString(),
+    slidesUrl: p.slides_url ?? undefined,
   };
 }
 

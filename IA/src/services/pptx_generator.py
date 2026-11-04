@@ -1,4 +1,4 @@
-'''Valida e renderiza dados de apresentação acadêmica usando o guia visual externo.'''
+'''Renderiza dados de apresentação como PPTX seguindo o visual dos cards web (IaSlideCard).'''
 
 from pathlib import Path
 import re
@@ -15,31 +15,58 @@ from config.pptx_style import load_style_guide
 from config.settings import ASSETS_DIR, PRESENTATION_CONTACT, PROJECT_ROOT
 
 
-SLIDE_WIDTH_IN = 40 / 3
+SLIDE_WIDTH_IN  = 40 / 3   # 13.33"
 SLIDE_HEIGHT_IN = 7.5
 
+# ── Web-card color palette (matches frontend IaSlideCard) ────────────────────
+_C = RGBColor
+C_BLUE       = _C(0x16, 0x75, 0xb8)  # #1675b8  primary blue
+C_DARK_BLUE  = _C(0x0d, 0x52, 0x83)  # #0d5283  dark blue (quote bg)
+C_GREEN      = _C(0x16, 0xa3, 0x4a)  # #16a34a  primary green
+C_LIGHT_BLUE = _C(0xef, 0xf6, 0xff)  # #eff6ff  light blue (badge / KPI bg)
+C_LIGHT_GRAY = _C(0xf8, 0xfa, 0xfc)  # #f8fafc  light gray (divisor bg / card bg)
+C_BORDER     = _C(0xe2, 0xe8, 0xf0)  # #e2e8f0  borders
+C_KPI_BORDER = _C(0xdb, 0xe4, 0xfe)  # #dbeafe  KPI card border
+C_TEXT       = _C(0x1e, 0x1e, 0x1e)  # #1e1e1e  dark text
+C_TEXT_MED   = _C(0x6b, 0x72, 0x80)  # #6b7280  medium gray text
+C_TEXT_GRAY  = _C(0x37, 0x41, 0x51)  # #374151  body gray text
+C_TEXT_LIGHT = _C(0x9c, 0xa3, 0xaf)  # #9ca3af  light gray text
+C_WHITE      = _C(0xFF, 0xFF, 0xFF)
+C_SLATE      = _C(0x47, 0x55, 0x69)  # #475569
+
+LAYOUT_LABELS: dict[str, str] = {
+    "capa":                    "Capa",
+    "encerramento":            "Encerramento",
+    "divisor_secao":           "Divisor de Seção",
+    "conteudo_com_metrica":    "Conteúdo com Métrica",
+    "destaque_citacao":        "Destaque / Citação",
+    "nuvem_de_tags":           "Nuvem de Tags",
+    "visao_geral_infografica": "Visão Geral / Infográfico",
+    "mapa_nacional":           "Mapa Nacional",
+    "reconhecimento":          "Reconhecimento",
+    "dados_municipio":         "Dados do Município",
+    "referencias":             "Referências",
+}
+
+
+# ── Low-level utilities ───────────────────────────────────────────────────────
 
 def _color(value: str, fallback: str = "#FFFFFF") -> RGBColor:
     value = value or fallback
     rgba = re.search(r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)", value)
     if rgba:
-        return RGBColor(*(max(0, min(255, int(channel))) for channel in rgba.groups()))
+        return RGBColor(*(max(0, min(255, int(ch))) for ch in rgba.groups()))
     match = re.search(r"#([0-9A-Fa-f]{6})", value)
     if not match:
         match = re.search(r"#([0-9A-Fa-f]{3})", value)
         if match:
             short = match.group(1)
-            value = "#" + "".join(char * 2 for char in short)
+            value = "#" + "".join(c * 2 for c in short)
     else:
         value = "#" + match.group(1)
     if not value.startswith("#"):
         value = fallback
     return RGBColor.from_string(value.lstrip("#").upper())
-
-
-def _alpha(value: str, default: float = 1.0) -> float:
-    match = re.search(r"rgba\([^,]+,[^,]+,[^,]+,\s*([0-9.]+)\s*\)", value or "")
-    return max(0.0, min(1.0, float(match.group(1)))) if match else default
 
 
 def _set_transparency(shape, opacity: float) -> None:
@@ -101,84 +128,45 @@ def add_text_box(
     paragraph.space_after = Pt(0)
     run = paragraph.add_run()
     run.text = text or ""
-    if font_name is None:
-        typography = load_style_guide()["metadados_padrao"]["tipografia"]
-        font_key = "fonte_titulo" if bold else "fonte_corpo"
-        font_name = typography.get(font_key, {}).get("familia", "Montserrat")
-    run.font.name = font_name
+    run.font.name = font_name or "Montserrat"
     run.font.size = Pt(font_size)
     run.font.bold = bold
     run.font.italic = italic
-    run.font.color.rgb = color or RGBColor(255, 255, 255)
+    run.font.color.rgb = color or C_WHITE
     return shape
 
 
 def _add_picture(slide, path: Path, x: float, y: float, w: float, h: float, *, fill: bool = False):
     try:
         with Image.open(path) as image:
-            image_width, image_height = image.size
+            iw, ih = image.size
     except (OSError, ValueError):
         return None
-    if not image_width or not image_height:
+    if not iw or not ih:
         return None
-
     box_ratio = w / h
-    image_ratio = image_width / image_height
+    img_ratio = iw / ih
     shape = slide.shapes.add_picture(str(path), Inches(x), Inches(y), Inches(w), Inches(h))
     if fill:
-        if image_ratio > box_ratio:
-            visible = box_ratio / image_ratio
+        if img_ratio > box_ratio:
+            visible = box_ratio / img_ratio
             crop = (1 - visible) / 2
             shape.crop_left = crop
             shape.crop_right = crop
-        elif image_ratio < box_ratio:
-            visible = image_ratio / box_ratio
+        elif img_ratio < box_ratio:
+            visible = img_ratio / box_ratio
             crop = (1 - visible) / 2
             shape.crop_top = crop
             shape.crop_bottom = crop
         return shape
-
     shape.width = Inches(w)
-    shape.height = Inches(w / image_ratio)
+    shape.height = Inches(w / img_ratio)
     if shape.height > Inches(h):
         shape.height = Inches(h)
-        shape.width = Inches(h * image_ratio)
+        shape.width = Inches(h * img_ratio)
     shape.left = Inches(x + (w - shape.width / 914400) / 2)
-    shape.top = Inches(y + (h - shape.height / 914400) / 2)
+    shape.top  = Inches(y + (h - shape.height / 914400) / 2)
     return shape
-
-
-def _position(element: dict, x: float, y: float, w: float, h: float) -> tuple[float, float, float, float]:
-    pos = element.get("posicao", {})
-    px = float(pos.get("x_pct", x / SLIDE_WIDTH_IN * 100))
-    py = float(pos.get("y_pct", y / SLIDE_HEIGHT_IN * 100))
-    pw = float(pos.get("w_pct", w / SLIDE_WIDTH_IN * 100))
-    ph = float(pos.get("h_pct", h / SLIDE_HEIGHT_IN * 100))
-    return (
-        SLIDE_WIDTH_IN * px / 100,
-        SLIDE_HEIGHT_IN * py / 100,
-        SLIDE_WIDTH_IN * pw / 100,
-        SLIDE_HEIGHT_IN * ph / 100,
-    )
-
-
-def _element(layout_style: dict, element_id: str) -> dict:
-    return next(
-        (item for item in layout_style.get("elementos", []) if item.get("id") == element_id),
-        {},
-    )
-
-
-def _xy(element: dict, x: float, y: float) -> tuple[float, float]:
-    pos = element.get("posicao", {})
-    return (
-        SLIDE_WIDTH_IN * float(pos.get("x_pct", x / SLIDE_WIDTH_IN * 100)) / 100,
-        SLIDE_HEIGHT_IN * float(pos.get("y_pct", y / SLIDE_HEIGHT_IN * 100)) / 100,
-    )
-
-
-def _font_size(element: dict, fallback: float) -> float:
-    return float(element.get("tamanho_pt", fallback))
 
 
 def _asset(name: str | None, assets_dir: Path) -> Path | None:
@@ -191,553 +179,471 @@ def _asset(name: str | None, assets_dir: Path) -> Path | None:
     return candidate if candidate.is_file() else None
 
 
-def _background_asset(layout: str, assets_dir: Path) -> Path | None:
-    candidates = {
-        "capa": "skyline_barueri.png",
-        "dados_municipio": "vista_aerea_barueri.png",
-        "divisor_secao": "skyline_tecnologico.png",
-        "destaque_citacao": "autoridade_evento.png",
-        "encerramento": "cidade_noturna.png",
-    }
-    return _asset(candidates.get(layout), assets_dir)
+# ── Shared layout helpers ─────────────────────────────────────────────────────
+
+def _add_badge(slide, number: int, layout: str, x: float, y: float, *, dark_bg: bool = False) -> None:
+    """Renders the "N · Label" pill matching the web card badge."""
+    label = LAYOUT_LABELS.get(layout, layout)
+    text  = f"{number} · {label.upper()}"
+    w = max(1.5, min(5.5, 0.3 + len(text) * 0.13))
+    h = 0.37
+    badge = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE, Inches(x), Inches(y), Inches(w), Inches(h)
+    )
+    badge.fill.solid()
+    if dark_bg:
+        badge.fill.fore_color.rgb = C_WHITE
+        _set_transparency(badge, 0.20)
+        badge.line.fill.background()
+        text_color = C_WHITE
+    else:
+        badge.fill.fore_color.rgb = C_LIGHT_BLUE
+        badge.line.color.rgb = C_KPI_BORDER
+        text_color = C_BLUE
+    tf = badge.text_frame
+    tf.clear()
+    tf.word_wrap = False
+    tf.margin_left   = Pt(5)
+    tf.margin_right  = Pt(5)
+    tf.margin_top    = Pt(0)
+    tf.margin_bottom = Pt(0)
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    run = p.add_run()
+    run.text = text
+    run.font.name  = "Montserrat"
+    run.font.size  = Pt(9)
+    run.font.bold  = True
+    run.font.color.rgb = text_color
 
 
-def _add_background(slide, layout: str, layout_style: dict, guide: dict, assets_dir: Path) -> None:
-    palette = guide["metadados_padrao"]["paleta_cores"]
-    fill = layout_style.get("fundo", {})
-    background_asset = _background_asset(layout, assets_dir)
-    color = _color(fill.get("cor", palette.get("fundo_primario", "#05082A")))
-    add_background_rect(slide, color)
-    if fill.get("tipo", "").startswith("foto") and background_asset:
-        _add_picture(slide, background_asset, 0, 0, SLIDE_WIDTH_IN, SLIDE_HEIGHT_IN, fill=True)
-        overlay = slide.shapes.add_shape(
-            MSO_SHAPE.RECTANGLE, 0, 0, Inches(SLIDE_WIDTH_IN), Inches(SLIDE_HEIGHT_IN)
+def _add_kpis_web(slide, kpis: list[dict], x: float, y: float, w: float) -> None:
+    """Renders KPI chips matching the web card (#eff6ff bg, #1675b8 value)."""
+    if not kpis:
+        return
+    count  = min(len(kpis), 3)
+    gap    = 0.18
+    card_w = (w - gap * (count - 1)) / count
+    for i, item in enumerate(kpis[:count]):
+        cx = x + i * (card_w + gap)
+        card = slide.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE, Inches(cx), Inches(y), Inches(card_w), Inches(1.35)
         )
-        overlay.fill.solid()
-        overlay_color = fill.get("overlay", "rgba(5,8,42,0.7)")
-        overlay.fill.fore_color.rgb = _color(overlay_color, "#05082A")
-        _set_transparency(overlay, _alpha(overlay_color, 0.7))
-        overlay.line.fill.background()
-    elif fill.get("tipo", "").startswith("foto"):
-        placeholder = slide.shapes.add_shape(
-            MSO_SHAPE.RECTANGLE, Inches(9.5), Inches(0.0), Inches(3.83), Inches(7.5)
+        card.fill.solid()
+        card.fill.fore_color.rgb = C_LIGHT_BLUE
+        card.line.color.rgb = C_KPI_BORDER
+        value = str(item.get("valor", ""))
+        unit  = str(item.get("unidade") or "")
+        label = str(item.get("label", ""))
+        ctx   = str(item.get("contexto") or "")
+        num   = f"{value}{unit}" if unit else value
+        fs    = 36 if len(num) <= 6 else max(22, 36 - (len(num) - 6) * 3)
+        add_text_box(slide, num,          cx + 0.1, y + 0.1,  card_w - 0.2, 0.68, fs, True,  C_BLUE, PP_ALIGN.CENTER)
+        add_text_box(slide, label.upper(), cx + 0.1, y + 0.84, card_w - 0.2, 0.3,  9,  True,  C_TEXT_MED, PP_ALIGN.CENTER)
+        if ctx:
+            add_text_box(slide, ctx,       cx + 0.1, y + 1.15, card_w - 0.2, 0.3,  8,  False, C_TEXT_LIGHT, PP_ALIGN.CENTER)
+
+
+def _add_bullets(slide, pontos: list[str], x: float, y: float, w: float, h: float,
+                 font_size: float = 13, text_color: RGBColor | None = None) -> None:
+    """Renders bullet points with blue circle markers."""
+    text_color = text_color or C_TEXT_GRAY
+    row_h = max(0.28, font_size / 72 * 1.5 + 0.08)
+    for i, point in enumerate(pontos):
+        ry = y + i * row_h
+        if ry + 0.22 > y + h:
+            break
+        dot = slide.shapes.add_shape(
+            MSO_SHAPE.OVAL, Inches(x), Inches(ry + 0.1), Inches(0.1), Inches(0.1)
         )
-        placeholder.fill.solid()
-        placeholder.fill.fore_color.rgb = _color(palette.get("azul_navy", "#0A1F5C"))
-        _set_transparency(placeholder, 0.42)
-        placeholder.line.fill.background()
+        dot.fill.solid()
+        dot.fill.fore_color.rgb = C_BLUE
+        dot.line.fill.background()
+        add_text_box(slide, point, x + 0.18, ry, w - 0.18, row_h, font_size, False, text_color)
 
 
-def _add_branding(
-    slide, guide: dict, assets_dir: Path, *, ods: bool = False, light_background: bool = False
-) -> None:
-    logos = [
-        "prefeitura_barueri.png", "sit.png", "inovacao_barueri.png", "tv_inovacao.png"
-    ]
-    x = 0.35
-    found = False
-    for name in logos:
-        path = _asset(name, assets_dir)
-        if not path:
-            continue
-        picture = _add_picture(slide, path, x, 7.00, 1.1, 0.32)
-        if picture:
-            x += picture.width / 914400 + 0.14
-            found = True
-    if not found:
-        add_text_box(
-            slide, "PREFEITURA DE BARUERI  •  SECRETARIA DE INOVAÇÃO E TECNOLOGIA",
-            0.35, 7.0, 7.9, 0.3, 8, True,
-            _color("#556273" if light_background else "#E8EDF5"),
-        )
-
-    if ods:
-        ods_filename = guide["metadados_padrao"].get("barra_inferior_ods", {}).get(
-            "ods_icons_url_placeholder", "ods_goals_strip.png"
-        )
-        ods_path = _asset(ods_filename, assets_dir) or _asset("ods_strip.png", assets_dir)
-        if ods_path:
-            _add_picture(slide, ods_path, 9.45, 6.62, 3.55, 0.78)
-        else:
-            add_text_box(
-                slide, "INSERIR ods_goals_strip.png", 9.45, 6.88, 3.55, 0.28,
-                8, True, _color("#556273" if light_background else "#B0BAC8"), PP_ALIGN.RIGHT,
-            )
-
-
-def _add_image_panel(slide, data: dict, x: float, y: float, w: float, h: float, assets_dir: Path, guide: dict) -> None:
+def _add_image_panel(slide, data: dict, x: float, y: float, w: float, h: float, assets_dir: Path) -> None:
+    """Renders an image panel; falls back to placeholder."""
     requested = data.get("_imagem_arquivo") or "foto_conteudo.png"
     image = _asset(requested, assets_dir)
     panel = slide.shapes.add_shape(
         MSO_SHAPE.ROUNDED_RECTANGLE, Inches(x), Inches(y), Inches(w), Inches(h)
     )
     panel.fill.solid()
-    panel.fill.fore_color.rgb = _color(guide["metadados_padrao"]["paleta_cores"].get("fundo_secundario", "#0A1230"))
-    panel.line.color.rgb = _color(guide["metadados_padrao"]["paleta_cores"].get("azul_medio", "#1460A8"))
+    panel.fill.fore_color.rgb = C_LIGHT_GRAY
+    panel.line.color.rgb = C_BORDER
     if image:
         _add_picture(slide, image, x + 0.06, y + 0.06, w - 0.12, h - 0.12, fill=True)
         return
     caption = data.get("imagem_descricao") or "Imagem de apoio pendente"
-    add_text_box(slide, "IMAGEM / GRÁFICO", x + 0.28, y + h * 0.32, w - 0.56, 0.35,
-                 13, True, _color("#FFFFFF"), PP_ALIGN.CENTER)
-    add_text_box(slide, caption, x + 0.35, y + h * 0.44, w - 0.7, min(0.9, h * 0.28),
-                 10, False, _color("#B0BAC8"), PP_ALIGN.CENTER)
+    add_text_box(slide, "IMAGEM / GRÁFICO", x + 0.3, y + h * 0.33, w - 0.6, 0.4,
+                 14, True, C_BLUE, PP_ALIGN.CENTER)
+    add_text_box(slide, caption, x + 0.3, y + h * 0.46, w - 0.6, min(1.0, h * 0.3),
+                 10, False, C_TEXT_MED, PP_ALIGN.CENTER)
 
 
-def _add_kpis(
-    slide,
-    kpis: list[dict],
-    x: float,
-    y: float,
-    w: float,
-    *,
-    dark: bool = True,
-    template: dict | None = None,
-    badges: bool = False,
-) -> None:
-    if not kpis:
-        return
-    template = template or {}
-    count = min(len(kpis), 3)
-    if badges:
-        diameter = min(2.2, (w - 0.6 * (count - 1)) / count)
-        gap = (w - diameter * count) / max(1, count - 1) if count > 1 else 0
-        for index, item in enumerate(kpis[:count]):
-            left = x + index * (diameter + gap)
-            circle = slide.shapes.add_shape(
-                MSO_SHAPE.OVAL, Inches(left), Inches(y), Inches(diameter), Inches(diameter)
-            )
-            circle.fill.solid()
-            circle.fill.fore_color.rgb = _color(template.get("fundo_cor", "#1460A8"))
-            _set_transparency(circle, _alpha(template.get("fundo_cor", ""), 1.0))
-            circle.line.color.rgb = _color(template.get("borda_cor", "#1E90FF"))
-            foreground = _color(template.get("numero_cor", "#FFFFFF"))
-            number = f"{item.get('valor', '')} {item.get('unidade') or ''}".strip()
-            number_size = float(template.get("numero_tamanho_pt", 28))
-            if len(number) > 8:
-                number_size = max(18, number_size - (len(number) - 8) * 2)
-            add_text_box(slide, number, left + 0.12, y + 0.54, diameter - 0.24, 0.55,
-                         number_size, True, foreground, PP_ALIGN.CENTER)
-            add_text_box(slide, item.get("label", ""), left + 0.15, y + 1.14, diameter - 0.3, 0.46,
-                         float(template.get("label_tamanho_pt", 11)), False,
-                         _color(template.get("label_cor", "#B0BAC8")), PP_ALIGN.CENTER)
-        return
-
-    gap = 0.16
-    card_width = (w - gap * (count - 1)) / count
-    for index, item in enumerate(kpis[:count]):
-        left = x + index * (card_width + gap)
-        card = slide.shapes.add_shape(
-            MSO_SHAPE.ROUNDED_RECTANGLE, Inches(left), Inches(y), Inches(card_width), Inches(1.2)
-        )
-        card.fill.solid()
-        card.fill.fore_color.rgb = _color(template.get("fundo_cor", "#1460A8" if dark else "#E8EDF5"))
-        card.line.fill.background()
-        foreground = _color(template.get("numero_cor", "#FFFFFF" if dark else "#0A1F5C"))
-        number = f"{item.get('valor', '')} {item.get('unidade') or ''}".strip()
-        number_size = float(template.get("numero_tamanho_pt", 32))
-        font_config = load_style_guide()["metadados_padrao"]["tipografia"].get("fonte_kpi_numero", {})
-        number_size = min(number_size, float(font_config.get("tamanho_maximo_pt", 80)))
-        number_size = max(number_size - max(0, len(number) - 7) * 3, float(font_config.get("tamanho_minimo_pt", 36)))
-        add_text_box(slide, number, left + 0.1, y + 0.12, card_width - 0.2, 0.55,
-                     number_size, True, foreground, PP_ALIGN.CENTER)
-        add_text_box(slide, item.get("label", ""), left + 0.12, y + 0.72, card_width - 0.24,
-                     0.28, float(template.get("label_tamanho_pt", 11)), False, foreground, PP_ALIGN.CENTER)
-
-
-def _add_source_footer(
-    slide, data: dict, guide: dict, assets_dir: Path, *, light_background: bool = False
-) -> None:
-    source_ids = data.get("fontes", [])
-    if source_ids:
-        add_text_box(slide, "Fontes: " + " · ".join(source_ids), 0.35, 6.55, 8.6, 0.26,
-                     8, False, _color("#556273" if light_background else "#B0BAC8"))
-    else:
+def _add_branding(slide, assets_dir: Path, *, light: bool = False) -> None:
+    logos = ["prefeitura_barueri.png", "sit.png", "inovacao_barueri.png"]
+    x = 0.35
+    found = False
+    for name in logos:
+        path = _asset(name, assets_dir)
+        if not path:
+            continue
+        picture = _add_picture(slide, path, x, 7.07, 1.0, 0.3)
+        if picture:
+            x += picture.width / 914400 + 0.12
+            found = True
+    if not found:
         add_text_box(
-            slide,
-            "Sem fontes vinculadas — conteúdo não verificado",
-            0.35,
-            6.55,
-            8.6,
-            0.26,
-            8,
-            False,
-            _color("#556273" if light_background else "#B0BAC8"),
+            slide, "PREFEITURA DE BARUERI  •  SECRETARIA DE INOVAÇÃO E TECNOLOGIA",
+            0.35, 7.1, 7.9, 0.28, 8, True,
+            C_TEXT_LIGHT if light else C_TEXT_LIGHT,
         )
-    _add_branding(slide, guide, assets_dir, ods=True, light_background=light_background)
 
+
+def _add_source_footer(slide, data: dict, assets_dir: Path, *, light: bool = False) -> None:
+    source_ids = data.get("fontes") or []
+    if source_ids:
+        add_text_box(slide, "Fontes: " + " · ".join(source_ids),
+                     0.35, 6.62, 8.6, 0.26, 8, False, C_TEXT_LIGHT)
+    _add_branding(slide, assets_dir, light=light)
+
+
+# ── Slide renderers ───────────────────────────────────────────────────────────
 
 def _draw_cover(slide, data: dict, style: dict, guide: dict, assets: Path) -> None:
-    _add_background(slide, "capa", style, guide, assets)
-    pre_title = _element(style, "pre_titulo")
-    main_title = _element(style, "titulo_principal")
-    subtitle_element = _element(style, "subtitulo")
-    description_element = _element(style, "descricao_curta")
+    add_background_rect(slide, C_BLUE)
+    idx   = data.get("_slide_index", 1)
+    _add_badge(slide, idx, "capa", 0.45, 0.4, dark_bg=True)
     title = data.get("titulo") or "APRESENTAÇÃO"
-    pre_x, pre_y = _xy(pre_title, 0.68, 2.62)
-    title_x, title_y = _xy(main_title, 0.68, 3.06)
-    subtitle_x, subtitle_y = _xy(subtitle_element, 0.7, 4.33)
-    description_x, description_y = _xy(description_element, 0.7, 5.15)
-    add_text_box(slide, pre_title.get("conteudo", "PREFEITURA DE"), pre_x, pre_y, 6.6, 0.45,
-                 _font_size(pre_title, 20), True, _color(pre_title.get("cor", "#FFFFFF")))
-    title_limit = int(main_title.get("max_chars", 30))
-    cover_size = _font_size(main_title, 42) if len(title) <= title_limit else 44
-    add_text_box(slide, title.upper(), title_x, title_y, 11.7, 1.15,
-                 cover_size, True, _color(main_title.get("cor", "#FFFFFF")))
-    subtitle = data.get("subtitulo") or data.get("texto_apoio") or ""
+    fs    = 54 if len(title) <= 32 else 44
+    add_text_box(slide, title.upper(), 0.65, 2.1, 12.0, 1.6, fs, True, C_WHITE)
+    subtitle = data.get("subtitulo") or ""
     if subtitle:
-        add_text_box(slide, subtitle, subtitle_x, subtitle_y, 9.9, 0.72,
-                     _font_size(subtitle_element, 18), False,
-                     _color(subtitle_element.get("cor", "#E8EDF5")))
-    description = data.get("texto_apoio") if subtitle else ""
-    if description and description != subtitle:
-        add_text_box(slide, description, description_x, description_y, 9.9, 0.58,
-                     _font_size(description_element, 14), False,
-                     _color(description_element.get("cor", "#B0BAC8")))
-    flags = _element(style, "bandeiras")
-    flag_x, flag_y = _xy(flags, 11.65, 0.2)
-    for index, name in enumerate(flags.get("conteudo", [])):
-        path = _asset(name, assets)
-        if path:
-            _add_picture(slide, path, flag_x + index * 0.76, flag_y, 0.68, 0.44)
-    _add_branding(slide, guide, assets)
+        add_text_box(slide, subtitle, 0.65, 3.9, 12.0, 0.75, 22, False, C_WHITE)
+    support = data.get("texto_apoio") or ""
+    if support and support != subtitle:
+        add_text_box(slide, support, 0.65, 4.78, 11.5, 0.65, 16, False, C_WHITE)
+    _add_branding(slide, assets)
 
 
 def _draw_municipality(slide, data: dict, style: dict, guide: dict, assets: Path) -> None:
-    _add_background(slide, "dados_municipio", style, guide, assets)
-    add_text_box(slide, data.get("titulo") or "BARUERI EM DADOS", 0.65, 0.45, 11.9, 0.7,
-                 30, True, _color("#FFFFFF"))
-    badge_element = _element(style, "badges_kpi")
-    badge_template = badge_element.get("badge_template", {})
-    _add_kpis(slide, data.get("kpis", []), 1.15, 2.05, 11.0,
-              template=badge_template, badges=True)
-    if data.get("pontos"):
-        add_text_box(slide, "\n".join(f"• {point}" for point in data["pontos"]),
-                     1.05, 4.55, 11.2, 1.15, 13, False, _color("#E8EDF5"))
-    tagline = _element(style, "subtitulo_slide")
-    tagline_x, tagline_y = _xy(tagline, 0.65, 5.9)
-    caption = data.get("texto_apoio", "")
-    if caption:
-        add_text_box(slide, caption, tagline_x, tagline_y, 11.3, 0.42,
-                     _font_size(tagline, 16), True, _color(tagline.get("cor", "#FFFFFF")))
-    _add_source_footer(slide, data, guide, assets)
+    add_background_rect(slide, C_WHITE)
+    idx = data.get("_slide_index", 1)
+    _add_badge(slide, idx, "dados_municipio", 0.45, 0.35)
+    add_text_box(slide, data.get("titulo") or "BARUERI EM DADOS",
+                 0.45, 0.9, 12.3, 0.95, 32, True, C_TEXT)
+    text_y = 2.05
+    kpis = data.get("kpis") or []
+    if kpis:
+        _add_kpis_web(slide, kpis, 0.45, text_y, 12.3)
+        text_y = 3.6
+    support = data.get("texto_apoio") or ""
+    if support:
+        add_text_box(slide, support, 0.45, text_y, 12.3, 0.72, 14, False, C_TEXT_MED)
+        text_y += 0.82
+    pontos = data.get("pontos") or []
+    if pontos:
+        _add_bullets(slide, pontos, 0.45, text_y, 12.3, 6.5 - text_y, 13)
+    _add_source_footer(slide, data, assets, light=True)
 
 
 def _draw_divider(slide, data: dict, style: dict, guide: dict, assets: Path) -> None:
-    _add_background(slide, "divisor_secao", style, guide, assets)
-    watermark = _element(style, "supertitulo_fantasma")
-    watermark_x, watermark_y = _xy(watermark, 0.7, 2.1)
-    if data.get("subtitulo"):
-        watermark_shape = add_text_box(
-            slide, data["subtitulo"].upper(),
-            watermark_x, watermark_y, 12.0, 0.65, _font_size(watermark, 24), True,
-            _color(watermark.get("cor", "#B0BAC8")), italic=True
-        )
-        _set_text_transparency(watermark_shape, _alpha(watermark.get("cor", ""), 1.0))
-    title_element = _element(style, "titulo_pilar")
-    title_x, title_y = _xy(title_element, 0.7, 3.05)
-    add_text_box(slide, data.get("titulo") or "SEÇÃO", title_x, title_y, 12.0, 1.05,
-                 _font_size(title_element, 34), True, _color(title_element.get("cor", "#FFFFFF")))
-    icon = _element(style, "icone_pilar")
-    icon_x, icon_y = _xy(icon, 0.7, 5.4)
-    icon_size = float(icon.get("tamanho_px", 80)) / 96
-    icon_shape = slide.shapes.add_shape(
-        MSO_SHAPE.ROUNDED_RECTANGLE, Inches(icon_x), Inches(icon_y),
-        Inches(icon_size), Inches(icon_size)
+    add_background_rect(slide, C_LIGHT_GRAY)
+    strip = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE, 0, 0, Inches(0.22), Inches(SLIDE_HEIGHT_IN)
     )
-    icon_shape.fill.solid()
-    icon_shape.fill.fore_color.rgb = _color(icon.get("fundo_cor", "#1460A8"))
-    icon_shape.line.fill.background()
-    for element_id in ("logos_topo", "logos_topo_direita"):
-        logo_group = _element(style, element_id)
-        logo_x, logo_y = _xy(logo_group, 0.3, 0.2)
-        for index, logo_name in enumerate(logo_group.get("logos", [])):
-            logo = _asset(logo_name, assets)
-            if logo:
-                _add_picture(slide, logo, logo_x + index * 0.85, logo_y, 0.74, 0.48)
-    colors = guide["catalogo_de_layouts"]["divisor_secao"]["elementos"][-1].get("cores", [])
-    if colors:
-        segment_width = SLIDE_WIDTH_IN / len(colors)
-        for index, color in enumerate(colors):
-            rect = slide.shapes.add_shape(
-                MSO_SHAPE.RECTANGLE, Inches(index * segment_width), Inches(7.25),
-                Inches(segment_width), Inches(0.25)
-            )
-            rect.fill.solid()
-            rect.fill.fore_color.rgb = _color(color)
-            rect.line.fill.background()
+    strip.fill.solid()
+    strip.fill.fore_color.rgb = C_BLUE
+    strip.line.fill.background()
+    idx = data.get("_slide_index", 1)
+    _add_badge(slide, idx, "divisor_secao", 0.5, 0.38)
+    subtitle = data.get("subtitulo") or ""
+    if subtitle:
+        add_text_box(slide, subtitle.upper(), 0.5, 2.1, 12.5, 0.72,
+                     26, True, C_TEXT_LIGHT, italic=True)
+    title = data.get("titulo") or "SEÇÃO"
+    add_text_box(slide, title, 0.5, 2.9, 12.5, 1.3, 48, True, C_BLUE)
+    support = data.get("texto_apoio") or ""
+    if support:
+        add_text_box(slide, support, 0.5, 4.38, 12.5, 0.65, 14, False, C_TEXT_MED)
+    # colored bottom stripe from guide (fallback to brand colors)
+    catalog_colors: list[str] = []
+    for el in guide.get("catalogo_de_layouts", {}).get("divisor_secao", {}).get("elementos", []):
+        if el.get("cores"):
+            catalog_colors = el["cores"]
+            break
+    if not catalog_colors:
+        catalog_colors = ["#1675b8", "#16a34a", "#f59e0b", "#ef4444"]
+    seg_w = SLIDE_WIDTH_IN / len(catalog_colors)
+    for i, c in enumerate(catalog_colors):
+        rect = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE,
+            Inches(i * seg_w), Inches(SLIDE_HEIGHT_IN - 0.2),
+            Inches(seg_w), Inches(0.2)
+        )
+        rect.fill.solid()
+        rect.fill.fore_color.rgb = _color(c)
+        rect.line.fill.background()
 
 
 def _draw_content(slide, data: dict, style: dict, guide: dict, assets: Path) -> None:
-    _add_background(slide, "conteudo_com_metrica", style, guide, assets)
-    header_style = _element(style, "header_barra")
-    header_color = header_style.get("fundo_cor", guide["metadados_padrao"]["paleta_cores"].get("fundo_secundario", "#0A1230"))
-    header_height = SLIDE_HEIGHT_IN * float(header_style.get("altura_pct", 14)) / 100
-    header = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, Inches(SLIDE_WIDTH_IN), Inches(header_height))
-    header.fill.solid()
-    header.fill.fore_color.rgb = _color(header_color)
-    header.line.fill.background()
-    section = data.get("subtitulo") or data.get("secao") or "PREFEITURA DE BARUERI"
-    add_text_box(slide, section.upper(), 0.45, 0.12, 7.5, 0.55, 18, True, _color("#FFFFFF"))
-
-    image_element = _element(style, "imagem_esquerda")
-    image_x, image_y, image_w, image_h = _position(image_element, 0.27, 1.2, 6.12, 4.95)
-    _add_image_panel(slide, data, image_x, image_y, image_w, image_h, assets, guide)
-
-    title_element = _element(style, "topico_titulo")
-    title_x, title_y = _xy(title_element, 6.92, 1.35)
-    right_x, right_w = title_x, SLIDE_WIDTH_IN - title_x - 0.35
-    add_text_box(slide, data.get("titulo") or "", right_x, title_y, right_w, 0.95,
-                 _font_size(title_element, 22), True, _color(title_element.get("cor", "#FFFFFF")))
-    if data.get("kpis"):
-        kpi_element = _element(style, "kpi_numero")
-        kpi_x, kpi_y = _xy(kpi_element, right_x, 2.65)
-        kpi_template = {
-            "numero_tamanho_pt": kpi_element.get("numero_tamanho_pt", 56),
-            "numero_cor": kpi_element.get("numero_cor", "#FFFFFF"),
-            "label_tamanho_pt": kpi_element.get("label_tamanho_pt", 13),
-            "label_cor": kpi_element.get("label_cor", "#B0BAC8"),
-            "fundo_cor": "#1460A8",
-        }
-        _add_kpis(slide, data["kpis"], kpi_x, kpi_y, right_w, template=kpi_template)
-        text_y = kpi_y + 1.35
-    else:
-        text_y = 2.55
-    if data.get("texto_apoio"):
-        description_element = _element(style, "descricao_texto")
-        description_x, description_y = _xy(description_element, right_x, text_y)
-        text_y = max(text_y, description_y)
-        add_text_box(slide, data["texto_apoio"], description_x, text_y, right_w, 0.9,
-                     _font_size(description_element, 14), False,
-                     _color(description_element.get("cor", "#B0BAC8")))
-        text_y += 0.94
-    if data.get("pontos"):
-        bullets = "\n".join(f"• {point}" for point in data["pontos"])
-        add_text_box(slide, bullets, right_x, text_y, right_w, max(0.45, 6.25 - text_y),
-                     12, False, _color("#E8EDF5"))
-    _add_source_footer(slide, data, guide, assets)
+    add_background_rect(slide, C_WHITE)
+    idx = data.get("_slide_index", 1)
+    _add_badge(slide, idx, "conteudo_com_metrica", 0.45, 0.35)
+    title = data.get("titulo") or ""
+    add_text_box(slide, title, 0.45, 0.9, 12.3, 1.0, 26, True, C_TEXT)
+    _add_image_panel(slide, data, 0.4, 2.05, 5.6, 4.9, assets)
+    rx, rw = 6.35, SLIDE_WIDTH_IN - 6.35 - 0.4
+    text_y = 2.05
+    kpis = data.get("kpis") or []
+    if kpis:
+        _add_kpis_web(slide, kpis, rx, text_y, rw)
+        text_y += 1.6
+    support = data.get("texto_apoio") or ""
+    if support:
+        add_text_box(slide, support, rx, text_y, rw, 0.85, 13, False, C_TEXT_MED)
+        text_y += 0.95
+    pontos = data.get("pontos") or []
+    if pontos:
+        _add_bullets(slide, pontos, rx, text_y, rw, 6.75 - text_y, 12)
+    _add_source_footer(slide, data, assets, light=True)
 
 
 def _draw_quote(slide, data: dict, style: dict, guide: dict, assets: Path) -> None:
-    _add_background(slide, "destaque_citacao", style, guide, assets)
+    add_background_rect(slide, C_DARK_BLUE)
+    idx = data.get("_slide_index", 1)
+    _add_badge(slide, idx, "destaque_citacao", 0.45, 0.4, dark_bg=True)
     quote = data.get("citacao") or {}
     citation_text = quote.get("texto") if isinstance(quote, dict) else ""
-    text = citation_text or data.get("texto_apoio") or data.get("titulo") or ""
-    quote_element = _element(style, "texto_destaque")
-    quote_x, quote_y = _xy(quote_element, 0.75, 1.7)
-    displayed_text = f"“{text}”" if citation_text else text
-    add_text_box(slide, displayed_text, quote_x, quote_y, 11.8, 2.8,
-                 _font_size(quote_element, 42), True, _color(quote_element.get("cor", "#F5C518")))
+    main_text = citation_text or data.get("texto_apoio") or data.get("titulo") or ""
+    # decorative opening quote mark
+    add_text_box(slide, "“", 0.5, 0.75, 1.5, 1.5, 120, True, C_BLUE)
+    displayed = f"“{main_text}”" if citation_text else main_text
+    add_text_box(slide, displayed, 0.65, 1.8, 12.0, 2.5, 32, True, C_WHITE,
+                 italic=bool(citation_text))
+    # subtitulo appears below the main text (same as web card)
+    subtitle = data.get("subtitulo") or ""
+    if subtitle and not citation_text:
+        add_text_box(slide, subtitle, 0.65, 4.4, 12.0, 0.6, 18, False, C_TEXT_LIGHT)
+    # author attribution from citacao
     author = quote.get("autor") if isinstance(quote, dict) else ""
-    if author:
-        author_element = _element(style, "subtexto")
-        author_x, author_y = _xy(author_element, 0.8, 4.75)
-        add_text_box(slide, author, author_x, author_y, 10.5, 0.55,
-                     _font_size(author_element, 16), False,
-                     _color(author_element.get("cor", "#FFFFFF")))
-    _add_source_footer(slide, data, guide, assets)
+    cargo  = quote.get("cargo")  if isinstance(quote, dict) else ""
+    inst   = quote.get("instituicao") if isinstance(quote, dict) else ""
+    attrib = " · ".join(filter(None, [author, cargo, inst]))
+    if attrib:
+        add_text_box(slide, f"— {attrib}", 0.65, 4.9, 12.0, 0.6, 16, False, C_TEXT_LIGHT)
+    _add_source_footer(slide, data, assets)
 
 
 def _draw_tags(slide, data: dict, style: dict, guide: dict, assets: Path) -> None:
-    _add_background(slide, "nuvem_de_tags", style, guide, assets)
-    add_text_box(slide, data.get("titulo") or "TEMAS EM DESTAQUE", 0.65, 0.45, 11.9,
-                 0.8, 30, True, _color("#0A1F5C"))
-    cloud = _element(style, "itens_nuvem")
-    cloud_rules = cloud.get("regras", {})
-    colors = cloud_rules.get("cores", ["#0A1F5C", "#1460A8", "#1E90FF", "#00A99D", "#F5A623"])
-    tags = data.get("tags", [])
-    for index, tag in enumerate(tags[:25]):
-        row, col = divmod(index, 5)
-        x = 0.7 + col * 2.48 + (0.22 if row % 2 else 0)
-        y = 1.65 + row * 0.82
-        size_max = int(cloud_rules.get("tamanho_maior_pt", 28))
-        size_min = int(cloud_rules.get("tamanho_menor_pt", 11))
-        size = max(size_min, size_max - (index % 5) * 3)
-        add_text_box(slide, tag.upper(), x, y, 2.25, 0.52,
-                     size, True, _color(colors[index % len(colors)]), PP_ALIGN.CENTER)
-    stripe = _element(style, "barra_cor_inferior")
-    stripe_colors = stripe.get("cores", [])
-    if stripe_colors:
-        segment_width = SLIDE_WIDTH_IN / len(stripe_colors)
-        stripe_height = SLIDE_HEIGHT_IN * float(stripe.get("altura_pct", 4)) / 100
-        for index, color in enumerate(stripe_colors):
-            rect = slide.shapes.add_shape(
-                MSO_SHAPE.RECTANGLE, Inches(index * segment_width),
-                Inches(SLIDE_HEIGHT_IN - stripe_height), Inches(segment_width), Inches(stripe_height)
-            )
-            rect.fill.solid()
-            rect.fill.fore_color.rgb = _color(color)
-            rect.line.fill.background()
-    _add_source_footer(slide, data, guide, assets, light_background=True)
+    add_background_rect(slide, C_WHITE)
+    idx = data.get("_slide_index", 1)
+    _add_badge(slide, idx, "nuvem_de_tags", 0.45, 0.35)
+    add_text_box(slide, data.get("titulo") or "TEMAS EM DESTAQUE",
+                 0.45, 0.9, 12.3, 0.72, 28, True, C_TEXT)
+    sizes = [26, 22, 18, 15, 13]
+    for i, tag in enumerate((data.get("tags") or [])[:25]):
+        row, col = divmod(i, 5)
+        cx = 0.6 + col * 2.5 + (0.22 if row % 2 else 0)
+        cy = 2.0 + row * 0.9
+        fs = sizes[i % 5]
+        pill_w = max(1.2, min(2.4, 0.3 + len(tag) * 0.14))
+        pill = slide.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE, Inches(cx), Inches(cy), Inches(pill_w), Inches(0.52)
+        )
+        pill.fill.solid()
+        pill.fill.fore_color.rgb = C_LIGHT_BLUE
+        pill.line.color.rgb = C_KPI_BORDER
+        add_text_box(slide, f"#{tag}", cx + 0.08, cy + 0.05, pill_w - 0.16, 0.44,
+                     fs, True, C_BLUE, PP_ALIGN.CENTER)
+    _add_source_footer(slide, data, assets, light=True)
 
 
 def _draw_infographic(slide, data: dict, style: dict, guide: dict, assets: Path) -> None:
-    _add_background(slide, "visao_geral_infografica", style, guide, assets)
-    title_element = _element(style, "titulo_grande")
-    title_x, title_y = _xy(title_element, 0.3, 0.3)
-    add_text_box(slide, data.get("titulo") or "VISÃO GERAL", title_x, title_y, 12.3, 0.65,
-                 _font_size(title_element, 36), True, _color(title_element.get("cor", "#FFFFFF")))
-    blocks = data.get("blocos", [])[:4]
-    for index, block in enumerate(blocks):
-        row, col = divmod(index, 2)
-        x, y = 0.55 + col * 6.25, 1.22 + row * 2.27
-        card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(x), Inches(y), Inches(5.95), Inches(1.95))
+    add_background_rect(slide, C_WHITE)
+    idx = data.get("_slide_index", 1)
+    _add_badge(slide, idx, "visao_geral_infografica", 0.45, 0.35)
+    add_text_box(slide, data.get("titulo") or "VISÃO GERAL",
+                 0.45, 0.9, 12.3, 0.72, 28, True, C_TEXT)
+    blocks = (data.get("blocos") or [])[:4]
+    for i, block in enumerate(blocks):
+        row, col = divmod(i, 2)
+        bx = 0.4 + col * 6.6
+        by = 2.0 + row * 2.45
+        card = slide.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE, Inches(bx), Inches(by), Inches(6.15), Inches(2.15)
+        )
         card.fill.solid()
-        card.fill.fore_color.rgb = _color("#0A1230")
-        card.line.color.rgb = _color("#1460A8")
-        add_text_box(slide, block.get("titulo", ""), x + 0.18, y + 0.12, 5.58, 0.38,
-                     14, True, _color("#FFFFFF"))
-        bullet_text = "\n".join(f"• {point}" for point in block.get("pontos", []))
-        add_text_box(slide, bullet_text, x + 0.18, y + 0.55, 5.58, 1.23,
-                     10, False, _color("#B0BAC8"))
-    _add_kpis(slide, data.get("kpis", []), 0.75, 5.05, 11.8)
-    _add_source_footer(slide, data, guide, assets)
+        card.fill.fore_color.rgb = C_LIGHT_GRAY
+        card.line.color.rgb = C_BORDER
+        btitle   = block.get("titulo") or ""
+        conteudo = block.get("conteudo") or ""
+        pontos_b = block.get("pontos") or []
+        if btitle:
+            add_text_box(slide, btitle, bx + 0.2, by + 0.15, 5.75, 0.44,
+                         14, True, C_TEXT_GRAY)
+        if pontos_b:
+            _add_bullets(slide, pontos_b, bx + 0.2, by + 0.65, 5.75, 1.3, 11)
+        elif conteudo:
+            add_text_box(slide, conteudo, bx + 0.2, by + 0.65, 5.75, 1.28, 11, False, C_TEXT_MED)
+    kpis = data.get("kpis") or []
+    if kpis and not blocks:
+        _add_kpis_web(slide, kpis, 0.45, 2.0, 12.3)
+    _add_source_footer(slide, data, assets, light=True)
 
 
 def _draw_map(slide, data: dict, style: dict, guide: dict, assets: Path) -> None:
-    _add_background(slide, "mapa_nacional", style, guide, assets)
-    background_photo = _asset("vista_aerea_barueri.png", assets)
-    if background_photo:
-        _add_picture(slide, background_photo, 0, 0, SLIDE_WIDTH_IN, SLIDE_HEIGHT_IN, fill=True)
-        wash = slide.shapes.add_shape(
-            MSO_SHAPE.RECTANGLE, 0, 0, Inches(SLIDE_WIDTH_IN), Inches(SLIDE_HEIGHT_IN)
-        )
-        wash.fill.solid()
-        wash.fill.fore_color.rgb = _color("#EAEFF5")
-        _set_transparency(wash, 0.88)
-        wash.line.fill.background()
-    title_element = _element(style, "titulo")
-    title_color = _color(title_element.get("cor", "#0A1F5C"))
-    title_x, title_y = _xy(title_element, 0.65, 0.4)
-    add_text_box(slide, data.get("titulo") or "ALCANCE NACIONAL", title_x, title_y, 12.0, 0.7,
-                 _font_size(title_element, 36), True, title_color)
+    add_background_rect(slide, C_LIGHT_GRAY)
+    idx = data.get("_slide_index", 1)
+    _add_badge(slide, idx, "mapa_nacional", 0.45, 0.35)
+    add_text_box(slide, data.get("titulo") or "ALCANCE NACIONAL",
+                 0.45, 0.9, 12.3, 0.72, 28, True, C_TEXT)
     map_path = _asset(data.get("imagem_arquivo") or "mapa_brasil.png", assets)
     if map_path:
-        _add_picture(slide, map_path, 1.0, 1.3, 11.3, 5.2, fill=True)
+        _add_picture(slide, map_path, 1.2, 1.9, 10.9, 4.5, fill=True)
     else:
-        add_text_box(slide, "INSERIR mapa_brasil.png", 2.0, 2.6, 9.3, 1.0,
-                     22, True, title_color, PP_ALIGN.CENTER)
-        add_text_box(slide, data.get("texto_apoio") or data.get("imagem_descricao") or "Mapa de alcance citado nas fontes",
-                     2.0, 3.7, 9.3, 0.7, 13, False, title_color, PP_ALIGN.CENTER)
-    _add_source_footer(slide, data, guide, assets, light_background=True)
+        ph = slide.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE, Inches(1.5), Inches(1.9), Inches(10.3), Inches(4.5)
+        )
+        ph.fill.solid()
+        ph.fill.fore_color.rgb = C_BORDER
+        ph.line.color.rgb = C_BORDER
+        caption = data.get("texto_apoio") or data.get("imagem_descricao") or "Mapa de alcance"
+        add_text_box(slide, "INSERIR mapa_brasil.png", 2.0, 3.2, 9.3, 0.6,
+                     18, True, C_BLUE, PP_ALIGN.CENTER)
+        add_text_box(slide, caption, 2.0, 3.95, 9.3, 0.65, 13, False, C_TEXT_MED, PP_ALIGN.CENTER)
+    _add_source_footer(slide, data, assets, light=True)
 
 
 def _draw_recognition(slide, data: dict, style: dict, guide: dict, assets: Path) -> None:
-    _add_background(slide, "reconhecimento", style, guide, assets)
-    title_element = _element(style, "titulo")
-    title_x, title_y = _xy(title_element, 0.55, 0.35)
-    add_text_box(slide, data.get("titulo") or "RECONHECIMENTO", title_x, title_y, 12.2, 0.7,
-                 _font_size(title_element, 42), True, _color(title_element.get("cor", "#FFFFFF")))
-    items = data.get("reconhecimentos", [])[:8]
-    for index, item in enumerate(items):
-        row, col = divmod(index, 4)
-        x, y = 0.5 + col * 3.12, 1.55 + row * 2.25
-        card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(x), Inches(y), Inches(2.85), Inches(1.9))
-        card.fill.solid()
-        card.fill.fore_color.rgb = _color("rgba(20,96,168,0.30)", "#1460A8")
-        card.line.color.rgb = _color("#1460A8")
-        _set_transparency(card, 0.3)
-        add_text_box(slide, item.get("nome", ""), x + 0.14, y + 0.2, 2.57, 0.54,
-                     12, True, _color("#FFFFFF"), PP_ALIGN.CENTER)
-        add_text_box(slide, item.get("descricao", ""), x + 0.14, y + 0.8, 2.57, 0.86,
-                     9, False, _color("#B0BAC8"), PP_ALIGN.CENTER)
-    _add_source_footer(slide, data, guide, assets)
+    add_background_rect(slide, C_WHITE)
+    idx = data.get("_slide_index", 1)
+    _add_badge(slide, idx, "reconhecimento", 0.45, 0.35)
+    add_text_box(slide, data.get("titulo") or "RECONHECIMENTO",
+                 0.45, 0.9, 12.3, 0.72, 28, True, C_TEXT)
+    items = (data.get("reconhecimentos") or [])[:8]
+    if items:
+        cols   = min(4, len(items))
+        card_w = (SLIDE_WIDTH_IN - 0.8 - 0.2 * (cols - 1)) / cols
+        for i, item in enumerate(items):
+            row, col = divmod(i, 4)
+            cx = 0.4 + col * (card_w + 0.2)
+            cy = 2.05 + row * 2.3
+            card = slide.shapes.add_shape(
+                MSO_SHAPE.ROUNDED_RECTANGLE, Inches(cx), Inches(cy), Inches(card_w), Inches(2.0)
+            )
+            card.fill.solid()
+            card.fill.fore_color.rgb = C_LIGHT_GRAY
+            card.line.color.rgb = C_BORDER
+            nome  = item.get("nome", "")
+            cargo = item.get("cargo", "")
+            msg   = item.get("mensagem", "")
+            add_text_box(slide, nome, cx + 0.14, cy + 0.2, card_w - 0.28, 0.5,
+                         12, True, C_TEXT_GRAY, PP_ALIGN.CENTER)
+            if cargo:
+                add_text_box(slide, cargo, cx + 0.14, cy + 0.75, card_w - 0.28, 0.4,
+                             10, False, C_TEXT_MED, PP_ALIGN.CENTER)
+            if msg:
+                add_text_box(slide, msg, cx + 0.14, cy + 1.2, card_w - 0.28, 0.65,
+                             9, False, C_TEXT_LIGHT, PP_ALIGN.CENTER)
+    _add_source_footer(slide, data, assets, light=True)
 
 
 def _draw_end(slide, data: dict, style: dict, guide: dict, assets: Path) -> None:
-    _add_background(slide, "encerramento", style, guide, assets)
-    title_element = _element(style, "titulo_obrigado")
-    title_x, title_y = _xy(title_element, 1.0, 2.0)
-    add_text_box(slide, data.get("titulo") or "OBRIGADO", title_x, title_y, 11.3, 1.15,
-                 _font_size(title_element, 60), True, _color(title_element.get("cor", "#FFFFFF")), PP_ALIGN.CENTER)
-    contact = data.get("contato") or PRESENTATION_CONTACT
-    lines = []
-    if isinstance(contact, dict):
-        lines = [contact.get(key, "") for key in ("nome", "cargo", "telefone", "email", "website")]
-        lines = [line for line in lines if isinstance(line, str) and line.strip()]
-    qr = _asset("qr_code_contato.png", assets)
-    if qr:
-        _add_picture(slide, qr, 0.67, 4.12, 0.86, 0.86)
-    if lines:
-        contact_x = 1.8 if qr else 0.8
-        contact_width = 5.5 if qr else 6.0
-        add_text_box(slide, "\n".join(lines), contact_x, 4.65, contact_width, 1.35,
-                     12, False, _color("#E8EDF5"))
-    logo = _asset("prefeitura_barueri.png", assets)
-    if logo:
-        _add_picture(slide, logo, 9.33, 4.88, 2.1, 1.65)
-    _add_branding(slide, guide, assets)
+    add_background_rect(slide, C_GREEN)
+    idx = data.get("_slide_index", 1)
+    _add_badge(slide, idx, "encerramento", 0.45, 0.4, dark_bg=True)
+    title = data.get("titulo") or "OBRIGADO"
+    add_text_box(slide, title.upper(), 0.65, 1.0, 12.0, 1.1, 48, True, C_WHITE, PP_ALIGN.CENTER)
+    subtitle = data.get("subtitulo") or ""
+    if subtitle:
+        add_text_box(slide, subtitle, 0.65, 2.15, 12.0, 0.6, 18, False, C_WHITE, PP_ALIGN.CENTER)
+    texto = data.get("texto_apoio") or ""
+    if texto:
+        add_text_box(slide, texto, 0.65, 2.9, 12.0, 0.65, 14, False, C_WHITE, PP_ALIGN.CENTER)
+    pontos = (data.get("pontos") or [])[:4]
+    if pontos:
+        y = 3.65
+        for p in pontos:
+            add_text_box(slide, f"• {p}", 2.0, y, 9.3, 0.42, 13, False, C_WHITE)
+            y += 0.44
+    else:
+        contact = data.get("contato") or PRESENTATION_CONTACT
+        lines: list[str] = []
+        if isinstance(contact, dict):
+            lines = [contact.get(k, "") for k in ("nome", "cargo", "telefone", "email", "website")]
+            lines = [ln for ln in lines if isinstance(ln, str) and ln.strip()]
+        if lines:
+            add_text_box(slide, "\n".join(lines), 0.65, 3.85, 12.0, 1.5, 14, False, C_WHITE, PP_ALIGN.CENTER)
+    _add_branding(slide, assets)
 
 
 def _draw_references(slide, sources: list[dict], style: dict, guide: dict) -> None:
-    palette = guide["metadados_padrao"]["paleta_cores"]
-    add_background_rect(slide, _color(palette.get("fundo_primario", "#05082A")))
-    title_element = _element(style, "titulo")
-    title_x, title_y = _xy(title_element, 0.55, 0.32)
-    add_text_box(slide, "REFERÊNCIAS", title_x, title_y, 12.0, 0.7,
-                 _font_size(title_element, 36), True, _color(title_element.get("cor", "#FFFFFF")))
-    list_element = _element(style, "lista_fontes")
-    list_x, list_y, list_w, list_h = _position(list_element, 0.65, 1.35, 12.0, 5.6)
-    y = list_y
-    row_step = min(0.9, list_h / max(1, len(sources)))
+    add_background_rect(slide, C_LIGHT_GRAY)
+    add_text_box(slide, "REFERÊNCIAS", 0.5, 0.35, 12.0, 0.7, 36, True, C_BLUE)
+    y = 1.35
+    row_step = min(0.9, 5.6 / max(1, len(sources)))
     for source in sources:
-        title = source.get("titulo", "Fonte sem título")
-        url = source.get("url", "")
-        add_text_box(slide, f"{source.get('id', '')} — {title}", list_x, y, list_w, 0.38,
-                     11, True, _color("#FFFFFF"))
-        link_box = add_text_box(slide, url, list_x, y + 0.39, list_w, 0.34,
-                                8, False, _color("#1E90FF"))
+        title_s = source.get("titulo", "Fonte sem título")
+        url     = source.get("url", "")
+        add_text_box(slide, f"{source.get('id', '')} — {title_s}", 0.65, y, 12.0, 0.38,
+                     11, True, C_TEXT)
         if url:
+            link_box = add_text_box(slide, url, 0.65, y + 0.39, 12.0, 0.34, 8, False, C_BLUE)
             try:
                 link_box.text_frame.paragraphs[0].runs[0].hyperlink.address = url
             except (IndexError, AttributeError):
                 pass
         y += row_step
-        if y > list_y + list_h:
+        if y > 6.95:
             break
 
 
+# ── Registry ──────────────────────────────────────────────────────────────────
+
 LAYOUT_RENDERERS = {
-    "capa": _draw_cover,
-    "dados_municipio": _draw_municipality,
-    "divisor_secao": _draw_divider,
-    "conteudo_com_metrica": _draw_content,
-    "destaque_citacao": _draw_quote,
-    "nuvem_de_tags": _draw_tags,
+    "capa":                    _draw_cover,
+    "dados_municipio":         _draw_municipality,
+    "divisor_secao":           _draw_divider,
+    "conteudo_com_metrica":    _draw_content,
+    "destaque_citacao":        _draw_quote,
+    "nuvem_de_tags":           _draw_tags,
     "visao_geral_infografica": _draw_infographic,
-    "mapa_nacional": _draw_map,
-    "reconhecimento": _draw_recognition,
-    "encerramento": _draw_end,
+    "mapa_nacional":           _draw_map,
+    "reconhecimento":          _draw_recognition,
+    "encerramento":            _draw_end,
 }
 
 
+# ── Entry points ──────────────────────────────────────────────────────────────
+
 def criar_apresentacao(presentation: dict, caminho_saida: str | Path, assets_dir: str | Path | None = None) -> Path:
-    """Renderiza os slides validados em PPTX 16:9 usando o guia visual e os assets disponíveis. Insere a página de referências e retorna o caminho do arquivo salvo."""
-    guide = load_style_guide()
+    """Renderiza os slides em PPTX 16:9 no estilo dos cards web. Retorna o caminho do arquivo."""
+    guide      = load_style_guide()
     assets_path = Path(assets_dir) if assets_dir else ASSETS_DIR
-    catalog = guide["catalogo_de_layouts"]
-    prs = Presentation()
-    prs.slide_width = Inches(SLIDE_WIDTH_IN)
+    catalog    = guide["catalogo_de_layouts"]
+    prs        = Presentation()
+    prs.slide_width  = Inches(SLIDE_WIDTH_IN)
     prs.slide_height = Inches(SLIDE_HEIGHT_IN)
     blank_layout = prs.slide_layouts[6]
 
     slides = presentation["slides"]
     end_index = next(
-        (index for index, item in enumerate(slides) if item.get("tipo_layout") == "encerramento"),
+        (i for i, s in enumerate(slides) if s.get("tipo_layout") == "encerramento"),
         len(slides),
     )
     content_image_index = 0
     for index, slide_data in enumerate(slides):
-        # Keep the public, validated slide contract unchanged for API callers.
         data = dict(slide_data)
+        data["_slide_index"] = index + 1
+
         if index == end_index and presentation.get("fontes"):
-            reference_slide = prs.slides.add_slide(blank_layout)
-            _draw_references(
-                reference_slide,
-                presentation.get("fontes", []),
-                catalog.get("referencias", {}),
-                guide,
-            )
+            ref_slide = prs.slides.add_slide(blank_layout)
+            _draw_references(ref_slide, presentation.get("fontes", []),
+                             catalog.get("referencias", {}), guide)
 
         layout = data["tipo_layout"]
         if layout == "conteudo_com_metrica":
@@ -745,6 +651,7 @@ def criar_apresentacao(presentation: dict, caminho_saida: str | Path, assets_dir
             numbered_image = _asset(f"foto_conteudo_{content_image_index:02d}.png", assets_path)
             if numbered_image:
                 data["_imagem_arquivo"] = numbered_image.name
+
         renderer = LAYOUT_RENDERERS.get(layout)
         if renderer is None:
             raise ValueError(f"Não há renderizador PPTX para o layout '{layout}'.")
@@ -761,7 +668,7 @@ def criar_apresentacao(presentation: dict, caminho_saida: str | Path, assets_dir
 
 
 def validate_pptx_file(path: str | Path, *, minimum_slides: int = 3) -> None:
-    """Confirma que o artefato salvo é um PPTX aberto pelo python-pptx e contém slides."""
+    """Confirma que o artefato salvo é um PPTX válido com slides suficientes."""
     candidate = Path(path)
     if not candidate.is_file():
         raise ValueError("O arquivo PPTX não foi criado.")

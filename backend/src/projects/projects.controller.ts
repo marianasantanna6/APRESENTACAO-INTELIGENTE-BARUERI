@@ -1,5 +1,6 @@
 
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import { JwtAuthGuard } from '../users/authentication/jwt-auth.guard';
 import { ProjectsService } from './projects.service';
 import { CreateProjectsDto } from './dto/inputs-projects.dto';
@@ -54,6 +55,22 @@ export class ProjectsController {
     @Req() req: any,
   ) {
     return this.projectsService.reject(id, req.user.id);
+  }
+
+  @Get(':id/pptx')
+  @UseGuards(JwtAuthGuard)
+  async downloadPptx(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Res() res: Response,
+  ) {
+    const { buffer, filename } = await this.projectsService.downloadPptx(id, req.user.id);
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
   }
 
   @Get()

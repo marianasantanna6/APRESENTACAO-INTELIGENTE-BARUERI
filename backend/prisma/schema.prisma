@@ -54,6 +54,7 @@ model projects {
   implementation_date DateTime?       @map("implementation-date") @db.Date
   keywords            String[]
   slides_url          String
+  slides_json         Json?
   awards              awards[]
   indicators          indicators[]
   teams               teams           @relation(fields: [team], references: [id], onDelete: Cascade)

@@ -153,6 +153,7 @@ export type ProjectSummary = {
   governmentArea: GovernmentArea;
   mainDepartment: string;
   lastUpdatedAt: string;
+  slidesUrl?: string;
 };
 
 // ─── Filtros ─────────────────────────────────────────────────────────────────

@@ -16,6 +16,7 @@ import {
   FiFileText,
   FiFlag,
   FiGlobe,
+  FiImage,
   FiGrid,
   FiHeart,
   FiLayers,
@@ -104,6 +105,288 @@ const MODULE_ICONS: Record<PresentationModuleId, React.ComponentType<{ className
   "agradecimento":           FiZap,
 };
 
+// ─── Tipos de slides da IA ────────────────────────────────────────────────────
+
+type IaKpi = { label: string; valor: string; unidade?: string; contexto?: string };
+type IaFonteRef = string; // ID que referencia o catálogo top-level
+type IaFonteCatalog = { id: string; titulo?: string; url?: string; fonte?: string; autor_ou_instituicao?: string };
+type IaBloco = { titulo?: string; conteudo?: string };
+type IaCitacao = { texto?: string; autor?: string; cargo?: string; instituicao?: string };
+type IaReconhecimento = { nome?: string; cargo?: string; mensagem?: string };
+
+export type IaSlide = {
+  tipo_layout: string;
+  titulo?: string;
+  subtitulo?: string;
+  texto_apoio?: string;
+  pontos?: string[];
+  kpis?: IaKpi[];
+  fontes?: IaFonteRef[];
+  imagem_descricao?: string;
+  tags?: string[];
+  blocos?: IaBloco[];
+  citacao?: IaCitacao;
+  reconhecimentos?: IaReconhecimento[];
+};
+
+// ─── Renderizador de slide individual ────────────────────────────────────────
+
+const LAYOUT_LABELS: Record<string, string> = {
+  capa:                "Capa",
+  encerramento:        "Encerramento",
+  titulo_conteudo:     "Título + Conteúdo",
+  destaque_citacao:    "Destaque / Citação",
+  conteudo_com_metrica:"Conteúdo + Métrica",
+  divisor_secao:       "Divisor de Seção",
+  nuvem_de_tags:       "Nuvem de Tags",
+  reconhecimento:      "Reconhecimento",
+};
+
+function IaSlideCard({ slide, index, fonteCatalog = [] }: { slide: IaSlide; index: number; fonteCatalog?: IaFonteCatalog[] }) {
+  const label = LAYOUT_LABELS[slide.tipo_layout] ?? slide.tipo_layout;
+  const isCapa = slide.tipo_layout === "capa";
+  const isEnc  = slide.tipo_layout === "encerramento";
+  const isDiv  = slide.tipo_layout === "divisor_secao";
+
+  return (
+    <div className={`relative flex flex-col h-full min-h-[340px] rounded-[20px] border-2 p-6 shadow-[0_2px_12px_rgba(0,0,0,0.06)] ${
+      isCapa ? "border-[#1675b8] bg-[linear-gradient(135deg,#1675b8_0%,#0d5283_100%)] text-white"
+      : isEnc ? "border-[#16a34a] bg-[linear-gradient(135deg,#16a34a,#166534)] text-white"
+      : isDiv ? "border-[#e2e8f0] bg-[#f8fafc]"
+      : "border-[#e2e8f0] bg-white"
+    }`}>
+      <span className={`inline-block rounded-full px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-widest mb-3 ${
+        isCapa || isEnc ? "bg-white/20 text-white" : "bg-[#eff6ff] text-[#1675b8]"
+      }`}>
+        {index + 1} · {label}
+      </span>
+
+      {slide.titulo && (
+        <h3 className={`text-[1.1rem] font-extrabold leading-tight mb-1 ${isCapa || isEnc ? "text-white" : "text-[#1e1e1e]"}`}>
+          {slide.titulo}
+        </h3>
+      )}
+      {slide.subtitulo && (
+        <p className={`text-[0.88rem] mb-3 ${isCapa || isEnc ? "text-white/80" : "text-[#6b7280]"}`}>
+          {slide.subtitulo}
+        </p>
+      )}
+      {slide.texto_apoio && (
+        <p className={`text-[0.84rem] leading-relaxed mb-3 ${isCapa || isEnc ? "text-white/90" : "text-[#374151]"}`}>
+          {slide.texto_apoio}
+        </p>
+      )}
+
+      {slide.imagem_descricao && (
+        <div className={`mb-3 flex items-center gap-2.5 rounded-[12px] border-2 border-dashed py-5 px-4 ${isCapa || isEnc ? "border-white/30" : "border-[#e2e8f0] bg-[#f8fafc]"}`}>
+          <FiImage className={`h-5 w-5 shrink-0 ${isCapa || isEnc ? "text-white/50" : "text-[#9ca3af]"}`} />
+          <p className={`text-[0.78rem] italic ${isCapa || isEnc ? "text-white/60" : "text-[#9ca3af]"}`}>{slide.imagem_descricao}</p>
+        </div>
+      )}
+
+      {slide.pontos && slide.pontos.length > 0 && (
+        <ul className="space-y-1.5 mb-3">
+          {slide.pontos.map((p, i) => (
+            <li key={i} className="flex items-start gap-2 text-[0.84rem] text-[#374151]">
+              <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#1675b8]" />
+              {p}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {slide.kpis && slide.kpis.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 mb-3 sm:grid-cols-3">
+          {slide.kpis.map((k, i) => (
+            <div key={i} className="rounded-[14px] border border-[#dbeafe] bg-[#eff6ff] px-3 py-2.5">
+              <p className="text-[1.2rem] font-extrabold text-[#1675b8]">{k.valor}{k.unidade ? <span className="text-[0.8rem] font-semibold ml-0.5">{k.unidade}</span> : null}</p>
+              <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-[#6b7280]">{k.label}</p>
+              {k.contexto && <p className="mt-0.5 text-[0.7rem] text-[#9ca3af]">{k.contexto}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {slide.blocos && slide.blocos.length > 0 && (
+        <div className="space-y-2 mb-3">
+          {slide.blocos.map((b, i) => (
+            <div key={i} className="rounded-[12px] border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2">
+              {b.titulo && <p className="text-[0.8rem] font-bold text-[#374151] mb-0.5">{b.titulo}</p>}
+              {b.conteudo && <p className="text-[0.82rem] text-[#6b7280]">{b.conteudo}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {slide.citacao?.texto && (
+        <blockquote className="border-l-4 border-[#1675b8] pl-4 mb-3">
+          <p className="text-[0.9rem] italic text-[#374151]">"{slide.citacao.texto}"</p>
+          {(slide.citacao.autor || slide.citacao.cargo) && (
+            <p className="mt-1 text-[0.75rem] font-semibold text-[#9ca3af]">
+              — {[slide.citacao.autor, slide.citacao.cargo, slide.citacao.instituicao].filter(Boolean).join(", ")}
+            </p>
+          )}
+        </blockquote>
+      )}
+
+      {slide.tags && slide.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {slide.tags.map((t, i) => (
+            <span key={i} className="rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-[0.74rem] font-semibold text-[#475569]">
+              #{t}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {slide.reconhecimentos && slide.reconhecimentos.length > 0 && (
+        <div className="space-y-1.5 mb-3">
+          {slide.reconhecimentos.map((r, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <FiUser className="h-3.5 w-3.5 shrink-0 text-[#9ca3af]" />
+              <p className="text-[0.82rem] text-[#374151]">
+                <span className="font-semibold">{r.nome}</span>
+                {r.cargo ? ` · ${r.cargo}` : ""}
+                {r.mensagem ? <span className="ml-1 text-[#6b7280]">— {r.mensagem}</span> : null}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(() => {
+        const fonteRefs = (slide.fontes ?? [])
+          .map(id => fonteCatalog.find(c => c.id === id))
+          .filter((f): f is IaFonteCatalog => !!f?.url); // só fontes externas com URL
+        if (!fonteRefs.length) return null;
+        return (
+          <div className={`mt-auto pt-3 border-t ${isCapa || isEnc ? "border-white/20" : "border-[#f1f5f9]"}`}>
+            <p className={`text-[0.62rem] font-bold uppercase tracking-widest mb-1 ${isCapa || isEnc ? "text-white/40" : "text-[#9ca3af]"}`}>Fontes</p>
+            <div className="space-y-0.5">
+              {fonteRefs.map((f, i) => (
+                <p key={i} className={`text-[0.69rem] leading-snug ${isCapa || isEnc ? "text-white/50" : "text-[#9ca3af]"}`}>
+                  [{i + 1}] {f.titulo ?? f.id}
+                  {f.fonte ? <span className="opacity-70"> · {f.fonte}</span> : null}
+                  {" — "}
+                  <a href={f.url} target="_blank" rel="noopener noreferrer" className={`hover:underline break-all ${isCapa || isEnc ? "text-white/70" : "text-[#1675b8]"}`}>{f.url}</a>
+                </p>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+// ─── Modo Apresentação IA ─────────────────────────────────────────────────────
+
+function IaPresenterOverlay({
+  slides,
+  enabled,
+  initialIndex,
+  onClose,
+  fonteCatalog = [],
+}: {
+  slides: IaSlide[];
+  enabled: Record<number, boolean>;
+  initialIndex: number;
+  onClose: () => void;
+  fonteCatalog?: IaFonteCatalog[];
+}) {
+  const activeSlides = slides
+    .map((s, i) => ({ slide: s, origIndex: i }))
+    .filter(({ origIndex }) => enabled[origIndex] !== false);
+
+  const [curr, setCurr] = useState(() => {
+    const idx = activeSlides.findIndex(({ origIndex }) => origIndex === initialIndex);
+    return idx >= 0 ? idx : 0;
+  });
+
+  useEffect(() => {
+    document.documentElement.requestFullscreen?.().catch(() => {});
+    return () => { if (document.fullscreenElement) void document.exitFullscreen?.(); };
+  }, []);
+
+  const slide = activeSlides[curr];
+  if (!slide) return null;
+
+  const canPrev = curr > 0;
+  const canNext = curr < activeSlides.length - 1;
+
+  function handleKey(e: React.KeyboardEvent) {
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") canNext && setCurr(c => c + 1);
+    if (e.key === "ArrowLeft"  || e.key === "ArrowUp")   canPrev && setCurr(c => c - 1);
+    if (e.key === "Escape") onClose();
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      tabIndex={0}
+      onKeyDown={handleKey}
+      // eslint-disable-next-line jsx-a11y/no-autofocus
+      autoFocus
+      className="fixed inset-0 z-[200] flex flex-col bg-[#0a1628] text-white outline-none"
+    >
+      {/* Barra superior */}
+      <div className="flex items-center justify-between px-6 py-3 bg-black/30">
+        <span className="text-[0.8rem] font-bold uppercase tracking-widest text-white/60">
+          {curr + 1} / {activeSlides.length}
+        </span>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+          aria-label="Fechar modo apresentação"
+        >
+          <FiX className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Conteúdo do slide */}
+      <div className="flex flex-1 items-center justify-center px-8 py-6 overflow-auto">
+        <div className="w-full max-w-4xl">
+          <IaSlideCard slide={slide.slide} index={slide.origIndex} fonteCatalog={fonteCatalog} />
+        </div>
+      </div>
+
+      {/* Navegação */}
+      <div className="flex items-center justify-center gap-6 px-6 py-4 bg-black/30">
+        <button
+          type="button"
+          onClick={() => setCurr(c => c - 1)}
+          disabled={!canPrev}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-30"
+        >
+          <FiArrowLeft className="h-5 w-5" />
+        </button>
+        <div className="flex gap-1.5">
+          {activeSlides.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setCurr(i)}
+              className={`h-2 rounded-full transition-all ${
+                i === curr ? "w-6 bg-white" : "w-2 bg-white/30"
+              }`}
+            />
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => setCurr(c => c + 1)}
+          disabled={!canNext}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-30"
+        >
+          <FiArrowRight className="h-5 w-5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
 type ToastState = { message: string };
@@ -133,6 +416,7 @@ function InstitutionalHeader({
   onSaveAsTemplate,
   onShare,
   onDownloadPptx,
+  hideStructure,
 }: {
   presentation: InstitutionalPresentation;
   projects: ProjectSummary[];
@@ -141,6 +425,7 @@ function InstitutionalHeader({
   onOpenPresenterMode: () => void;
   onShare?: () => void;
   onDownloadPptx?: () => void;
+  hideStructure?: boolean;
 }) {
   const status = STATUS_CONFIG[p.status] ?? STATUS_CONFIG.draft;
   const eventLabel = EVENT_LABELS[p.eventType] ?? p.eventType;
@@ -244,7 +529,8 @@ function InstitutionalHeader({
         </div>
       </div>
 
-      {/* Estrutura: módulos ativos */}
+      {/* Estrutura: módulos ativos — oculto quando slides da IA já mostram isso */}
+      {!hideStructure && (
       <div className="mb-10">
         <div className="mb-5 flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#1675b8,#1255a0)]">
@@ -290,6 +576,7 @@ function InstitutionalHeader({
           </div>
         )}
       </div>
+      )}
 
       {/* Projetos incluídos */}
       {projects.length > 0 && (
@@ -402,30 +689,66 @@ export default function GeneratedPresentationPage() {
   const [isSavingModules, setIsSavingModules] = useState(false);
   const [modulesSaved, setModulesSaved] = useState(false);
 
+  // ── Slides da IA ──
+  const [iaSlides, setIaSlides] = useState<IaSlide[] | null>(null);
+  const [iaFonteCatalog, setIaFonteCatalog] = useState<IaFonteCatalog[]>([]);
+  const [iaSlideEnabled, setIaSlideEnabled] = useState<Record<number, boolean>>({});
+  const [iaPresenterOpen, setIaPresenterOpen] = useState(false);
+  const [iaPresenterIndex, setIaPresenterIndex] = useState(0);
+
   useEffect(() => {
     if (!presentationId) return;
     setInstitutionalLoading(true);
-    Promise.all([
-      presentationService.getPresentationById(presentationId),
-      projectService.getProjects(),
-    ])
-      .then(([pres, allProjects]) => {
+
+    authFetch(`/api/projects?id=${encodeURIComponent(presentationId)}`)
+      .then(async (res) => {
+        if (!res.ok) return;
+        const list = await res.json() as Array<{
+          id: string; name: string; user: string; version: string;
+          status: number; short_description?: string | null;
+          audience?: string | null; areas: string[];
+          last_update: string;
+          slides_json?: { titulo?: string; slides?: IaSlide[]; fontes?: IaFonteCatalog[] } | null;
+        }>;
+        const project = list[0];
+        if (!project) return;
+        const pres: InstitutionalPresentation = {
+          id: project.id,
+          title: project.name,
+          eventName: "",
+          eventType: "outro",
+          purpose: project.short_description ?? "",
+          audience: project.audience ?? "",
+          mainFocus: project.areas[0] ?? "",
+          secondaryFocuses: project.areas.slice(1),
+          selectedProjects: [],
+          moduleConfigs: [],
+          language: "pt-BR",
+          status: project.status === 2 ? "active" : "draft",
+          createdBy: project.user,
+          createdAt: project.last_update,
+          updatedAt: project.last_update,
+          version: parseInt(project.version, 10),
+        };
         setInstitutionalPresentation(pres);
-        if (pres) {
+
+        const rawSlides = project.slides_json?.slides;
+        const rawFontes = project.slides_json?.fontes;
+        if (Array.isArray(rawFontes)) setIaFonteCatalog(rawFontes);
+        if (Array.isArray(rawSlides) && rawSlides.length > 0) {
+          setIaSlides(rawSlides);
+          const initial: Record<number, boolean> = {};
+          rawSlides.forEach((_, i) => { initial[i] = true; });
+          setIaSlideEnabled(initial);
+        } else {
           setEditModuleConfigs(
-            pres.moduleConfigs.length > 0
-              ? pres.moduleConfigs
-              : CANONICAL_MODULE_ORDER.map((moduleId) => ({
-                  instanceId: `inst-${moduleId}`,
-                  moduleId,
-                  enabled: true,
-                  hidden: false,
-                })),
+            CANONICAL_MODULE_ORDER.map((moduleId) => ({
+              instanceId: `inst-${moduleId}`,
+              moduleId,
+              enabled: true,
+              hidden: false,
+            })),
           );
-          if (pres.selectedProjects.length > 0) {
-            const ids = new Set(pres.selectedProjects);
-            setInstitutionalProjects(allProjects.filter((p) => ids.has(p.id)));
-          }
         }
       })
       .finally(() => setInstitutionalLoading(false));
@@ -494,7 +817,10 @@ export default function GeneratedPresentationPage() {
   async function handleDownloadPptx() {
     if (!downloadUrlParam) return;
     try {
-      const res = await authFetch(`/api${downloadUrlParam}`);
+      const fetchUrl = downloadUrlParam.startsWith("http")
+        ? downloadUrlParam
+        : `/api${downloadUrlParam}`;
+      const res = await authFetch(fetchUrl);
       if (!res.ok) throw new Error("download failed");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -697,9 +1023,17 @@ export default function GeneratedPresentationPage() {
             projects={institutionalProjects}
             onBack={() => navigate(presentationsRoute)}
             onToast={(msg) => setToast({ message: msg })}
-            onOpenPresenterMode={() => setPresenterModeOpen(true)}
+            onOpenPresenterMode={() => {
+              if (iaSlides?.length) {
+                setIaPresenterIndex(0);
+                setIaPresenterOpen(true);
+              } else {
+                setPresenterModeOpen(true);
+              }
+            }}
             onShare={() => setShareModalOpen(true)}
             onDownloadPptx={downloadUrlParam ? handleDownloadPptx : undefined}
+            hideStructure={!!iaSlides?.length}
           />
 
           {/* Divisor */}
@@ -711,8 +1045,8 @@ export default function GeneratedPresentationPage() {
             <div className="h-px flex-1 bg-[#e2e8f0]" />
           </div>
 
-          {/* Dashboard + slides */}
-          {renderSlidesSection()}
+          {/* Slides da IA (quando gerados pelo wizard) ou dashboard/slides antigo */}
+          {iaSlides ? null : renderSlidesSection()}
 
           {/* Fontes consultadas pela IA */}
           {iaSources && iaSources.length > 0 && (
@@ -747,7 +1081,89 @@ export default function GeneratedPresentationPage() {
             </section>
           )}
 
-          {/* ── Módulos — ajuste de ordem e visibilidade ── */}
+          {/* ── Slides gerados pela IA ── */}
+          {iaSlides && iaSlides.length > 0 && (
+            <section className="mt-12">
+              <div className="mb-6 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#1675b8,#0d5283)]">
+                    <FiLayers className="h-4.5 w-4.5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-[1.3rem] font-extrabold tracking-[-0.03em] text-[#1e1e1e]">
+                      Módulos da Apresentação
+                    </h2>
+                    <p className="text-[0.84rem] text-[#878787]">
+                      {Object.values(iaSlideEnabled).filter(Boolean).length} de {iaSlides.length} módulos ativos — clique no olho para ocultar/mostrar
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setIaPresenterIndex(0); setIaPresenterOpen(true); }}
+                  className="flex items-center gap-2 rounded-full bg-[#1675b8] px-4 py-2 text-[0.84rem] font-bold text-white shadow-[0_2px_10px_rgba(22,117,184,0.3)] hover:bg-[#1262a0] transition-colors"
+                >
+                  <FiMaximize className="h-4 w-4" />
+                  Apresentar
+                </button>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {iaSlides.map((slide, i) => {
+                  const active = iaSlideEnabled[i] !== false;
+                  return (
+                    <div key={i} className={`relative flex flex-col transition-opacity ${active ? "opacity-100" : "opacity-40"}`}>
+                      <button
+                        type="button"
+                        aria-label={active ? "Ocultar slide" : "Mostrar slide"}
+                        onClick={() => setIaSlideEnabled(prev => ({ ...prev, [i]: !prev[i] }))}
+                        className="absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 shadow-md hover:bg-white transition-colors"
+                      >
+                        {active ? <FiEye className="h-3.5 w-3.5 text-[#1675b8]" /> : <FiEyeOff className="h-3.5 w-3.5 text-[#9ca3af]" />}
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Apresentar a partir deste slide"
+                        onClick={() => { setIaPresenterIndex(i); setIaPresenterOpen(true); }}
+                        className="absolute left-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 shadow-md hover:bg-white transition-colors"
+                      >
+                        <FiMaximize className="h-3.5 w-3.5 text-[#374151]" />
+                      </button>
+                      <IaSlideCard slide={slide} index={i} fonteCatalog={iaFonteCatalog} />
+                    </div>
+                  );
+                })}
+
+                {/* Card de Referências — igual ao slide final do PPTX */}
+                {iaFonteCatalog.filter(f => f.url).length > 0 && (
+                  <div className="sm:col-span-2 xl:col-span-3">
+                    <div className="rounded-[20px] border-2 border-[#e2e8f0] bg-[#f8fafc] p-6 shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
+                      <span className="inline-block rounded-full bg-[#eff6ff] px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-widest text-[#1675b8] mb-4">
+                        Referências
+                      </span>
+                      <div className="space-y-3">
+                        {iaFonteCatalog.filter(f => f.url).map((f, i) => (
+                          <div key={i} className="flex gap-3">
+                            <span className="shrink-0 mt-0.5 text-[0.72rem] font-bold text-[#9ca3af]">[{i + 1}]</span>
+                            <div>
+                              <p className="text-[0.82rem] font-semibold text-[#374151] leading-snug">{f.titulo ?? f.id}</p>
+                              {f.fonte && <p className="text-[0.72rem] text-[#9ca3af]">{f.fonte}</p>}
+                              <a href={f.url} target="_blank" rel="noopener noreferrer"
+                                className="text-[0.72rem] text-[#1675b8] hover:underline break-all">
+                                {f.url}
+                              </a>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* ── Módulos — ajuste de ordem e visibilidade (fallback quando não há slides da IA) ── */}
           {editModuleConfigs.length > 0 && (
             <section className="mt-12">
               <div className="mb-6 flex items-center gap-3">
@@ -894,6 +1310,17 @@ export default function GeneratedPresentationPage() {
             </section>
           )}
         </main>
+
+        {/* Modo apresentação para slides da IA */}
+        {iaPresenterOpen && iaSlides && (
+          <IaPresenterOverlay
+            slides={iaSlides}
+            enabled={iaSlideEnabled}
+            initialIndex={iaPresenterIndex}
+            onClose={() => setIaPresenterOpen(false)}
+            fonteCatalog={iaFonteCatalog}
+          />
+        )}
 
         {presentationData && (
           <InstitutionalPresenterMode

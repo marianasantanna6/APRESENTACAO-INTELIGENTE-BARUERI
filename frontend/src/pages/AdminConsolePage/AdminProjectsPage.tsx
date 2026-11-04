@@ -590,7 +590,15 @@ function ProjectCard({
   canArchive: boolean;
   onArchive: () => void;
 }) {
+  const navigate = useNavigate();
   const st = STATUS_CONFIG[p.status] ?? STATUS_CONFIG.draft;
+
+  function handleView() {
+    const params = new URLSearchParams();
+    params.set("pid", p.id);
+    if (p.slidesUrl) params.set("dlUrl", `/projects/${p.id}/pptx`);
+    navigate(`${ROUTE_PATHS.generatedPresentation}?${params.toString()}`);
+  }
 
   return (
     <div className="flex flex-col gap-3 rounded-[18px] border border-[#e5e7eb] bg-white p-5 shadow-[0_2px_10px_rgba(20,33,51,0.06)]">
@@ -624,19 +632,29 @@ function ProjectCard({
         <p className="text-[0.85rem] text-[#6b7280] leading-snug line-clamp-2">{p.shortDescription}</p>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 pt-1 text-[0.8rem] text-[#9ca3af]">
-        {p.mainDepartment && (
-          <span className="flex items-center gap-1.5">
-            <FiUsers className="h-3.5 w-3.5" />
-            {p.mainDepartment}
-          </span>
-        )}
-        {p.lastUpdatedAt && (
-          <span className="flex items-center gap-1.5">
-            <FiCalendar className="h-3.5 w-3.5" />
-            {formatShortDate(p.lastUpdatedAt)}
-          </span>
-        )}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+        <div className="flex flex-wrap items-center gap-3 text-[0.8rem] text-[#9ca3af]">
+          {p.mainDepartment && (
+            <span className="flex items-center gap-1.5">
+              <FiUsers className="h-3.5 w-3.5" />
+              {p.mainDepartment}
+            </span>
+          )}
+          {p.lastUpdatedAt && (
+            <span className="flex items-center gap-1.5">
+              <FiCalendar className="h-3.5 w-3.5" />
+              {formatShortDate(p.lastUpdatedAt)}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={handleView}
+          className="inline-flex items-center gap-1.5 rounded-full bg-[#eff6ff] px-3 py-1.5 text-[0.78rem] font-semibold text-[#1675b8] transition hover:bg-[#dbeafe]"
+        >
+          <FiArrowRight className="h-3.5 w-3.5" />
+          Ver Apresentação
+        </button>
       </div>
     </div>
   );

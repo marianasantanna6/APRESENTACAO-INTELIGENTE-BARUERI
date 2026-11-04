@@ -1,4 +1,3 @@
-=======
 # =========================
 # FRONTEND (VITE / REACT)
 # =========================
@@ -16,13 +15,16 @@ backend/logs/
 # =========================
 # IA
 # =========================
-
 .venv
 IA/assets
 IA/output
 IA/tests
 IA/supabase
-
+IA/**/__pycache__/
+__pycache__/
+*.pyc
+IA/*.pptx
+IA/*.json
 
 # =========================
 # GERAL
@@ -35,6 +37,4 @@ IA/supabase
 # =========================
 # CLAUDE CODE (memória local)
 # =========================
-# =========================
 .claude/
->>>>>>> 38da87f00c810c78a876f26442914365f6398fb6
