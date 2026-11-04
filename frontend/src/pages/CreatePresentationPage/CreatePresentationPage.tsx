@@ -24,6 +24,7 @@ import {
   FiTag,
   FiTarget,
   FiTrendingUp,
+  FiUsers,
   FiX,
 } from "react-icons/fi";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -121,6 +122,16 @@ function CreatePresentationPage() {
   // ── Validação etapa 1 ──
   const [step1Error, setStep1Error] = useState("");
 
+  // ── Time selecionado (quando usuário tem múltiplos times) ──
+  const userTeams = user?.teams ?? [];
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
+  // Inicializa com o primeiro time disponível
+  useEffect(() => {
+    if (userTeams.length > 0 && !selectedTeamId) {
+      setSelectedTeamId(userTeams[0].id);
+    }
+  }, [userTeams]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Salvando ──
   const [isSaving, setIsSaving]   = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -201,7 +212,8 @@ function CreatePresentationPage() {
         return;
       }
 
-      const teamId = parseInt((user.teams as Array<{ id: string }>)[0].id, 10);
+      const resolvedTeamId = selectedTeamId || user.teams[0].id;
+      const teamId = parseInt(resolvedTeamId, 10);
       const userId = parseInt(user.id, 10);
 
       const iaPrompt = [
@@ -520,6 +532,33 @@ function CreatePresentationPage() {
                       placeholder="Público-alvo (ex: gestores, parceiros, imprensa)…"
                       className="h-[44px] w-full rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-4 text-[0.9rem] text-[#1e1e1e] placeholder:text-[#bbb] outline-none focus:border-[#1675b8] focus:ring-2 focus:ring-[#1675b8]/10"
                     />
+
+                    {/* Seletor de time — só aparece para usuários com mais de um time */}
+                    {userTeams.length > 1 && (
+                      <div className="flex items-center gap-3 rounded-xl border border-[#e0eaf3] bg-[#f0f7ff] px-4 py-3">
+                        <FiUsers className="h-4 w-4 shrink-0 text-[#1675b8]" />
+                        <div className="flex flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3">
+                          <span className="text-[0.85rem] font-semibold text-[#1e3a52] shrink-0">
+                            Em nome do time:
+                          </span>
+                          <div className="relative flex-1">
+                            <select
+                              value={selectedTeamId}
+                              onChange={(e) => setSelectedTeamId(e.target.value)}
+                              className="h-[38px] w-full appearance-none rounded-lg border border-[#c5d8f0] bg-white pl-3 pr-8 text-[0.88rem] text-[#1e1e1e] outline-none focus:border-[#1675b8]"
+                            >
+                              {userTeams.map((t) => (
+                                <option key={t.id} value={t.id}>
+                                  {t.name} — {t.sectorName}
+                                  {t.areaManager ? " (Gerente)" : t.approver ? " (Aprovador)" : ""}
+                                </option>
+                              ))}
+                            </select>
+                            <FaChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-[#8a9ab0]" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </section>
 

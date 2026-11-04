@@ -154,6 +154,7 @@ export type ProjectSummary = {
   mainDepartment: string;
   lastUpdatedAt: string;
   slidesUrl?: string;
+  teamId?: string;
 };
 
 // ─── Filtros ─────────────────────────────────────────────────────────────────

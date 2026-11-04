@@ -15,11 +15,12 @@ import {
   FiShield,
   FiSun,
   FiType,
+  FiUsers,
   FiX,
 } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
 import { AdminPanel } from "../../components/AdminConsole";
-import { useSystemPreferences } from "../../context";
+import { useAuth, useSystemPreferences } from "../../context";
 import { useModalAccessibility, useTheme } from "../../hooks";
 
 type DocumentKey = "terms" | "privacy" | null;
@@ -254,6 +255,7 @@ function DocumentModal({
 
 export default function AdminSettingsPage() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const {
     highContrast,
     setHighContrast,
@@ -589,6 +591,56 @@ export default function AdminSettingsPage() {
             </div>
           </SettingsCard>
         </div>
+
+        {/* ─── Meus Times e Funções ─────────────────────────────────── */}
+        {(user?.teams ?? []).length > 0 && (
+          <SettingsCard
+            title="Meus Times e Funções"
+            description="Times aos quais você pertence e seu papel em cada um"
+            icon={FiUsers}
+            className="xl:col-span-2"
+          >
+            {user?.head_manager && (
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[linear-gradient(90deg,#f59e0b,#d97706)] px-3 py-1 text-[0.8rem] font-bold uppercase tracking-widest text-white shadow-sm">
+                Head Manager
+              </div>
+            )}
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {(user?.teams ?? []).map((team) => {
+                const roles: string[] = [];
+                if (team.areaManager) roles.push("Gerente de Área");
+                if (team.approver) roles.push("Aprovador");
+                if (roles.length === 0) roles.push("Membro");
+
+                return (
+                  <div
+                    key={team.id}
+                    className={`rounded-[18px] border bg-white/82 px-4 py-4 ${subtlePanelClass}`}
+                  >
+                    <p className="text-[0.95rem] font-bold text-[#26313b] leading-snug">{team.name}</p>
+                    <p className="text-[0.78rem] font-medium text-[#9ca3af] mt-0.5">{team.sectorName}</p>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {roles.map((role) => (
+                        <span
+                          key={role}
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.72rem] font-bold uppercase tracking-wider ${
+                            role === "Aprovador"
+                              ? "bg-[#dbeafe] text-[#1d4ed8]"
+                              : role === "Gerente de Área"
+                              ? "bg-[#d1fae5] text-[#065f46]"
+                              : "bg-[#f3f4f6] text-[#6b7280]"
+                          }`}
+                        >
+                          {role}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </SettingsCard>
+        )}
 
         <div className="flex justify-stretch sm:justify-end">
           <button

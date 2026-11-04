@@ -55,6 +55,7 @@ function toSummary(p: ApiProject): ProjectSummary {
     mainDepartment: p.main_department ?? "",
     lastUpdatedAt: p.last_update ?? new Date().toISOString(),
     slidesUrl: p.slides_url ?? undefined,
+    teamId: p.team ?? undefined,
   };
 }
 
@@ -155,6 +156,22 @@ export const realProjectService: ProjectServiceContract = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({})) as { message?: string };
       throw new Error(err.message ?? "Falha ao arquivar projeto");
+    }
+  },
+
+  async approveProject(id: string) {
+    const res = await authFetch(`/api/projects/${id}/approve`, { method: "PATCH" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({})) as { message?: string };
+      throw new Error(err.message ?? "Falha ao aprovar projeto");
+    }
+  },
+
+  async rejectProject(id: string) {
+    const res = await authFetch(`/api/projects/${id}/reject`, { method: "DELETE" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({})) as { message?: string };
+      throw new Error(err.message ?? "Falha ao rejeitar projeto");
     }
   },
 

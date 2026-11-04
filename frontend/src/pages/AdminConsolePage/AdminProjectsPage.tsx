@@ -11,6 +11,7 @@ import {
   FiArchive,
   FiArrowRight,
   FiCalendar,
+  FiCheck,
   FiFolder,
   FiGrid,
   FiLayers,
@@ -20,6 +21,7 @@ import {
   FiTag,
   FiUser,
   FiUsers,
+  FiX,
   FiZap,
 } from "react-icons/fi";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -94,6 +96,8 @@ export default function AdminProjectsPage() {
   const [loadingProj, setLoadingProj]     = useState(true);
   const [loadingTimes, setLoadingTimes]   = useState(false);
   const [archivingId, setArchivingId]     = useState<string | null>(null);
+  const [approvingId, setApprovingId]     = useState<string | null>(null);
+  const [rejectingId, setRejectingId]     = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -113,17 +117,23 @@ export default function AdminProjectsPage() {
   useEffect(() => { reloadProjects(); }, [reloadProjects]);
 
   useEffect(() => {
-    if (activeTab !== "times" || !user) return;
-    if (rawApiProjects.length > 0) return; // já carregado
+    if (!user) return;
+    if (rawApiProjects.length > 0) return;
     setLoadingTimes(true);
     authFetch("/api/projects")
       .then((r) => r.ok ? r.json() as Promise<RawApiProject[]> : Promise.resolve([]))
       .then(setRawApiProjects)
       .catch(() => {})
       .finally(() => setLoadingTimes(false));
-  }, [activeTab, user]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loading = loadingPres;
+
+  // Verifica se o usuário é aprovador no time de um projeto específico
+  function isApproverForTeam(teamId: string | undefined): boolean {
+    if (!teamId || !user) return false;
+    return user.teams?.some(t => t.id === teamId && t.approver) ?? false;
+  }
 
   const projectMap = useMemo(
     () => new Map(allProjects.map((p) => [p.id, p.name])),
@@ -137,15 +147,26 @@ export default function AdminProjectsPage() {
 
   async function handleArchive(id: string) {
     setArchivingId(id);
-    try {
-      await projectService.archiveProject(id);
-      reloadProjects();
-    } catch {
-      // silent — reload anyway to show current state
-      reloadProjects();
-    } finally {
-      setArchivingId(null);
-    }
+    try { await projectService.archiveProject(id); } catch { /* silent */ }
+    reloadProjects();
+    setArchivingId(null);
+    setRawApiProjects([]); // força reload da aba Times também
+  }
+
+  async function handleApprove(id: string) {
+    setApprovingId(id);
+    try { await projectService.approveProject(id); } catch { /* silent */ }
+    reloadProjects();
+    setApprovingId(null);
+    setRawApiProjects([]);
+  }
+
+  async function handleReject(id: string) {
+    setRejectingId(id);
+    try { await projectService.rejectProject(id); } catch { /* silent */ }
+    reloadProjects();
+    setRejectingId(null);
+    setRawApiProjects([]);
   }
 
   const userTeams = user?.teams ?? [];
@@ -274,8 +295,12 @@ export default function AdminProjectsPage() {
           statusFilter={statusFilter}
           onStatusFilter={setStatusFilter}
           archivingId={archivingId}
+          approvingId={approvingId}
+          rejectingId={rejectingId}
           onArchive={handleArchive}
-          canArchive={!!user?.approver}
+          onApprove={handleApprove}
+          onReject={handleReject}
+          isApproverForTeam={isApproverForTeam}
         />
       )}
 
@@ -287,6 +312,13 @@ export default function AdminProjectsPage() {
           loading={loadingTimes}
           statusFilter={timesStatusFilter}
           onStatusFilter={setTimesStatusFilter}
+          archivingId={archivingId}
+          approvingId={approvingId}
+          rejectingId={rejectingId}
+          onArchive={handleArchive}
+          onApprove={handleApprove}
+          onReject={handleReject}
+          isApproverForTeam={isApproverForTeam}
         />
       )}
     </section>
@@ -310,12 +342,26 @@ function TimesTab({
   loading,
   statusFilter,
   onStatusFilter,
+  archivingId,
+  approvingId,
+  rejectingId,
+  onArchive,
+  onApprove,
+  onReject,
+  isApproverForTeam,
 }: {
   user: AuthSessionUser | null;
   rawProjects: RawApiProject[];
   loading: boolean;
   statusFilter: StatusFilter;
   onStatusFilter: (s: StatusFilter) => void;
+  archivingId: string | null;
+  approvingId: string | null;
+  rejectingId: string | null;
+  onArchive: (id: string) => void;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+  isApproverForTeam: (teamId: string | undefined) => boolean;
 }) {
   const teams = user?.teams ?? [];
   const hasTeams = teams.length > 0;
@@ -405,11 +451,19 @@ function TimesTab({
       {/* Seções por time */}
       {teams.map((team) => {
         const projects = byTeam.get(team.id) ?? [];
+        const canApprove = isApproverForTeam(team.id);
         return (
           <TeamSection
             key={team.id}
             team={team}
             projects={projects}
+            canApprove={canApprove}
+            archivingId={archivingId}
+            approvingId={approvingId}
+            rejectingId={rejectingId}
+            onArchive={onArchive}
+            onApprove={onApprove}
+            onReject={onReject}
           />
         );
       })}
@@ -420,9 +474,23 @@ function TimesTab({
 function TeamSection({
   team,
   projects,
+  canApprove,
+  archivingId,
+  approvingId,
+  rejectingId,
+  onArchive,
+  onApprove,
+  onReject,
 }: {
-  team: { id: string; name: string; sectorId: string; sectorName: string };
+  team: { id: string; name: string; sectorId: string; sectorName: string; approver?: boolean };
   projects: RawApiProject[];
+  canApprove: boolean;
+  archivingId: string | null;
+  approvingId: string | null;
+  rejectingId: string | null;
+  onArchive: (id: string) => void;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
 }) {
   return (
     <section className="rounded-[20px] border border-[#e5e7eb] bg-white shadow-[0_2px_12px_rgba(20,33,51,0.05)]">
@@ -435,9 +503,16 @@ function TeamSection({
           <h2 className="text-[1rem] font-bold text-[#1e1e1e]">{team.name}</h2>
           <p className="text-[0.8rem] text-[#9ca3af]">{team.sectorName}</p>
         </div>
-        <span className="shrink-0 rounded-full bg-[#eff6ff] px-3 py-1 text-[0.76rem] font-bold text-[#1675b8]">
-          {projects.length} {projects.length !== 1 ? "projetos" : "projeto"}
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          {canApprove && (
+            <span className="rounded-full bg-[#fef9c3] px-2.5 py-0.5 text-[0.72rem] font-bold text-[#92400e]">
+              Aprovador
+            </span>
+          )}
+          <span className="rounded-full bg-[#eff6ff] px-3 py-1 text-[0.76rem] font-bold text-[#1675b8]">
+            {projects.length} {projects.length !== 1 ? "projetos" : "projeto"}
+          </span>
+        </div>
       </div>
 
       {/* Projetos do time */}
@@ -449,7 +524,17 @@ function TeamSection({
       ) : (
         <div className="grid gap-4 p-5 xl:grid-cols-2">
           {projects.map((p) => (
-            <TeamProjectCard key={p.id} project={p} />
+            <TeamProjectCard
+              key={p.id}
+              project={p}
+              canApprove={canApprove}
+              archiving={archivingId === p.id}
+              approving={approvingId === p.id}
+              rejecting={rejectingId === p.id}
+              onArchive={() => onArchive(p.id)}
+              onApprove={() => onApprove(p.id)}
+              onReject={() => onReject(p.id)}
+            />
           ))}
         </div>
       )}
@@ -457,9 +542,28 @@ function TeamSection({
   );
 }
 
-function TeamProjectCard({ project: p }: { project: RawApiProject }) {
+function TeamProjectCard({
+  project: p,
+  canApprove,
+  archiving,
+  approving,
+  rejecting,
+  onArchive,
+  onApprove,
+  onReject,
+}: {
+  project: RawApiProject;
+  canApprove: boolean;
+  archiving: boolean;
+  approving: boolean;
+  rejecting: boolean;
+  onArchive: () => void;
+  onApprove: () => void;
+  onReject: () => void;
+}) {
   const status = mapStatusNum(p.status);
   const st = STATUS_CONFIG[status] ?? STATUS_CONFIG.draft;
+  const busy = archiving || approving || rejecting;
   return (
     <div className="flex flex-col gap-2 rounded-[14px] border border-[#f0f2f4] bg-[#f9fafb] p-4">
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -491,6 +595,45 @@ function TeamProjectCard({ project: p }: { project: RawApiProject }) {
           </span>
         )}
       </div>
+
+      {/* Ações do aprovador */}
+      {canApprove && (
+        <div className="flex gap-2 pt-1 flex-wrap">
+          {status === "draft" && (
+            <>
+              <button
+                type="button"
+                onClick={onApprove}
+                disabled={busy}
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#dcfce7] px-3 py-1 text-[0.74rem] font-semibold text-[#166534] transition hover:bg-[#bbf7d0] disabled:opacity-50"
+              >
+                {approving ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiCheck className="h-3.5 w-3.5" />}
+                Aprovar
+              </button>
+              <button
+                type="button"
+                onClick={onReject}
+                disabled={busy}
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#fee2e2] px-3 py-1 text-[0.74rem] font-semibold text-[#991b1b] transition hover:bg-[#fecaca] disabled:opacity-50"
+              >
+                {rejecting ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiX className="h-3.5 w-3.5" />}
+                Rejeitar
+              </button>
+            </>
+          )}
+          {status === "active" && (
+            <button
+              type="button"
+              onClick={onArchive}
+              disabled={busy}
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#fff7ed] px-3 py-1 text-[0.74rem] font-semibold text-[#c2410c] transition hover:bg-[#ffedd5] disabled:opacity-50"
+            >
+              {archiving ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiArchive className="h-3.5 w-3.5" />}
+              Arquivar
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -504,8 +647,12 @@ function ProjectsTab({
   statusFilter,
   onStatusFilter,
   archivingId,
+  approvingId,
+  rejectingId,
   onArchive,
-  canArchive,
+  onApprove,
+  onReject,
+  isApproverForTeam,
 }: {
   projects: ProjectSummary[];
   allCount: number;
@@ -513,8 +660,12 @@ function ProjectsTab({
   statusFilter: StatusFilter;
   onStatusFilter: (s: StatusFilter) => void;
   archivingId: string | null;
+  approvingId: string | null;
+  rejectingId: string | null;
   onArchive: (id: string) => void;
-  canArchive: boolean;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+  isApproverForTeam: (teamId: string | undefined) => boolean;
 }) {
   return (
     <div className="space-y-5">
@@ -569,8 +720,12 @@ function ProjectsTab({
               key={p.id}
               project={p}
               archiving={archivingId === p.id}
-              canArchive={canArchive && p.status === "active"}
+              approving={approvingId === p.id}
+              rejecting={rejectingId === p.id}
+              canApprove={isApproverForTeam(p.teamId)}
               onArchive={() => onArchive(p.id)}
+              onApprove={() => onApprove(p.id)}
+              onReject={() => onReject(p.id)}
             />
           ))}
         </div>
@@ -582,16 +737,25 @@ function ProjectsTab({
 function ProjectCard({
   project: p,
   archiving,
-  canArchive,
+  approving,
+  rejecting,
+  canApprove,
   onArchive,
+  onApprove,
+  onReject,
 }: {
   project: ProjectSummary;
   archiving: boolean;
-  canArchive: boolean;
+  approving: boolean;
+  rejecting: boolean;
+  canApprove: boolean;
   onArchive: () => void;
+  onApprove: () => void;
+  onReject: () => void;
 }) {
   const navigate = useNavigate();
   const st = STATUS_CONFIG[p.status] ?? STATUS_CONFIG.draft;
+  const busy = archiving || approving || rejecting;
 
   function handleView() {
     const params = new URLSearchParams();
@@ -614,16 +778,31 @@ function ProjectCard({
             </span>
           )}
         </div>
-        {canArchive && (
-          <button
-            type="button"
-            onClick={onArchive}
-            disabled={archiving}
-            className="inline-flex items-center gap-1.5 rounded-full bg-[#fff7ed] px-3 py-1 text-[0.76rem] font-semibold text-[#c2410c] transition hover:bg-[#ffedd5] disabled:opacity-50"
-          >
-            {archiving ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiArchive className="h-3.5 w-3.5" />}
-            Arquivar
-          </button>
+        {/* Ações do aprovador */}
+        {canApprove && (
+          <div className="flex gap-1.5 flex-wrap">
+            {p.status === "draft" && (
+              <>
+                <button type="button" onClick={onApprove} disabled={busy}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#dcfce7] px-3 py-1 text-[0.74rem] font-semibold text-[#166534] transition hover:bg-[#bbf7d0] disabled:opacity-50">
+                  {approving ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiCheck className="h-3.5 w-3.5" />}
+                  Aprovar
+                </button>
+                <button type="button" onClick={onReject} disabled={busy}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#fee2e2] px-3 py-1 text-[0.74rem] font-semibold text-[#991b1b] transition hover:bg-[#fecaca] disabled:opacity-50">
+                  {rejecting ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiX className="h-3.5 w-3.5" />}
+                  Rejeitar
+                </button>
+              </>
+            )}
+            {p.status === "active" && (
+              <button type="button" onClick={onArchive} disabled={busy}
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#fff7ed] px-3 py-1 text-[0.74rem] font-semibold text-[#c2410c] transition hover:bg-[#ffedd5] disabled:opacity-50">
+                {archiving ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiArchive className="h-3.5 w-3.5" />}
+                Arquivar
+              </button>
+            )}
+          </div>
         )}
       </div>
 

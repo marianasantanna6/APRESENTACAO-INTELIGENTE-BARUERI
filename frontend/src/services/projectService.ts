@@ -24,6 +24,8 @@ export interface ProjectServiceContract {
   updateProject(id: string, data: UpdateProjectPayload): Promise<InstitutionalProject>;
   deleteProject(id: string): Promise<void>;
   archiveProject(id: string): Promise<void>;
+  approveProject(id: string): Promise<void>;
+  rejectProject(id: string): Promise<void>;
   searchProjects(query: string): Promise<ProjectSummary[]>;
 }
 
@@ -126,6 +128,23 @@ const mockProjectService: ProjectServiceContract = {
       { ...store[index], status: "archived", lastUpdatedAt: now },
       ...store.slice(index + 1),
     ];
+  },
+
+  async approveProject(id) {
+    await delay(300);
+    const index = store.findIndex((p) => p.id === id);
+    if (index === -1) throw new Error(`Projeto não encontrado: ${id}`);
+    const now = new Date().toISOString();
+    store = [
+      ...store.slice(0, index),
+      { ...store[index], status: "active", lastUpdatedAt: now },
+      ...store.slice(index + 1),
+    ];
+  },
+
+  async rejectProject(id) {
+    await delay(300);
+    store = store.filter((p) => p.id !== id);
   },
 
   async searchProjects(query) {
