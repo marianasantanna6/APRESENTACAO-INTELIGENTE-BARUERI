@@ -1,11 +1,3 @@
-/**
- * AdminProjectsPage — "Minhas Apresentações"
- *
- * Duas abas:
- * - Minhas: apresentações criadas pelo usuário autenticado
- * - Times: apresentações de todos os membros do mesmo time (ou todos os times para master_admin)
- */
-
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FiArchive,
@@ -24,9 +16,9 @@ import {
   FiX,
   FiZap,
 } from "react-icons/fi";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { useAuth } from "../../context";
-import { canAccessAdminModules, canCreatePresentations } from "../../lib/accessControl";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth, useAdminConsole } from "../../context";
+import { canCreatePresentations } from "../../lib/accessControl";
 import { formatShortDate } from "../../lib/formatters";
 import { authFetch } from "../../lib/apiClient";
 import { presentationService } from "../../services/presentationService";
@@ -56,10 +48,9 @@ const EVENT_LABELS: Record<EventType, string> = {
   "outro":            "Outro",
 };
 
-type TabId = "minhas" | "projetos" | "times";
+type TabId = "minhas" | "projetos";
 type StatusFilter = "all" | ProjectStatus;
 
-// Projeto bruto da API (com teamId)
 type RawApiProject = {
   id: string;
   name: string;
@@ -77,27 +68,30 @@ function mapStatusNum(s: number): ProjectStatus {
   return "draft";
 }
 
+const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
+  { value: "all",      label: "Todos"     },
+  { value: "draft",    label: "Rascunho"  },
+  { value: "active",   label: "Ativo"     },
+  { value: "archived", label: "Arquivado" },
+];
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function AdminProjectsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const canCreate = canCreatePresentations(user);
-  const isAdmin = canAccessAdminModules(user);
-  const [activeTab, setActiveTab] = useState<TabId>("minhas");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [timesStatusFilter, setTimesStatusFilter] = useState<StatusFilter>("all");
+  const isHeadManager = !!(user?.head_manager || user?.master_admin);
 
+  const [activeTab, setActiveTab] = useState<TabId>("minhas");
   const [presentations, setPresentations] = useState<PresentationSummary[]>([]);
-  const [allProjects, setAllProjects]     = useState<ProjectSummary[]>([]);
+  const [allProjects, setAllProjects]       = useState<ProjectSummary[]>([]);
   const [rawApiProjects, setRawApiProjects] = useState<RawApiProject[]>([]);
-  const [loadingPres, setLoadingPres]     = useState(true);
-  const [loadingProj, setLoadingProj]     = useState(true);
-  const [loadingTimes, setLoadingTimes]   = useState(false);
-  const [archivingId, setArchivingId]     = useState<string | null>(null);
-  const [approvingId, setApprovingId]     = useState<string | null>(null);
-  const [rejectingId, setRejectingId]     = useState<string | null>(null);
+  const [loadingPres, setLoadingPres]       = useState(true);
+  const [loadingRaw, setLoadingRaw]         = useState(false);
+  const [archivingId, setArchivingId]       = useState<string | null>(null);
+  const [approvingId, setApprovingId]       = useState<string | null>(null);
+  const [rejectingId, setRejectingId]       = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -108,10 +102,7 @@ export default function AdminProjectsPage() {
   }, [user]);
 
   const reloadProjects = useCallback(() => {
-    setLoadingProj(true);
-    projectService.getProjects()
-      .then(setAllProjects)
-      .finally(() => setLoadingProj(false));
+    projectService.getProjects().then(setAllProjects);
   }, []);
 
   useEffect(() => { reloadProjects(); }, [reloadProjects]);
@@ -119,20 +110,17 @@ export default function AdminProjectsPage() {
   useEffect(() => {
     if (!user) return;
     if (rawApiProjects.length > 0) return;
-    setLoadingTimes(true);
+    setLoadingRaw(true);
     authFetch("/api/projects")
       .then((r) => r.ok ? r.json() as Promise<RawApiProject[]> : Promise.resolve([]))
       .then(setRawApiProjects)
       .catch(() => {})
-      .finally(() => setLoadingTimes(false));
+      .finally(() => setLoadingRaw(false));
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loading = loadingPres;
-
-  // Verifica se o usuário é aprovador no time de um projeto específico
   function isApproverForTeam(teamId: string | undefined): boolean {
     if (!teamId || !user) return false;
-    return user.teams?.some(t => t.id === teamId && t.approver) ?? false;
+    return user.teams?.some((t) => t.id === teamId && t.approver) ?? false;
   }
 
   const projectMap = useMemo(
@@ -140,17 +128,12 @@ export default function AdminProjectsPage() {
     [allProjects],
   );
 
-  const filteredProjects = useMemo(() => {
-    if (statusFilter === "all") return allProjects;
-    return allProjects.filter((p) => p.status === statusFilter);
-  }, [allProjects, statusFilter]);
-
   async function handleArchive(id: string) {
     setArchivingId(id);
     try { await projectService.archiveProject(id); } catch { /* silent */ }
     reloadProjects();
     setArchivingId(null);
-    setRawApiProjects([]); // força reload da aba Times também
+    setRawApiProjects([]);
   }
 
   async function handleApprove(id: string) {
@@ -169,13 +152,9 @@ export default function AdminProjectsPage() {
     setRawApiProjects([]);
   }
 
-  const userTeams = user?.teams ?? [];
-  const userTeamCount = userTeams.length || (user?.team ? 1 : 0);
-
   const tabs: { id: TabId; label: string; count?: number }[] = [
-    { id: "minhas",   label: "Minhas",   count: presentations.length },
-    ...(!isAdmin ? [{ id: "projetos" as TabId, label: "Projetos", count: allProjects.length }] : []),
-    { id: "times",    label: "Times",    count: userTeamCount || undefined },
+    { id: "minhas",   label: "Minhas Apresentações", count: presentations.length },
+    { id: "projetos", label: "Projetos Institucionais" },
   ];
 
   return (
@@ -184,10 +163,12 @@ export default function AdminProjectsPage() {
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="page-title text-[2.2rem] font-extrabold tracking-[-0.05em] text-[#1e1e1e] sm:text-[2.8rem]">
-            Minhas Apresentações
+            {activeTab === "minhas" ? "Minhas Apresentações" : "Projetos Institucionais"}
           </h1>
           <p className="page-subtitle mt-1 text-[1rem] font-medium text-[#878787]">
-            {loading ? "Carregando…" : `${presentations.length} ${presentations.length !== 1 ? "apresentações" : "apresentação"}`}
+            {activeTab === "minhas"
+              ? (loadingPres ? "Carregando…" : `${presentations.length} ${presentations.length !== 1 ? "apresentações" : "apresentação"}`)
+              : (isHeadManager ? "Visão geral de todos os setores e times" : "Projetos dos seus times")}
           </p>
         </div>
 
@@ -215,13 +196,7 @@ export default function AdminProjectsPage() {
                 : "text-[#6b7280] hover:text-[#374151]"
             }`}
           >
-            {tab.id === "minhas" ? (
-              <FiMonitor className="h-4 w-4" />
-            ) : tab.id === "times" ? (
-              <FiUsers className="h-4 w-4" />
-            ) : (
-              <FiFolder className="h-4 w-4" />
-            )}
+            {tab.id === "minhas" ? <FiMonitor className="h-4 w-4" /> : <FiLayers className="h-4 w-4" />}
             {tab.label}
             {tab.count !== undefined && tab.count > 0 && (
               <span className={`rounded-full px-2 py-0.5 text-[0.72rem] font-bold ${
@@ -234,145 +209,226 @@ export default function AdminProjectsPage() {
         ))}
       </div>
 
-      {/* Aba Minhas */}
+      {/* Aba Minhas Apresentações */}
       {activeTab === "minhas" && (
-        <>
-          {loading && (
-            <div className="flex items-center justify-center py-20">
-              <FiLoader className="h-8 w-8 animate-spin text-[#1675b8]" />
-            </div>
-          )}
-          {!loading && presentations.length === 0 && (
-            <div className="flex flex-col items-center gap-5 rounded-[24px] border border-dashed border-[#d1d5db] bg-[#f9fafb] py-20 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#eff6ff]">
-                <FiMonitor className="h-7 w-7 text-[#1675b8]" />
-              </div>
-              <div>
-                <p className="text-[1.05rem] font-semibold text-[#374151]">Nenhuma apresentação ainda</p>
-                <p className="mt-1 text-[0.9rem] text-[#9ca3af]">
-                  Crie sua primeira apresentação inteligente com projetos e indicadores.
-                </p>
-              </div>
-              {canCreate && (
-                <Link
-                  to={ROUTE_PATHS.createPresentation}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#1675b8] px-5 py-2.5 text-[0.94rem] font-bold text-white shadow-[0_8px_20px_-8px_rgba(22,117,184,0.5)] transition hover:-translate-y-0.5"
-                >
-                  <FiPlus className="h-4 w-4" /> Criar apresentação
-                </Link>
-              )}
-            </div>
-          )}
-          {!loading && presentations.length > 0 && (
-            <div className="grid gap-6 xl:grid-cols-2">
-              {presentations.map((pres) => (
-                <PresentationCard
-                  key={pres.id}
-                  presentation={pres}
-                  projectMap={projectMap}
-                  onOpen={() => {
-                    const params = buildPresentationSearchParams({
-                      query: pres.eventName,
-                      category: pres.title,
-                      year: "Todos",
-                    });
-                    params.set("pid", pres.id);
-                    navigate(`${ROUTE_PATHS.generatedPresentation}?${params.toString()}`);
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </>
+        <MinhasTab
+          loading={loadingPres}
+          presentations={presentations}
+          projectMap={projectMap}
+          canCreate={canCreate}
+          onOpen={(pres) => {
+            const params = buildPresentationSearchParams({
+              query: pres.eventName,
+              category: pres.title,
+              year: "Todos",
+            });
+            params.set("pid", pres.id);
+            navigate(`${ROUTE_PATHS.generatedPresentation}?${params.toString()}`);
+          }}
+        />
       )}
 
-      {/* Aba Projetos */}
+      {/* Aba Projetos Institucionais */}
       {activeTab === "projetos" && (
-        <ProjectsTab
-          projects={filteredProjects}
-          allCount={allProjects.length}
-          loading={loadingProj}
-          statusFilter={statusFilter}
-          onStatusFilter={setStatusFilter}
-          archivingId={archivingId}
-          approvingId={approvingId}
-          rejectingId={rejectingId}
-          onArchive={handleArchive}
-          onApprove={handleApprove}
-          onReject={handleReject}
-          isApproverForTeam={isApproverForTeam}
-        />
-      )}
-
-      {/* Aba Times */}
-      {activeTab === "times" && (
-        <TimesTab
-          user={user}
-          rawProjects={rawApiProjects}
-          loading={loadingTimes}
-          statusFilter={timesStatusFilter}
-          onStatusFilter={setTimesStatusFilter}
-          archivingId={archivingId}
-          approvingId={approvingId}
-          rejectingId={rejectingId}
-          onArchive={handleArchive}
-          onApprove={handleApprove}
-          onReject={handleReject}
-          isApproverForTeam={isApproverForTeam}
-        />
+        isHeadManager
+          ? (
+            <HeadManagerProjectsView
+              rawProjects={rawApiProjects}
+              loading={loadingRaw}
+            />
+          )
+          : (
+            <UserTeamsView
+              user={user}
+              rawProjects={rawApiProjects}
+              loading={loadingRaw}
+              isApproverForTeam={isApproverForTeam}
+              archivingId={archivingId}
+              approvingId={approvingId}
+              rejectingId={rejectingId}
+              onArchive={handleArchive}
+              onApprove={handleApprove}
+              onReject={handleReject}
+            />
+          )
       )}
     </section>
   );
 }
 
-// ─── Filtro de status (compartilhado) ────────────────────────────────────────
+// ─── Aba Minhas Apresentações ─────────────────────────────────────────────────
 
-const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: "all",      label: "Todos"     },
-  { value: "draft",    label: "Rascunho"  },
-  { value: "active",   label: "Ativo"     },
-  { value: "archived", label: "Arquivado" },
-];
+function MinhasTab({
+  loading,
+  presentations,
+  projectMap,
+  canCreate,
+  onOpen,
+}: {
+  loading: boolean;
+  presentations: PresentationSummary[];
+  projectMap: Map<string, string>;
+  canCreate: boolean;
+  onOpen: (p: PresentationSummary) => void;
+}) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <FiLoader className="h-8 w-8 animate-spin text-[#1675b8]" />
+      </div>
+    );
+  }
 
-// ─── Aba Times ────────────────────────────────────────────────────────────────
+  if (presentations.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-5 rounded-[24px] border border-dashed border-[#d1d5db] bg-[#f9fafb] py-20 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#eff6ff]">
+          <FiMonitor className="h-7 w-7 text-[#1675b8]" />
+        </div>
+        <div>
+          <p className="text-[1.05rem] font-semibold text-[#374151]">Nenhuma apresentação ainda</p>
+          <p className="mt-1 text-[0.9rem] text-[#9ca3af]">
+            Crie sua primeira apresentação inteligente com projetos e indicadores.
+          </p>
+        </div>
+        {canCreate && (
+          <Link
+            to={ROUTE_PATHS.createPresentation}
+            className="inline-flex items-center gap-2 rounded-full bg-[#1675b8] px-5 py-2.5 text-[0.94rem] font-bold text-white shadow-[0_8px_20px_-8px_rgba(22,117,184,0.5)] transition hover:-translate-y-0.5"
+          >
+            <FiPlus className="h-4 w-4" /> Criar apresentação
+          </Link>
+        )}
+      </div>
+    );
+  }
 
-function TimesTab({
+  return (
+    <div className="grid gap-6 xl:grid-cols-2">
+      {presentations.map((pres) => (
+        <PresentationCard
+          key={pres.id}
+          presentation={pres}
+          projectMap={projectMap}
+          onOpen={() => onOpen(pres)}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── View por times do usuário ────────────────────────────────────────────────
+
+function UserTeamsView({
   user,
   rawProjects,
   loading,
-  statusFilter,
-  onStatusFilter,
+  isApproverForTeam,
   archivingId,
   approvingId,
   rejectingId,
   onArchive,
   onApprove,
   onReject,
-  isApproverForTeam,
 }: {
   user: AuthSessionUser | null;
   rawProjects: RawApiProject[];
   loading: boolean;
-  statusFilter: StatusFilter;
-  onStatusFilter: (s: StatusFilter) => void;
+  isApproverForTeam: (teamId: string | undefined) => boolean;
   archivingId: string | null;
   approvingId: string | null;
   rejectingId: string | null;
   onArchive: (id: string) => void;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
-  isApproverForTeam: (teamId: string | undefined) => boolean;
 }) {
   const teams = user?.teams ?? [];
-  const hasTeams = teams.length > 0;
 
-  // Projetos filtrados por status
+  const byTeam = useMemo(() => {
+    const map = new Map<string, RawApiProject[]>();
+    for (const p of rawProjects) {
+      if (!p.team) continue;
+      const list = map.get(p.team) ?? [];
+      list.push(p);
+      map.set(p.team, list);
+    }
+    return map;
+  }, [rawProjects]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <FiLoader className="h-8 w-8 animate-spin text-[#1675b8]" />
+      </div>
+    );
+  }
+
+  if (teams.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-4 rounded-[24px] border border-dashed border-[#d1d5db] bg-[#f9fafb] py-20 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f3f4f6]">
+          <FiUsers className="h-7 w-7 text-[#9ca3af]" />
+        </div>
+        <div>
+          <p className="text-[1.05rem] font-semibold text-[#374151]">
+            Você não está associado a nenhum time
+          </p>
+          <p className="mt-1 text-[0.9rem] text-[#9ca3af]">
+            Entre em contato com seu administrador para ser incluído em um time.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {teams.map((team) => {
+        const projects = byTeam.get(team.id) ?? [];
+        const canApprove = isApproverForTeam(team.id);
+        const canCreate = !team.approver || team.areaManager;
+
+        return (
+          <TeamSection
+            key={team.id}
+            teamId={team.id}
+            teamName={team.name}
+            sectorName={team.sectorName}
+            canApprove={canApprove}
+            canCreate={canCreate}
+            isApprover={team.approver}
+            isManager={team.areaManager}
+            projects={projects}
+            archivingId={archivingId}
+            approvingId={approvingId}
+            rejectingId={rejectingId}
+            onArchive={onArchive}
+            onApprove={onApprove}
+            onReject={onReject}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── View head_manager (setor → time → projetos) ──────────────────────────────
+
+function HeadManagerProjectsView({
+  rawProjects,
+  loading,
+}: {
+  rawProjects: RawApiProject[];
+  loading: boolean;
+}) {
+  const { setores, times } = useAdminConsole();
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+
   const filtered = useMemo(
     () => statusFilter === "all" ? rawProjects : rawProjects.filter((p) => mapStatusNum(p.status) === statusFilter),
     [rawProjects, statusFilter],
   );
 
-  // Projetos agrupados por teamId
   const byTeam = useMemo(() => {
     const map = new Map<string, RawApiProject[]>();
     for (const p of filtered) {
@@ -392,89 +448,116 @@ function TimesTab({
     );
   }
 
-  if (!hasTeams) {
-    return (
-      <div className="flex flex-col items-center gap-4 rounded-[24px] border border-dashed border-[#d1d5db] bg-[#f9fafb] py-20 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f3f4f6]">
-          <FiUsers className="h-7 w-7 text-[#9ca3af]" />
-        </div>
-        <div>
-          <p className="text-[1.05rem] font-semibold text-[#374151]">
-            Você não está associado a nenhum time
-          </p>
-          <p className="mt-1 text-[0.9rem] text-[#9ca3af]">
-            {user?.department
-              ? `Secretaria: ${user.department}`
-              : "Entre em contato com seu administrador para ser incluído em um time."}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const totalProjectsInUserTeams = teams.reduce(
-    (acc, t) => acc + (byTeam.get(t.id)?.length ?? 0), 0
-  );
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Filtro de status */}
       <div className="flex flex-wrap gap-2">
-        {STATUS_FILTER_OPTIONS.map((opt) => {
-          const count = opt.value === "all"
-            ? totalProjectsInUserTeams
-            : teams.reduce((acc, t) => acc + (byTeam.get(t.id)?.filter((p) => mapStatusNum(p.status) === opt.value).length ?? 0), 0);
-          return (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => onStatusFilter(opt.value)}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[0.8rem] font-semibold transition ${
-                statusFilter === opt.value
-                  ? "bg-[#1e3a52] text-white"
-                  : "bg-[#f0f2f4] text-[#6a7a88] hover:bg-[#e4e8ec]"
-              }`}
-            >
-              {opt.label}
-              {opt.value !== "all" && (
-                <span className={`rounded-full px-1.5 py-0.5 text-[0.68rem] font-bold ${
-                  statusFilter === opt.value ? "bg-white/20 text-white" : "bg-white text-[#6a7a88]"
-                }`}>
-                  {count}
-                </span>
-              )}
-            </button>
-          );
-        })}
+        {STATUS_FILTER_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => setStatusFilter(opt.value)}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[0.8rem] font-semibold transition ${
+              statusFilter === opt.value
+                ? "bg-[#1e3a52] text-white"
+                : "bg-[#f0f2f4] text-[#6a7a88] hover:bg-[#e4e8ec]"
+            }`}
+          >
+            {opt.label}
+            {opt.value !== "all" && (
+              <span className={`rounded-full px-1.5 py-0.5 text-[0.68rem] font-bold ${
+                statusFilter === opt.value ? "bg-white/20 text-white" : "bg-white text-[#6a7a88]"
+              }`}>
+                {filtered.filter((p) => mapStatusNum(p.status) === opt.value).length}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* Seções por time */}
-      {teams.map((team) => {
-        const projects = byTeam.get(team.id) ?? [];
-        const canApprove = isApproverForTeam(team.id);
+      {setores.map((setor) => {
+        const sectorTimes = times.filter((t) => t.secretariaId === setor.id);
+        if (sectorTimes.length === 0) return null;
+
+        const sectorTotal = sectorTimes.reduce((acc, t) => acc + (byTeam.get(t.id)?.length ?? 0), 0);
+
         return (
-          <TeamSection
-            key={team.id}
-            team={team}
-            projects={projects}
-            canApprove={canApprove}
-            archivingId={archivingId}
-            approvingId={approvingId}
-            rejectingId={rejectingId}
-            onArchive={onArchive}
-            onApprove={onApprove}
-            onReject={onReject}
-          />
+          <div key={setor.id} className="space-y-4">
+            {/* Cabeçalho do setor */}
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-[#1e3a52]">
+                <FiGrid className="h-4.5 w-4.5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-[1.05rem] font-bold text-[#1e1e1e]">{setor.nome}</h2>
+                <p className="text-[0.78rem] text-[#9ca3af]">{sectorTimes.length} {sectorTimes.length !== 1 ? "times" : "time"} · {sectorTotal} {sectorTotal !== 1 ? "projetos" : "projeto"}</p>
+              </div>
+            </div>
+
+            {/* Times do setor */}
+            <div className="space-y-3 pl-3 border-l-2 border-[#e5e7eb]">
+              {sectorTimes.map((time) => {
+                const projects = byTeam.get(time.id) ?? [];
+                return (
+                  <div key={time.id} className="rounded-[16px] border border-[#e5e7eb] bg-white overflow-hidden">
+                    <div className="flex items-center gap-3 px-4 py-3 border-b border-[#f3f4f6]">
+                      <FiUsers className="h-4 w-4 shrink-0 text-[#1675b8]" />
+                      <span className="flex-1 text-[0.9rem] font-semibold text-[#1e1e1e]">{time.nome}</span>
+                      <span className="rounded-full bg-[#eff6ff] px-2.5 py-0.5 text-[0.72rem] font-bold text-[#1675b8]">
+                        {projects.length} {projects.length !== 1 ? "projetos" : "projeto"}
+                      </span>
+                    </div>
+                    {projects.length === 0 ? (
+                      <div className="flex items-center justify-center gap-2 py-5 text-[0.84rem] text-[#9ca3af]">
+                        <FiFolder className="h-4 w-4" />
+                        Nenhum projeto
+                      </div>
+                    ) : (
+                      <div className="grid gap-3 p-4 xl:grid-cols-2">
+                        {projects.map((p) => (
+                          <TeamProjectCard
+                            key={p.id}
+                            project={p}
+                            canApprove={false}
+                            archiving={false}
+                            approving={false}
+                            rejecting={false}
+                            onArchive={() => {}}
+                            onApprove={() => {}}
+                            onReject={() => {}}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         );
       })}
+
+      {setores.length === 0 && (
+        <div className="flex flex-col items-center gap-4 rounded-[24px] border border-dashed border-[#d1d5db] bg-[#f9fafb] py-20 text-center">
+          <FiLayers className="h-8 w-8 text-[#9ca3af]" />
+          <p className="text-[1rem] font-semibold text-[#374151]">Carregando estrutura organizacional…</p>
+        </div>
+      )}
     </div>
   );
 }
 
+// ─── Seção de um time ─────────────────────────────────────────────────────────
+
 function TeamSection({
-  team,
-  projects,
+  teamId,
+  teamName,
+  sectorName,
   canApprove,
+  canCreate,
+  isApprover,
+  isManager,
+  projects,
   archivingId,
   approvingId,
   rejectingId,
@@ -482,9 +565,14 @@ function TeamSection({
   onApprove,
   onReject,
 }: {
-  team: { id: string; name: string; sectorId: string; sectorName: string; approver?: boolean };
-  projects: RawApiProject[];
+  teamId: string;
+  teamName: string;
+  sectorName: string;
   canApprove: boolean;
+  canCreate: boolean;
+  isApprover: boolean;
+  isManager: boolean;
+  projects: RawApiProject[];
   archivingId: string | null;
   approvingId: string | null;
   rejectingId: string | null;
@@ -494,32 +582,52 @@ function TeamSection({
 }) {
   return (
     <section className="rounded-[20px] border border-[#e5e7eb] bg-white shadow-[0_2px_12px_rgba(20,33,51,0.05)]">
-      {/* Cabeçalho do time */}
+      {/* Cabeçalho */}
       <div className="flex items-center gap-3 border-b border-[#f3f4f6] px-5 py-4">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eff6ff]">
           <FiUsers className="h-5 w-5 text-[#1675b8]" />
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="text-[1rem] font-bold text-[#1e1e1e]">{team.name}</h2>
-          <p className="text-[0.8rem] text-[#9ca3af]">{team.sectorName}</p>
+          <h2 className="text-[1rem] font-bold text-[#1e1e1e]">{teamName}</h2>
+          <p className="text-[0.8rem] text-[#9ca3af]">{sectorName}</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {canApprove && (
-            <span className="rounded-full bg-[#fef9c3] px-2.5 py-0.5 text-[0.72rem] font-bold text-[#92400e]">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+          {/* Badge do papel do usuário */}
+          {isManager && (
+            <span className="rounded-full bg-[#d1fae5] px-2.5 py-0.5 text-[0.7rem] font-bold text-[#065f46]">
+              Gerente
+            </span>
+          )}
+          {isApprover && (
+            <span className="rounded-full bg-[#dbeafe] px-2.5 py-0.5 text-[0.7rem] font-bold text-[#1d4ed8]">
               Aprovador
+            </span>
+          )}
+          {!isManager && !isApprover && (
+            <span className="rounded-full bg-[#f3f4f6] px-2.5 py-0.5 text-[0.7rem] font-bold text-[#6b7280]">
+              Membro
             </span>
           )}
           <span className="rounded-full bg-[#eff6ff] px-3 py-1 text-[0.76rem] font-bold text-[#1675b8]">
             {projects.length} {projects.length !== 1 ? "projetos" : "projeto"}
           </span>
+          {canCreate && (
+            <Link
+              to={`${ROUTE_PATHS.createPresentation}?teamId=${teamId}`}
+              className="inline-flex items-center gap-1 rounded-full bg-[#1675b8] px-3 py-1 text-[0.74rem] font-semibold text-white transition hover:bg-[#1255a0]"
+            >
+              <FiPlus className="h-3.5 w-3.5" />
+              Nova
+            </Link>
+          )}
         </div>
       </div>
 
-      {/* Projetos do time */}
+      {/* Projetos */}
       {projects.length === 0 ? (
         <div className="flex items-center justify-center gap-3 py-8 text-[0.88rem] text-[#9ca3af]">
           <FiFolder className="h-5 w-5" />
-          Nenhum projeto neste time com o filtro selecionado
+          Nenhum projeto neste time
         </div>
       ) : (
         <div className="grid gap-4 p-5 xl:grid-cols-2">
@@ -541,6 +649,8 @@ function TeamSection({
     </section>
   );
 }
+
+// ─── Card de projeto (dentro de time) ────────────────────────────────────────
 
 function TeamProjectCard({
   project: p,
@@ -564,6 +674,7 @@ function TeamProjectCard({
   const status = mapStatusNum(p.status);
   const st = STATUS_CONFIG[status] ?? STATUS_CONFIG.draft;
   const busy = archiving || approving || rejecting;
+
   return (
     <div className="flex flex-col gap-2 rounded-[14px] border border-[#f0f2f4] bg-[#f9fafb] p-4">
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -596,38 +707,25 @@ function TeamProjectCard({
         )}
       </div>
 
-      {/* Ações do aprovador */}
       {canApprove && (
         <div className="flex gap-2 pt-1 flex-wrap">
           {status === "draft" && (
             <>
-              <button
-                type="button"
-                onClick={onApprove}
-                disabled={busy}
-                className="inline-flex items-center gap-1.5 rounded-full bg-[#dcfce7] px-3 py-1 text-[0.74rem] font-semibold text-[#166534] transition hover:bg-[#bbf7d0] disabled:opacity-50"
-              >
+              <button type="button" onClick={onApprove} disabled={busy}
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#dcfce7] px-3 py-1 text-[0.74rem] font-semibold text-[#166534] transition hover:bg-[#bbf7d0] disabled:opacity-50">
                 {approving ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiCheck className="h-3.5 w-3.5" />}
                 Aprovar
               </button>
-              <button
-                type="button"
-                onClick={onReject}
-                disabled={busy}
-                className="inline-flex items-center gap-1.5 rounded-full bg-[#fee2e2] px-3 py-1 text-[0.74rem] font-semibold text-[#991b1b] transition hover:bg-[#fecaca] disabled:opacity-50"
-              >
+              <button type="button" onClick={onReject} disabled={busy}
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#fee2e2] px-3 py-1 text-[0.74rem] font-semibold text-[#991b1b] transition hover:bg-[#fecaca] disabled:opacity-50">
                 {rejecting ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiX className="h-3.5 w-3.5" />}
                 Rejeitar
               </button>
             </>
           )}
           {status === "active" && (
-            <button
-              type="button"
-              onClick={onArchive}
-              disabled={busy}
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#fff7ed] px-3 py-1 text-[0.74rem] font-semibold text-[#c2410c] transition hover:bg-[#ffedd5] disabled:opacity-50"
-            >
+            <button type="button" onClick={onArchive} disabled={busy}
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#fff7ed] px-3 py-1 text-[0.74rem] font-semibold text-[#c2410c] transition hover:bg-[#ffedd5] disabled:opacity-50">
               {archiving ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiArchive className="h-3.5 w-3.5" />}
               Arquivar
             </button>
@@ -638,208 +736,7 @@ function TeamProjectCard({
   );
 }
 
-// ─── Aba Projetos ─────────────────────────────────────────────────────────────
-
-function ProjectsTab({
-  projects,
-  allCount,
-  loading,
-  statusFilter,
-  onStatusFilter,
-  archivingId,
-  approvingId,
-  rejectingId,
-  onArchive,
-  onApprove,
-  onReject,
-  isApproverForTeam,
-}: {
-  projects: ProjectSummary[];
-  allCount: number;
-  loading: boolean;
-  statusFilter: StatusFilter;
-  onStatusFilter: (s: StatusFilter) => void;
-  archivingId: string | null;
-  approvingId: string | null;
-  rejectingId: string | null;
-  onArchive: (id: string) => void;
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
-  isApproverForTeam: (teamId: string | undefined) => boolean;
-}) {
-  return (
-    <div className="space-y-5">
-      {/* Filtro de status */}
-      <div className="flex flex-wrap gap-2">
-        {STATUS_FILTER_OPTIONS.map((opt) => {
-          const count = opt.value === "all"
-            ? allCount
-            : projects.filter((p) => p.status === opt.value).length;
-          return (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => onStatusFilter(opt.value)}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[0.8rem] font-semibold transition ${
-                statusFilter === opt.value
-                  ? "bg-[#1e3a52] text-white"
-                  : "bg-[#f0f2f4] text-[#6a7a88] hover:bg-[#e4e8ec]"
-              }`}
-            >
-              {opt.label}
-              {opt.value !== "all" && (
-                <span className={`rounded-full px-1.5 py-0.5 text-[0.68rem] font-bold ${
-                  statusFilter === opt.value ? "bg-white/20 text-white" : "bg-white text-[#6a7a88]"
-                }`}>
-                  {projects.filter((p) => p.status === opt.value).length}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <FiLoader className="h-8 w-8 animate-spin text-[#1675b8]" />
-        </div>
-      ) : projects.length === 0 ? (
-        <div className="flex flex-col items-center gap-5 rounded-[24px] border border-dashed border-[#d1d5db] bg-[#f9fafb] py-20 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#eff6ff]">
-            <FiLayers className="h-7 w-7 text-[#1675b8]" />
-          </div>
-          <p className="text-[1.05rem] font-semibold text-[#374151]">Nenhum projeto encontrado</p>
-          <p className="text-[0.9rem] text-[#9ca3af]">
-            {statusFilter !== "all" ? "Tente selecionar outro filtro de status." : "Nenhum projeto cadastrado ainda."}
-          </p>
-        </div>
-      ) : (
-        <div className="grid gap-4 xl:grid-cols-2">
-          {projects.map((p) => (
-            <ProjectCard
-              key={p.id}
-              project={p}
-              archiving={archivingId === p.id}
-              approving={approvingId === p.id}
-              rejecting={rejectingId === p.id}
-              canApprove={isApproverForTeam(p.teamId)}
-              onArchive={() => onArchive(p.id)}
-              onApprove={() => onApprove(p.id)}
-              onReject={() => onReject(p.id)}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ProjectCard({
-  project: p,
-  archiving,
-  approving,
-  rejecting,
-  canApprove,
-  onArchive,
-  onApprove,
-  onReject,
-}: {
-  project: ProjectSummary;
-  archiving: boolean;
-  approving: boolean;
-  rejecting: boolean;
-  canApprove: boolean;
-  onArchive: () => void;
-  onApprove: () => void;
-  onReject: () => void;
-}) {
-  const navigate = useNavigate();
-  const st = STATUS_CONFIG[p.status] ?? STATUS_CONFIG.draft;
-  const busy = archiving || approving || rejecting;
-
-  function handleView() {
-    const params = new URLSearchParams();
-    params.set("pid", p.id);
-    if (p.slidesUrl) params.set("dlUrl", `/projects/${p.id}/pptx`);
-    navigate(`${ROUTE_PATHS.generatedPresentation}?${params.toString()}`);
-  }
-
-  return (
-    <div className="flex flex-col gap-3 rounded-[18px] border border-[#e5e7eb] bg-white p-5 shadow-[0_2px_10px_rgba(20,33,51,0.06)]">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.72rem] font-bold ${st.cls}`}>
-            {st.label}
-          </span>
-          {p.governmentArea && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-[0.72rem] font-semibold text-[#475569]">
-              <FiTag className="h-3 w-3" />
-              {p.governmentArea}
-            </span>
-          )}
-        </div>
-        {/* Ações do aprovador */}
-        {canApprove && (
-          <div className="flex gap-1.5 flex-wrap">
-            {p.status === "draft" && (
-              <>
-                <button type="button" onClick={onApprove} disabled={busy}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-[#dcfce7] px-3 py-1 text-[0.74rem] font-semibold text-[#166534] transition hover:bg-[#bbf7d0] disabled:opacity-50">
-                  {approving ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiCheck className="h-3.5 w-3.5" />}
-                  Aprovar
-                </button>
-                <button type="button" onClick={onReject} disabled={busy}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-[#fee2e2] px-3 py-1 text-[0.74rem] font-semibold text-[#991b1b] transition hover:bg-[#fecaca] disabled:opacity-50">
-                  {rejecting ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiX className="h-3.5 w-3.5" />}
-                  Rejeitar
-                </button>
-              </>
-            )}
-            {p.status === "active" && (
-              <button type="button" onClick={onArchive} disabled={busy}
-                className="inline-flex items-center gap-1.5 rounded-full bg-[#fff7ed] px-3 py-1 text-[0.74rem] font-semibold text-[#c2410c] transition hover:bg-[#ffedd5] disabled:opacity-50">
-                {archiving ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiArchive className="h-3.5 w-3.5" />}
-                Arquivar
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      <h3 className="text-[1rem] font-bold text-[#1e1e1e] leading-tight">{p.name}</h3>
-      {p.shortDescription && (
-        <p className="text-[0.85rem] text-[#6b7280] leading-snug line-clamp-2">{p.shortDescription}</p>
-      )}
-
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-        <div className="flex flex-wrap items-center gap-3 text-[0.8rem] text-[#9ca3af]">
-          {p.mainDepartment && (
-            <span className="flex items-center gap-1.5">
-              <FiUsers className="h-3.5 w-3.5" />
-              {p.mainDepartment}
-            </span>
-          )}
-          {p.lastUpdatedAt && (
-            <span className="flex items-center gap-1.5">
-              <FiCalendar className="h-3.5 w-3.5" />
-              {formatShortDate(p.lastUpdatedAt)}
-            </span>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={handleView}
-          className="inline-flex items-center gap-1.5 rounded-full bg-[#eff6ff] px-3 py-1.5 text-[0.78rem] font-semibold text-[#1675b8] transition hover:bg-[#dbeafe]"
-        >
-          <FiArrowRight className="h-3.5 w-3.5" />
-          Ver Apresentação
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Card de apresentação (aba Minhas) ────────────────────────────────────────
+// ─── Card de apresentação ─────────────────────────────────────────────────────
 
 function PresentationCard({
   presentation: p,
@@ -850,6 +747,7 @@ function PresentationCard({
   projectMap: Map<string, string>;
   onOpen: () => void;
 }) {
+  const navigate = useNavigate();
   const status = STATUS_CONFIG[p.status] ?? STATUS_CONFIG.draft;
   const eventLabel = EVENT_LABELS[p.eventType] ?? p.eventType;
 
@@ -861,7 +759,6 @@ function PresentationCard({
 
   return (
     <div className="flex h-full flex-col gap-5 rounded-[22px] border border-[#e5e7eb] bg-white p-6 shadow-[0_2px_16px_rgba(20,33,51,0.07)] transition hover:shadow-[0_6px_24px_rgba(20,33,51,0.11)]">
-
       <div className="flex items-center gap-2 flex-wrap">
         <span className={`inline-flex items-center rounded-full px-3 py-1 text-[0.76rem] font-bold ${status.cls}`}>
           {status.label}
@@ -898,51 +795,42 @@ function PresentationCard({
 
       {p.totalModuleCount > 0 && (
         <div className="flex items-center gap-2">
-          <FiGrid className="h-3.5 w-3.5 text-[#9ca3af]" />
-          <span className="text-[0.78rem] font-semibold text-[#6b7280]">
-            {p.activeModuleCount} de {p.totalModuleCount} módulos ativos
+          <FiLayers className="h-4 w-4 text-[#9ca3af]" />
+          <span className="text-[0.84rem] text-[#6b7280]">
+            {p.totalModuleCount} módulo{p.totalModuleCount !== 1 ? "s" : ""}
           </span>
         </div>
       )}
 
-      {projectNames.length > 0 ? (
-        <div>
-          <p className="mb-2 flex items-center gap-1.5 text-[0.76rem] font-bold uppercase tracking-wide text-[#9ca3af]">
-            <FiLayers className="h-3.5 w-3.5" />
-            Projetos incluídos
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {shownProjects.map((name) => (
-              <span
-                key={name}
-                className="rounded-full bg-[#eff6ff] px-2.5 py-1 text-[0.78rem] font-semibold text-[#1d4ed8]"
-              >
-                {name}
-              </span>
-            ))}
-            {hiddenCount > 0 && (
-              <span className="rounded-full bg-[#f1f5f9] px-2.5 py-1 text-[0.78rem] font-semibold text-[#6b7280]">
-                +{hiddenCount} mais
-              </span>
-            )}
-          </div>
+      {shownProjects.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {shownProjects.map((name) => (
+            <span key={name} className="rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-[0.74rem] font-medium text-[#475569]">
+              {name}
+            </span>
+          ))}
+          {hiddenCount > 0 && (
+            <span className="rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-[0.74rem] font-medium text-[#9ca3af]">
+              +{hiddenCount}
+            </span>
+          )}
         </div>
-      ) : (
-        <p className="text-[0.84rem] italic text-[#d1d5db]">Sem projetos vinculados</p>
       )}
 
       <div className="mt-auto flex items-center justify-between gap-3 pt-2">
-        <span className="flex items-center gap-1.5 text-[0.82rem] text-[#9ca3af]">
-          <FiCalendar className="h-3.5 w-3.5" />
-          {formatShortDate(p.updatedAt)}
-        </span>
-
+        {p.updatedAt && (
+          <span className="flex items-center gap-1.5 text-[0.78rem] text-[#9ca3af]">
+            <FiCalendar className="h-3.5 w-3.5" />
+            {formatShortDate(p.updatedAt)}
+          </span>
+        )}
         <button
           type="button"
           onClick={onOpen}
-          className="inline-flex items-center gap-1.5 rounded-full bg-[#eff6ff] px-4 py-1.5 text-[0.86rem] font-semibold text-[#1675b8] transition hover:bg-[#dbeafe]"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-[#eff6ff] px-4 py-2 text-[0.82rem] font-semibold text-[#1675b8] transition hover:bg-[#dbeafe]"
         >
-          Abrir <FiArrowRight className="h-4 w-4" />
+          <FiArrowRight className="h-3.5 w-3.5" />
+          Abrir
         </button>
       </div>
     </div>

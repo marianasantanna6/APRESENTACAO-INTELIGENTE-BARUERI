@@ -123,11 +123,16 @@ function CreatePresentationPage() {
   const [step1Error, setStep1Error] = useState("");
 
   // ── Time selecionado (quando usuário tem múltiplos times) ──
-  const userTeams = user?.teams ?? [];
+  // Apenas times onde o usuário pode criar (não puro-aprovador)
+  const userTeams = (user?.teams ?? []).filter((t) => !t.approver || t.areaManager);
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
-  // Inicializa com o primeiro time disponível
+  // Inicializa com teamId da URL (vindo do botão "Nova" no card do time) ou primeiro time
   useEffect(() => {
-    if (userTeams.length > 0 && !selectedTeamId) {
+    const urlTeamId = searchParams.get("teamId");
+    const validTeam = userTeams.find((t) => t.id === urlTeamId);
+    if (validTeam) {
+      setSelectedTeamId(validTeam.id);
+    } else if (userTeams.length > 0 && !selectedTeamId) {
       setSelectedTeamId(userTeams[0].id);
     }
   }, [userTeams]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -212,7 +217,7 @@ function CreatePresentationPage() {
         return;
       }
 
-      const resolvedTeamId = selectedTeamId || user.teams[0].id;
+      const resolvedTeamId = selectedTeamId || userTeams[0]?.id || user.teams[0].id;
       const teamId = parseInt(resolvedTeamId, 10);
       const userId = parseInt(user.id, 10);
 

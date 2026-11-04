@@ -22,6 +22,11 @@ export function isAdminAccessLevel(accessLevel: UserAccessLevel) {
 
 export function canCreatePresentations(user: AuthSessionUser | null) {
   if (!user) return false;
+  // Se tem times, pode criar se tiver ao menos um onde não é puro-aprovador
+  if (user.teams && user.teams.length > 0) {
+    return user.teams.some((t) => !t.approver || t.areaManager);
+  }
+  // Fallback: campo flat
   if (user.approver) return false;
   return true;
 }
