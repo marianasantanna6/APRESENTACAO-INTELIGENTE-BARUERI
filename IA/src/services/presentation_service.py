@@ -26,6 +26,43 @@ def _string_list(value: object, field: str) -> list[str]:
     return [item.strip() for item in value if item.strip()]
 
 
+def _source_relevance_terms(source: ResearchSource) -> set[str]:
+    text = " ".join(
+        part for part in (
+            source.title,
+            source.extract,
+            source.source_name or "",
+            source.identifier or "",
+            source.author or "",
+        ) if part
+    )
+    return {
+        token for token in re.findall(r"[a-z0-9]+", text.lower())
+        if len(token) >= 3
+    }
+
+
+def _infer_source_ids(slide_text: str, known_sources: dict[str, ResearchSource]) -> list[str]:
+    if not slide_text or not known_sources:
+        return []
+    slide_tokens = {
+        token for token in re.findall(r"[a-z0-9]+", slide_text.lower())
+        if len(token) >= 3
+    }
+    if not slide_tokens:
+        return []
+    scored = []
+    for source in known_sources.values():
+        source_tokens = _source_relevance_terms(source)
+        overlap = len(slide_tokens & source_tokens)
+        if overlap:
+            scored.append((source.id, overlap))
+    if not scored:
+        return []
+    return [source_id for source_id, _ in sorted(scored, key=lambda item: item[1], reverse=True)[:3]]
+
+
+
 def _source_ids(
     value: object, known_ids: set[str], slide_number: int
 ) -> tuple[list[str], list[str]]:
@@ -176,6 +213,32 @@ def validate_presentation(
             raw.get("fontes"), known_ids, slide_number
         )
         validation_limitations.extend(source_warnings)
+        if (
+            layout not in {"capa", "encerramento"}
+            and not source_ids
+            and (raw.get("fontes") is None or raw.get("fontes") == [])
+        ):
+            block_parts: list[str] = []
+            for block in raw.get("blocos") or []:
+                if isinstance(block, Mapping):
+                    block_parts.append(str(block.get("titulo") or ""))
+                    block_parts.extend(str(item) for item in block.get("pontos") or [])
+            slide_text = " ".join(
+                part for part in (
+                    raw.get("titulo"),
+                    raw.get("subtitulo"),
+                    raw.get("texto_apoio"),
+                    " ".join(raw.get("pontos") or []),
+                    " ".join(block_parts),
+                    " ".join(raw.get("tags") or []),
+                ) if isinstance(part, str) and part
+            )
+            inferred = _infer_source_ids(slide_text, canonical_sources)
+            if inferred:
+                source_ids = inferred
+                validation_limitations.append(
+                    f"Slide {slide_number + 1}: fontes foram associadas automaticamente com base em palavras-chave do conteúdo disponível."
+                )
         tags = _string_list(raw.get("tags"), f"slides[{slide_number}].tags")
         if len(tags) > max_tags:
             raise ValueError(f"O slide {slide_number + 1} excede o limite de {max_tags} tags.")

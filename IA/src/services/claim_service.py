@@ -75,6 +75,38 @@ def _verification_status(text: str, sources: Iterable[ResearchSource]) -> tuple[
     return "evidencia_insuficiente", evidence
 
 
+def _infer_source_ids(text: str, sources: Iterable[ResearchSource]) -> list[str]:
+    if not text:
+        return []
+    text_tokens = {
+        token for token in re.findall(r"[a-z0-9]+", normalized_text(text))
+        if len(token) >= 3
+    }
+    if not text_tokens:
+        return []
+    scored: list[tuple[str, int]] = []
+    for source in sources:
+        combined = " ".join(
+            part for part in (
+                source.title,
+                source.extract,
+                source.source_name or "",
+                source.identifier or "",
+                source.author or "",
+            ) if part
+        )
+        source_tokens = {
+            token for token in re.findall(r"[a-z0-9]+", normalized_text(combined))
+            if len(token) >= 3
+        }
+        overlap = len(text_tokens & source_tokens)
+        if overlap:
+            scored.append((source.id, overlap))
+    if not scored:
+        return []
+    return [source_id for source_id, _ in sorted(scored, key=lambda item: item[1], reverse=True)[:3]]
+
+
 def _claim(
     claim_id: str,
     text: str,
@@ -111,6 +143,20 @@ def build_claim_evidence(presentation: dict, sources: list[ResearchSource]) -> l
         source_ids = list(slide.get("fontes") or [])
         prefix = f"slide_{slide_index:02d}"
         support_text = slide.get("texto_apoio") or ""
+        if slide.get("tipo_layout") not in {"capa", "encerramento"} and not source_ids and slide.get("fontes") in (None, []):
+            block_points: list[str] = []
+            for block in slide.get("blocos") or []:
+                if isinstance(block, dict):
+                    block_points.extend(str(point) for point in block.get("pontos") or [])
+            slide_text = " ".join(
+                part for part in (
+                    str(slide.get("titulo") or ""),
+                    support_text,
+                    " ".join(str(point) for point in slide.get("pontos") or []),
+                    " ".join(block_points),
+                ) if part
+            )
+            source_ids = _infer_source_ids(slide_text, sources)
         if support_text:
             claims.append(_claim(f"{prefix}_apoio", support_text, source_ids, sources_by_id))
         for point_index, point in enumerate(slide.get("pontos") or [], start=1):
