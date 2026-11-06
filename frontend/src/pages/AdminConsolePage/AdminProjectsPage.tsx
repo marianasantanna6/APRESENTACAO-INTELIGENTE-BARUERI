@@ -115,8 +115,8 @@ function SectorCard({
       // Pure approver for this team → approval queue
       navigate(ROUTE_PATHS.teams);
     } else {
-      // Can create → wizard with this team pre-selected
-      navigate(`${ROUTE_PATHS.createPresentation}?teamId=${team.id}`);
+      // Can create → team detail page (shows existing projects + "Nova" button)
+      navigate(ROUTE_PATHS.teamDetail.replace(":teamId", team.id));
     }
   }
 

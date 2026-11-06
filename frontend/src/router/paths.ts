@@ -20,6 +20,7 @@ export const ROUTE_PATHS = {
   generatedPresentation: "/criar/resultado",
   analytics: "/analytics",
   teams: "/times",
+  teamDetail: "/time/:teamId",
   forgotPassword: "/recuperar-senha",
   resetPassword: "/redefinir-senha",
   help: "/ajuda",

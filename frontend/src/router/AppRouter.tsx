@@ -17,6 +17,7 @@ import { HelpPage } from "../pages/HelpPage";
 import LandingPage from "../pages/LandingPage";
 import LoginPage from "../pages/LoginPage";
 import { ResetPasswordPage } from "../pages/ResetPasswordPage";
+import TeamDetailPage from "../pages/TeamDetailPage/TeamDetailPage";
 import TeamsPage from "../pages/TeamsPage/TeamsPage";
 import {
   AdminRoute,
@@ -65,6 +66,10 @@ export function AppRouter() {
           <Route
             path={ROUTE_PATHS.settings}
             element={<AdminSettingsPage />}
+          />
+          <Route
+            path={ROUTE_PATHS.teamDetail}
+            element={<TeamDetailPage />}
           />
           <Route
             path={ROUTE_PATHS.adminProjects}
