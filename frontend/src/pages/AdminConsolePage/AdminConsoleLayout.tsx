@@ -332,13 +332,18 @@ function AdminConsoleLayoutContent() {
   const canSeeCreateFlow = canCreatePresentations(user);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
-  // Approvers can only access their profile and settings — render minimal layout
-  if (user?.approver) {
-    const allowedForApprover = [ROUTE_PATHS.myAccount, ROUTE_PATHS.settings];
-    if (!allowedForApprover.includes(location.pathname)) {
-      return <Navigate to={ROUTE_PATHS.teams} replace />;
+  // Pure approvers (no creator capability in any team) get the Teams Dashboard at /apresentacoes
+  // and the minimal layout for account/settings. Mixed users (approver + creator) get full layout.
+  const isStrictApproverOnly = user?.approver && !canSeeCreateFlow;
+  if (isStrictApproverOnly) {
+    const minimalPages: string[] = [ROUTE_PATHS.myAccount, ROUTE_PATHS.settings];
+    if (!minimalPages.includes(location.pathname) && location.pathname !== ROUTE_PATHS.presentations) {
+      return <Navigate to={ROUTE_PATHS.presentations} replace />;
     }
-    return <ApproverMinimalLayout />;
+    if (minimalPages.includes(location.pathname)) {
+      return <ApproverMinimalLayout />;
+    }
+    // Fall through to full layout for /apresentacoes (Teams Dashboard)
   }
 
   const activeHeaderItem =

@@ -1,838 +1,596 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  FiArchive,
   FiArrowRight,
-  FiCalendar,
   FiCheck,
-  FiFolder,
+  FiClock,
   FiGrid,
-  FiLayers,
-  FiLoader,
-  FiMonitor,
-  FiPlus,
-  FiTag,
+  FiSettings,
+  FiShield,
   FiUser,
   FiUsers,
   FiX,
   FiZap,
 } from "react-icons/fi";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth, useAdminConsole } from "../../context";
-import { canCreatePresentations } from "../../lib/accessControl";
-import { formatShortDate } from "../../lib/formatters";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { useAdminConsole } from "../../context/AdminConsoleContext";
 import { authFetch } from "../../lib/apiClient";
-import { presentationService } from "../../services/presentationService";
-import { projectService } from "../../services/projectService";
-import type { PresentationStatus, EventType } from "../../types/institutionalPresentation";
-import type { PresentationSummary } from "../../types/institutionalPresentation";
-import type { ProjectStatus, ProjectSummary } from "../../types/project";
 import type { AuthSessionUser } from "../../types/auth";
+import type { EmployeeDirectoryEntry, SetorEntry, TimeEntry } from "../../types/admin";
 import { ROUTE_PATHS } from "../../router/paths";
-import { buildPresentationSearchParams } from "../../router/presentationSearchParams";
 
-// ─── Metadados de exibição ────────────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────────────────
 
-const STATUS_CONFIG: Record<PresentationStatus | ProjectStatus, { label: string; cls: string }> = {
-  draft:    { label: "Rascunho",  cls: "bg-[#fef9c3] text-[#92400e]" },
-  active:   { label: "Ativo",     cls: "bg-[#dcfce7] text-[#166534]" },
-  archived: { label: "Arquivado", cls: "bg-[#f3f4f6] text-[#6b7280]" },
+type UserTeam = NonNullable<AuthSessionUser["teams"]>[number];
+
+type SectorGroup = {
+  sectorId: string;
+  sectorName: string;
+  teams: UserTeam[];
 };
 
-const EVENT_LABELS: Record<EventType, string> = {
-  "congresso":        "Congresso",
-  "visita-tecnica":   "Visita Técnica",
-  "premiacao":        "Premiação",
-  "reuniao-interna":  "Reunião Interna",
-  "feira":            "Feira / Expo",
-  "audiencia-publica": "Audiência Pública",
-  "outro":            "Outro",
-};
+type RoleEntry = { id: string; user: string; sector: string; team: string | null };
 
-type TabId = "minhas" | "projetos";
-type StatusFilter = "all" | ProjectStatus;
+// ─── Helpers ───────────────────────────────────────────────────────────────────
 
-type RawApiProject = {
-  id: string;
-  name: string;
-  short_description: string | null;
-  status: number;
-  main_department: string | null;
-  team: string;
-  last_update: string | null;
-  areas: string[];
-};
-
-function mapStatusNum(s: number): ProjectStatus {
-  if (s === 2) return "active";
-  if (s === 3) return "archived";
-  return "draft";
+function groupTeamsBySector(teams: UserTeam[]): SectorGroup[] {
+  const map = new Map<string, SectorGroup>();
+  for (const t of teams) {
+    if (!map.has(t.sectorId)) {
+      map.set(t.sectorId, { sectorId: t.sectorId, sectorName: t.sectorName, teams: [] });
+    }
+    map.get(t.sectorId)!.teams.push(t);
+  }
+  return Array.from(map.values());
 }
 
-const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: "all",      label: "Todos"     },
-  { value: "draft",    label: "Rascunho"  },
-  { value: "active",   label: "Ativo"     },
-  { value: "archived", label: "Arquivado" },
-];
-
-// ─── Componente principal ─────────────────────────────────────────────────────
+// ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function AdminProjectsPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const canCreate = canCreatePresentations(user);
-  const isHeadManager = !!(user?.head_manager || user?.master_admin);
+  const { setores, times, employees } = useAdminConsole();
 
-  const [activeTab, setActiveTab] = useState<TabId>("minhas");
-  const [presentations, setPresentations] = useState<PresentationSummary[]>([]);
-  const [allProjects, setAllProjects]       = useState<ProjectSummary[]>([]);
-  const [rawApiProjects, setRawApiProjects] = useState<RawApiProject[]>([]);
-  const [loadingPres, setLoadingPres]       = useState(true);
-  const [loadingRaw, setLoadingRaw]         = useState(false);
-  const [archivingId, setArchivingId]       = useState<string | null>(null);
-  const [approvingId, setApprovingId]       = useState<string | null>(null);
-  const [rejectingId, setRejectingId]       = useState<string | null>(null);
+  if (!user) return null;
+
+  if (user.head_manager) {
+    return <HeadManagerView setores={setores} times={times} employees={employees} />;
+  }
+
+  if (!user.teams || user.teams.length === 0) {
+    return <NoTeamsState />;
+  }
+
+  const sectors = groupTeamsBySector(user.teams);
+
+  return (
+    <div className="mx-auto max-w-5xl space-y-8">
+      <header>
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#4f84c4,#1675b8)]">
+            <FiGrid className="h-4.5 w-4.5 text-white" />
+          </div>
+          <h1 className="text-[1.5rem] font-bold text-[#1e1e1e]">Meus Times</h1>
+        </div>
+        <p className="mt-1.5 text-[0.88rem] text-[#6b7280]">
+          Selecione um time para criar ou aprovar apresentações.
+        </p>
+      </header>
+
+      <div className="space-y-6">
+        {sectors.map((sector) => (
+          <SectorCard
+            key={sector.sectorId}
+            sector={sector}
+            user={user}
+            employees={employees}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── SectorCard ────────────────────────────────────────────────────────────────
+
+function SectorCard({
+  sector,
+  user,
+  employees,
+}: {
+  sector: SectorGroup;
+  user: AuthSessionUser;
+  employees: EmployeeDirectoryEntry[];
+}) {
+  const navigate = useNavigate();
+  const [adminTeamId, setAdminTeamId] = useState<string | null>(null);
+
+  // Gear icon shows if user is head_manager, sectorManager, or areaManager in any team of this sector
+  const canAdmin =
+    user.head_manager ||
+    user.sectorManager ||
+    sector.teams.some((t) => t.areaManager);
+
+  function handleTeamClick(team: UserTeam) {
+    if (team.approver && !team.areaManager) {
+      // Pure approver for this team → approval queue
+      navigate(ROUTE_PATHS.teams);
+    } else {
+      // Can create → wizard with this team pre-selected
+      navigate(`${ROUTE_PATHS.createPresentation}?teamId=${team.id}`);
+    }
+  }
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-[#e0eaf3] bg-white shadow-[0_2px_12px_rgba(20,33,51,0.06)]">
+      {/* Sector header */}
+      <div className="flex items-center justify-between bg-[linear-gradient(135deg,#f0f7ff,#e8f4fb)] px-6 py-4">
+        <div>
+          <h2 className="text-[1.1rem] font-bold text-[#1e1e1e]">{sector.sectorName}</h2>
+          <p className="mt-0.5 text-[0.8rem] text-[#6b7280]">
+            {sector.teams.length} {sector.teams.length === 1 ? "time" : "times"}
+          </p>
+        </div>
+        {canAdmin && (
+          <button
+            type="button"
+            onClick={() => setAdminTeamId(sector.teams[0]?.id ?? null)}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#c9dff0] bg-white text-[#4f84c4] shadow-[0_2px_8px_rgba(79,132,196,0.15)] transition hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(79,132,196,0.25)]"
+            title="Administrar setor"
+            aria-label={`Administrar ${sector.sectorName}`}
+          >
+            <FiSettings className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Teams grid */}
+      <div className="p-6">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {sector.teams.map((team) => (
+            <TeamSquare
+              key={team.id}
+              team={team}
+              onClick={() => handleTeamClick(team)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Admin modal */}
+      {adminTeamId !== null && (
+        <SectorAdminModal
+          sector={sector}
+          initialTeamId={adminTeamId}
+          user={user}
+          employees={employees}
+          onClose={() => setAdminTeamId(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── TeamSquare ────────────────────────────────────────────────────────────────
+
+function TeamSquare({ team, onClick }: { team: UserTeam; onClick: () => void }) {
+  const isApproverOnly = team.approver && !team.areaManager;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex flex-col items-center rounded-xl border border-[#e0eaf3] bg-[#f8fafd] p-4 text-center transition-all hover:-translate-y-0.5 hover:border-[#4f84c4] hover:bg-white hover:shadow-[0_6px_20px_rgba(79,132,196,0.15)] focus:outline-none focus:ring-2 focus:ring-[#4f84c4]/30"
+    >
+      {/* Icon background */}
+      <div
+        className={`mb-3 flex h-11 w-11 items-center justify-center rounded-xl ${
+          isApproverOnly
+            ? "bg-[linear-gradient(135deg,#dbeafe,#bfdbfe)]"
+            : team.areaManager
+            ? "bg-[linear-gradient(135deg,#dcfce7,#bbf7d0)]"
+            : "bg-[linear-gradient(135deg,#f1f5f9,#e2e8f0)]"
+        }`}
+      >
+        <FiUsers
+          className={`h-5 w-5 ${
+            isApproverOnly
+              ? "text-[#1d4ed8]"
+              : team.areaManager
+              ? "text-[#15803d]"
+              : "text-[#475569]"
+          }`}
+        />
+      </div>
+
+      {/* Team name */}
+      <span className="mb-2 text-[0.88rem] font-semibold leading-tight text-[#1e1e1e]">
+        {team.name}
+      </span>
+
+      {/* Role badge */}
+      {team.areaManager ? (
+        <span className="mb-2 inline-flex items-center gap-1 rounded-full bg-[#dcfce7] px-2 py-0.5 text-[0.72rem] font-semibold text-[#15803d]">
+          <FiShield className="h-3 w-3" />
+          Gerente
+        </span>
+      ) : team.approver ? (
+        <span className="mb-2 inline-flex items-center gap-1 rounded-full bg-[#dbeafe] px-2 py-0.5 text-[0.72rem] font-semibold text-[#1d4ed8]">
+          <FiCheck className="h-3 w-3" />
+          Aprovador
+        </span>
+      ) : (
+        <span className="mb-2 inline-flex items-center gap-1 rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[0.72rem] font-semibold text-[#475569]">
+          <FiUser className="h-3 w-3" />
+          Membro
+        </span>
+      )}
+
+      {/* Action hint */}
+      <span className="inline-flex items-center gap-1 text-[0.75rem] text-[#9ca3af] group-hover:text-[#4f84c4]">
+        {isApproverOnly ? (
+          <>
+            <FiClock className="h-3 w-3" />
+            Aprovar
+          </>
+        ) : (
+          <>
+            <FiZap className="h-3 w-3" />
+            Criar
+          </>
+        )}
+        <FiArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+      </span>
+    </button>
+  );
+}
+
+// ─── SectorAdminModal ──────────────────────────────────────────────────────────
+
+function SectorAdminModal({
+  sector,
+  initialTeamId,
+  user,
+  employees,
+  onClose,
+}: {
+  sector: SectorGroup;
+  initialTeamId: string;
+  user: AuthSessionUser;
+  employees: EmployeeDirectoryEntry[];
+  onClose: () => void;
+}) {
+  const [selectedTeamId, setSelectedTeamId] = useState(initialTeamId);
+  const [roles, setRoles] = useState<RoleEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Teams this user can manage
+  const manageableTeams = user.head_manager || user.sectorManager
+    ? sector.teams
+    : sector.teams.filter((t) => t.areaManager);
+
+  const selectedTeamName = sector.teams.find((t) => t.id === selectedTeamId)?.name ?? "";
 
   useEffect(() => {
-    if (!user) return;
-    setLoadingPres(true);
-    presentationService.getPresentationsByUser(user.id)
-      .then(setPresentations)
-      .finally(() => setLoadingPres(false));
-  }, [user]);
-
-  const reloadProjects = useCallback(() => {
-    projectService.getProjects().then(setAllProjects);
+    setLoading(true);
+    setError(null);
+    authFetch("/api/users-role")
+      .then((r) => (r.ok ? (r.json() as Promise<RoleEntry[]>) : Promise.resolve([])))
+      .then(setRoles)
+      .catch(() => setError("Erro ao carregar membros."))
+      .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { reloadProjects(); }, [reloadProjects]);
-
-  useEffect(() => {
-    if (!user) return;
-    if (rawApiProjects.length > 0) return;
-    setLoadingRaw(true);
-    authFetch("/api/projects")
-      .then((r) => r.ok ? r.json() as Promise<RawApiProject[]> : Promise.resolve([]))
-      .then(setRawApiProjects)
-      .catch(() => {})
-      .finally(() => setLoadingRaw(false));
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  function isApproverForTeam(teamId: string | undefined): boolean {
-    if (!teamId || !user) return false;
-    return user.teams?.some((t) => t.id === teamId && t.approver) ?? false;
-  }
-
-  const projectMap = useMemo(
-    () => new Map(allProjects.map((p) => [p.id, p.name])),
-    [allProjects],
+  const teamRoles = useMemo(
+    () => roles.filter((r) => r.team === selectedTeamId),
+    [roles, selectedTeamId],
   );
 
-  async function handleArchive(id: string) {
-    setArchivingId(id);
-    try { await projectService.archiveProject(id); } catch { /* silent */ }
-    reloadProjects();
-    setArchivingId(null);
-    setRawApiProjects([]);
-  }
-
-  async function handleApprove(id: string) {
-    setApprovingId(id);
-    try { await projectService.approveProject(id); } catch { /* silent */ }
-    reloadProjects();
-    setApprovingId(null);
-    setRawApiProjects([]);
-  }
-
-  async function handleReject(id: string) {
-    setRejectingId(id);
-    try { await projectService.rejectProject(id); } catch { /* silent */ }
-    reloadProjects();
-    setRejectingId(null);
-    setRawApiProjects([]);
-  }
-
-  const tabs: { id: TabId; label: string; count?: number }[] = [
-    { id: "minhas",   label: "Minhas Apresentações", count: presentations.length },
-    { id: "projetos", label: "Projetos Institucionais" },
-  ];
-
-  return (
-    <section>
-      {/* Cabeçalho */}
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="page-title text-[2.2rem] font-extrabold tracking-[-0.05em] text-[#1e1e1e] sm:text-[2.8rem]">
-            {activeTab === "minhas" ? "Minhas Apresentações" : "Projetos Institucionais"}
-          </h1>
-          <p className="page-subtitle mt-1 text-[1rem] font-medium text-[#878787]">
-            {activeTab === "minhas"
-              ? (loadingPres ? "Carregando…" : `${presentations.length} ${presentations.length !== 1 ? "apresentações" : "apresentação"}`)
-              : (isHeadManager ? "Visão geral de todos os setores e times" : "Projetos dos seus times")}
-          </p>
-        </div>
-
-        {canCreate && (
-          <Link
-            to={ROUTE_PATHS.createPresentation}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[linear-gradient(90deg,#7fb4db_0%,#6ea7d4_100%)] px-5 text-[0.98rem] font-semibold !text-white shadow-[0_10px_24px_rgba(103,156,203,0.26)] transition hover:-translate-y-0.5"
-          >
-            <FiPlus className="h-4.5 w-4.5 !text-white" />
-            <span className="!text-white">Nova Apresentação</span>
-          </Link>
-        )}
-      </div>
-
-      {/* Abas */}
-      <div className="mb-6 flex gap-1 rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-1">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[0.92rem] font-semibold transition ${
-              activeTab === tab.id
-                ? "bg-white text-[#1e1e1e] shadow-[0_1px_4px_rgba(20,33,51,0.10)]"
-                : "text-[#6b7280] hover:text-[#374151]"
-            }`}
-          >
-            {tab.id === "minhas" ? <FiMonitor className="h-4 w-4" /> : <FiLayers className="h-4 w-4" />}
-            {tab.label}
-            {tab.count !== undefined && tab.count > 0 && (
-              <span className={`rounded-full px-2 py-0.5 text-[0.72rem] font-bold ${
-                activeTab === tab.id ? "bg-[#eff6ff] text-[#1675b8]" : "bg-[#e5e7eb] text-[#6b7280]"
-              }`}>
-                {tab.count}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Aba Minhas Apresentações */}
-      {activeTab === "minhas" && (
-        <MinhasTab
-          loading={loadingPres}
-          presentations={presentations}
-          projectMap={projectMap}
-          canCreate={canCreate}
-          onOpen={(pres) => {
-            const params = buildPresentationSearchParams({
-              query: pres.eventName,
-              category: pres.title,
-              year: "Todos",
-            });
-            params.set("pid", pres.id);
-            navigate(`${ROUTE_PATHS.generatedPresentation}?${params.toString()}`);
-          }}
-        />
-      )}
-
-      {/* Aba Projetos Institucionais */}
-      {activeTab === "projetos" && (
-        isHeadManager
-          ? (
-            <HeadManagerProjectsView
-              rawProjects={rawApiProjects}
-              loading={loadingRaw}
-            />
-          )
-          : (
-            <UserTeamsView
-              user={user}
-              rawProjects={rawApiProjects}
-              loading={loadingRaw}
-              isApproverForTeam={isApproverForTeam}
-              archivingId={archivingId}
-              approvingId={approvingId}
-              rejectingId={rejectingId}
-              onArchive={handleArchive}
-              onApprove={handleApprove}
-              onReject={handleReject}
-            />
-          )
-      )}
-    </section>
+  const teamMembers = useMemo(
+    () =>
+      teamRoles.map((r) => {
+        const emp = employees.find((e) => e.id === r.user);
+        return {
+          roleId: r.id,
+          userId: r.user,
+          name: emp?.name ?? `Usuário #${r.user}`,
+          email: emp?.email ?? "",
+        };
+      }),
+    [teamRoles, employees],
   );
-}
 
-// ─── Aba Minhas Apresentações ─────────────────────────────────────────────────
-
-function MinhasTab({
-  loading,
-  presentations,
-  projectMap,
-  canCreate,
-  onOpen,
-}: {
-  loading: boolean;
-  presentations: PresentationSummary[];
-  projectMap: Map<string, string>;
-  canCreate: boolean;
-  onOpen: (p: PresentationSummary) => void;
-}) {
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <FiLoader className="h-8 w-8 animate-spin text-[#1675b8]" />
-      </div>
-    );
-  }
-
-  if (presentations.length === 0) {
-    return (
-      <div className="flex flex-col items-center gap-5 rounded-[24px] border border-dashed border-[#d1d5db] bg-[#f9fafb] py-20 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#eff6ff]">
-          <FiMonitor className="h-7 w-7 text-[#1675b8]" />
-        </div>
-        <div>
-          <p className="text-[1.05rem] font-semibold text-[#374151]">Nenhuma apresentação ainda</p>
-          <p className="mt-1 text-[0.9rem] text-[#9ca3af]">
-            Crie sua primeira apresentação inteligente com projetos e indicadores.
-          </p>
-        </div>
-        {canCreate && (
-          <Link
-            to={ROUTE_PATHS.createPresentation}
-            className="inline-flex items-center gap-2 rounded-full bg-[#1675b8] px-5 py-2.5 text-[0.94rem] font-bold text-white shadow-[0_8px_20px_-8px_rgba(22,117,184,0.5)] transition hover:-translate-y-0.5"
-          >
-            <FiPlus className="h-4 w-4" /> Criar apresentação
-          </Link>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid gap-6 xl:grid-cols-2">
-      {presentations.map((pres) => (
-        <PresentationCard
-          key={pres.id}
-          presentation={pres}
-          projectMap={projectMap}
-          onOpen={() => onOpen(pres)}
-        />
-      ))}
-    </div>
-  );
-}
-
-// ─── View por times do usuário ────────────────────────────────────────────────
-
-function UserTeamsView({
-  user,
-  rawProjects,
-  loading,
-  isApproverForTeam,
-  archivingId,
-  approvingId,
-  rejectingId,
-  onArchive,
-  onApprove,
-  onReject,
-}: {
-  user: AuthSessionUser | null;
-  rawProjects: RawApiProject[];
-  loading: boolean;
-  isApproverForTeam: (teamId: string | undefined) => boolean;
-  archivingId: string | null;
-  approvingId: string | null;
-  rejectingId: string | null;
-  onArchive: (id: string) => void;
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
-}) {
-  const teams = user?.teams ?? [];
-
-  const byTeam = useMemo(() => {
-    const map = new Map<string, RawApiProject[]>();
-    for (const p of rawProjects) {
-      if (!p.team) continue;
-      const list = map.get(p.team) ?? [];
-      list.push(p);
-      map.set(p.team, list);
+  async function handleRemove(roleId: string) {
+    setRemovingId(roleId);
+    setError(null);
+    try {
+      const res = await authFetch(`/api/users-role/${roleId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { message?: string };
+        setError(err.message ?? "Erro ao remover membro.");
+        return;
+      }
+      setRoles((prev) => prev.filter((r) => r.id !== roleId));
+    } catch {
+      setError("Erro ao remover membro.");
+    } finally {
+      setRemovingId(null);
     }
-    return map;
-  }, [rawProjects]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <FiLoader className="h-8 w-8 animate-spin text-[#1675b8]" />
-      </div>
-    );
-  }
-
-  if (teams.length === 0) {
-    return (
-      <div className="flex flex-col items-center gap-4 rounded-[24px] border border-dashed border-[#d1d5db] bg-[#f9fafb] py-20 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f3f4f6]">
-          <FiUsers className="h-7 w-7 text-[#9ca3af]" />
-        </div>
-        <div>
-          <p className="text-[1.05rem] font-semibold text-[#374151]">
-            Você não está associado a nenhum time
-          </p>
-          <p className="mt-1 text-[0.9rem] text-[#9ca3af]">
-            Entre em contato com seu administrador para ser incluído em um time.
-          </p>
-        </div>
-      </div>
-    );
   }
 
   return (
-    <div className="space-y-6">
-      {teams.map((team) => {
-        const projects = byTeam.get(team.id) ?? [];
-        const canApprove = isApproverForTeam(team.id);
-        const canCreate = !team.approver || team.areaManager;
-
-        return (
-          <TeamSection
-            key={team.id}
-            teamId={team.id}
-            teamName={team.name}
-            sectorName={team.sectorName}
-            canApprove={canApprove}
-            canCreate={canCreate}
-            isApprover={team.approver}
-            isManager={team.areaManager}
-            projects={projects}
-            archivingId={archivingId}
-            approvingId={approvingId}
-            rejectingId={rejectingId}
-            onArchive={onArchive}
-            onApprove={onApprove}
-            onReject={onReject}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── View head_manager (setor → time → projetos) ──────────────────────────────
-
-function HeadManagerProjectsView({
-  rawProjects,
-  loading,
-}: {
-  rawProjects: RawApiProject[];
-  loading: boolean;
-}) {
-  const { setores, times } = useAdminConsole();
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-
-  const filtered = useMemo(
-    () => statusFilter === "all" ? rawProjects : rawProjects.filter((p) => mapStatusNum(p.status) === statusFilter),
-    [rawProjects, statusFilter],
-  );
-
-  const byTeam = useMemo(() => {
-    const map = new Map<string, RawApiProject[]>();
-    for (const p of filtered) {
-      if (!p.team) continue;
-      const list = map.get(p.team) ?? [];
-      list.push(p);
-      map.set(p.team, list);
-    }
-    return map;
-  }, [filtered]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <FiLoader className="h-8 w-8 animate-spin text-[#1675b8]" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-8">
-      {/* Filtro de status */}
-      <div className="flex flex-wrap gap-2">
-        {STATUS_FILTER_OPTIONS.map((opt) => (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-[#142133]/40 backdrop-blur-[2px]" />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Gerenciar membros — ${sector.sectorName}`}
+        className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(20,33,51,0.24)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#e8e9f0] px-6 py-4">
+          <div>
+            <h3 className="text-[1.05rem] font-bold text-[#1e1e1e]">{sector.sectorName}</h3>
+            <p className="text-[0.82rem] text-[#6b7280]">Gerenciar membros dos times</p>
+          </div>
           <button
-            key={opt.value}
             type="button"
-            onClick={() => setStatusFilter(opt.value)}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[0.8rem] font-semibold transition ${
-              statusFilter === opt.value
-                ? "bg-[#1e3a52] text-white"
-                : "bg-[#f0f2f4] text-[#6a7a88] hover:bg-[#e4e8ec]"
-            }`}
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-[#e8e9f0] text-[#6b7280] transition hover:bg-[#f3f4f6]"
+            aria-label="Fechar"
           >
-            {opt.label}
-            {opt.value !== "all" && (
-              <span className={`rounded-full px-1.5 py-0.5 text-[0.68rem] font-bold ${
-                statusFilter === opt.value ? "bg-white/20 text-white" : "bg-white text-[#6a7a88]"
-              }`}>
-                {filtered.filter((p) => mapStatusNum(p.status) === opt.value).length}
-              </span>
-            )}
+            <FiX className="h-4 w-4" />
           </button>
-        ))}
-      </div>
+        </div>
 
-      {setores.map((setor) => {
-        const sectorTimes = times.filter((t) => t.secretariaId === setor.id);
-        if (sectorTimes.length === 0) return null;
-
-        const sectorTotal = sectorTimes.reduce((acc, t) => acc + (byTeam.get(t.id)?.length ?? 0), 0);
-
-        return (
-          <div key={setor.id} className="space-y-4">
-            {/* Cabeçalho do setor */}
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-[#1e3a52]">
-                <FiGrid className="h-4.5 w-4.5 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="text-[1.05rem] font-bold text-[#1e1e1e]">{setor.nome}</h2>
-                <p className="text-[0.78rem] text-[#9ca3af]">{sectorTimes.length} {sectorTimes.length !== 1 ? "times" : "time"} · {sectorTotal} {sectorTotal !== 1 ? "projetos" : "projeto"}</p>
-              </div>
-            </div>
-
-            {/* Times do setor */}
-            <div className="space-y-3 pl-3 border-l-2 border-[#e5e7eb]">
-              {sectorTimes.map((time) => {
-                const projects = byTeam.get(time.id) ?? [];
-                return (
-                  <div key={time.id} className="rounded-[16px] border border-[#e5e7eb] bg-white overflow-hidden">
-                    <div className="flex items-center gap-3 px-4 py-3 border-b border-[#f3f4f6]">
-                      <FiUsers className="h-4 w-4 shrink-0 text-[#1675b8]" />
-                      <span className="flex-1 text-[0.9rem] font-semibold text-[#1e1e1e]">{time.nome}</span>
-                      <span className="rounded-full bg-[#eff6ff] px-2.5 py-0.5 text-[0.72rem] font-bold text-[#1675b8]">
-                        {projects.length} {projects.length !== 1 ? "projetos" : "projeto"}
-                      </span>
-                    </div>
-                    {projects.length === 0 ? (
-                      <div className="flex items-center justify-center gap-2 py-5 text-[0.84rem] text-[#9ca3af]">
-                        <FiFolder className="h-4 w-4" />
-                        Nenhum projeto
-                      </div>
-                    ) : (
-                      <div className="grid gap-3 p-4 xl:grid-cols-2">
-                        {projects.map((p) => (
-                          <TeamProjectCard
-                            key={p.id}
-                            project={p}
-                            canApprove={false}
-                            archiving={false}
-                            approving={false}
-                            rejecting={false}
-                            onArchive={() => {}}
-                            onApprove={() => {}}
-                            onReject={() => {}}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+        {/* Team selector */}
+        {manageableTeams.length > 1 && (
+          <div className="border-b border-[#e8e9f0] px-6 py-3">
+            <div className="flex gap-2 overflow-x-auto pb-0.5">
+              {manageableTeams.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setSelectedTeamId(t.id)}
+                  className={`shrink-0 rounded-full px-3 py-1.5 text-[0.82rem] font-medium transition ${
+                    selectedTeamId === t.id
+                      ? "bg-[#1675b8] text-white"
+                      : "border border-[#e0eaf3] text-[#6b7280] hover:border-[#1675b8] hover:text-[#1675b8]"
+                  }`}
+                >
+                  {t.name}
+                </button>
+              ))}
             </div>
           </div>
-        );
-      })}
+        )}
 
-      {setores.length === 0 && (
-        <div className="flex flex-col items-center gap-4 rounded-[24px] border border-dashed border-[#d1d5db] bg-[#f9fafb] py-20 text-center">
-          <FiLayers className="h-8 w-8 text-[#9ca3af]" />
-          <p className="text-[1rem] font-semibold text-[#374151]">Carregando estrutura organizacional…</p>
+        {/* Members list */}
+        <div className="max-h-72 overflow-y-auto px-6 py-4">
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <span className="text-[0.88rem] text-[#9ca3af]">Carregando membros...</span>
+            </div>
+          ) : teamMembers.length === 0 ? (
+            <div className="flex flex-col items-center py-8 text-center">
+              <FiUsers className="mb-2 h-8 w-8 text-[#d1d5db]" />
+              <p className="text-[0.88rem] text-[#6b7280]">
+                Nenhum membro em <strong>{selectedTeamName}</strong>
+              </p>
+            </div>
+          ) : (
+            <ul className="space-y-2" aria-label="Membros do time">
+              {teamMembers.map((m) => (
+                <li
+                  key={m.roleId}
+                  className="flex items-center justify-between rounded-xl border border-[#e8e9f0] px-4 py-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f1f5f9] text-[#475569]">
+                      <FiUser className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-[0.88rem] font-semibold text-[#1e1e1e]">{m.name}</p>
+                      {m.email && (
+                        <p className="text-[0.76rem] text-[#9ca3af]">{m.email}</p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={removingId === m.roleId}
+                    onClick={() => handleRemove(m.roleId)}
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[#9ca3af] transition hover:bg-[#fee2e2] hover:text-[#b91c1c] disabled:opacity-50"
+                    title="Remover do time"
+                    aria-label={`Remover ${m.name} do time`}
+                  >
+                    <FiX className="h-3.5 w-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {error && (
+            <p className="mt-3 text-[0.82rem] text-[#b91c1c]">{error}</p>
+          )}
         </div>
-      )}
+
+        {/* Footer note */}
+        <div className="border-t border-[#e8e9f0] px-6 py-3">
+          <p className="text-[0.76rem] text-[#9ca3af]">
+            Remover um membro não desativa a conta, apenas remove a associação ao time.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
 
-// ─── Seção de um time ─────────────────────────────────────────────────────────
+// ─── HeadManagerView ───────────────────────────────────────────────────────────
 
-function TeamSection({
-  teamId,
-  teamName,
-  sectorName,
-  canApprove,
-  canCreate,
-  isApprover,
-  isManager,
-  projects,
-  archivingId,
-  approvingId,
-  rejectingId,
-  onArchive,
-  onApprove,
-  onReject,
+function HeadManagerView({
+  setores,
+  times,
+  employees,
 }: {
-  teamId: string;
-  teamName: string;
-  sectorName: string;
-  canApprove: boolean;
-  canCreate: boolean;
-  isApprover: boolean;
-  isManager: boolean;
-  projects: RawApiProject[];
-  archivingId: string | null;
-  approvingId: string | null;
-  rejectingId: string | null;
-  onArchive: (id: string) => void;
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
+  setores: SetorEntry[];
+  times: TimeEntry[];
+  employees: EmployeeDirectoryEntry[];
 }) {
-  return (
-    <section className="rounded-[20px] border border-[#e5e7eb] bg-white shadow-[0_2px_12px_rgba(20,33,51,0.05)]">
-      {/* Cabeçalho */}
-      <div className="flex items-center gap-3 border-b border-[#f3f4f6] px-5 py-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eff6ff]">
-          <FiUsers className="h-5 w-5 text-[#1675b8]" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h2 className="text-[1rem] font-bold text-[#1e1e1e]">{teamName}</h2>
-          <p className="text-[0.8rem] text-[#9ca3af]">{sectorName}</p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-          {/* Badge do papel do usuário */}
-          {isManager && (
-            <span className="rounded-full bg-[#d1fae5] px-2.5 py-0.5 text-[0.7rem] font-bold text-[#065f46]">
-              Gerente
-            </span>
-          )}
-          {isApprover && (
-            <span className="rounded-full bg-[#dbeafe] px-2.5 py-0.5 text-[0.7rem] font-bold text-[#1d4ed8]">
-              Aprovador
-            </span>
-          )}
-          {!isManager && !isApprover && (
-            <span className="rounded-full bg-[#f3f4f6] px-2.5 py-0.5 text-[0.7rem] font-bold text-[#6b7280]">
-              Membro
-            </span>
-          )}
-          <span className="rounded-full bg-[#eff6ff] px-3 py-1 text-[0.76rem] font-bold text-[#1675b8]">
-            {projects.length} {projects.length !== 1 ? "projetos" : "projeto"}
-          </span>
-          {canCreate && (
-            <Link
-              to={`${ROUTE_PATHS.createPresentation}?teamId=${teamId}`}
-              className="inline-flex items-center gap-1 rounded-full bg-[#1675b8] px-3 py-1 text-[0.74rem] font-semibold text-white transition hover:bg-[#1255a0]"
-            >
-              <FiPlus className="h-3.5 w-3.5" />
-              Nova
-            </Link>
-          )}
-        </div>
-      </div>
+  const sectorGroups = useMemo(
+    () =>
+      setores
+        .map((s) => ({
+          sectorId: s.id,
+          sectorName: s.nome,
+          teams: times
+            .filter((t) => t.secretariaId === s.id)
+            .map((t) => ({
+              id: t.id,
+              name: t.nome,
+              sectorId: s.id,
+              sectorName: s.nome,
+              areaManager: false,
+              approver: false,
+            })),
+        }))
+        .filter((s) => s.teams.length > 0),
+    [setores, times],
+  );
 
-      {/* Projetos */}
-      {projects.length === 0 ? (
-        <div className="flex items-center justify-center gap-3 py-8 text-[0.88rem] text-[#9ca3af]">
-          <FiFolder className="h-5 w-5" />
-          Nenhum projeto neste time
+  // Fake head_manager user for the modal
+  const fakeUser = useMemo(
+    () => ({ head_manager: true } as AuthSessionUser),
+    [],
+  );
+
+  return (
+    <div className="mx-auto max-w-5xl space-y-8">
+      <header>
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#f59e0b,#d97706)]">
+            <FiShield className="h-4.5 w-4.5 text-white" />
+          </div>
+          <h1 className="text-[1.5rem] font-bold text-[#1e1e1e]">Visão Geral</h1>
+        </div>
+        <p className="mt-1.5 text-[0.88rem] text-[#6b7280]">
+          Todos os setores e times da organização.
+        </p>
+      </header>
+
+      {sectorGroups.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <FiGrid className="mb-4 h-10 w-10 text-[#d1d5db]" />
+          <p className="text-[0.88rem] text-[#6b7280]">
+            Nenhum setor ou time cadastrado ainda.
+          </p>
         </div>
       ) : (
-        <div className="grid gap-4 p-5 xl:grid-cols-2">
-          {projects.map((p) => (
-            <TeamProjectCard
-              key={p.id}
-              project={p}
-              canApprove={canApprove}
-              archiving={archivingId === p.id}
-              approving={approvingId === p.id}
-              rejecting={rejectingId === p.id}
-              onArchive={() => onArchive(p.id)}
-              onApprove={() => onApprove(p.id)}
-              onReject={() => onReject(p.id)}
+        <div className="space-y-6">
+          {sectorGroups.map((sector) => (
+            <HeadManagerSectorCard
+              key={sector.sectorId}
+              sector={sector}
+              fakeUser={fakeUser}
+              employees={employees}
             />
           ))}
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
-// ─── Card de projeto (dentro de time) ────────────────────────────────────────
+type HeadSectorGroup = {
+  sectorId: string;
+  sectorName: string;
+  teams: UserTeam[];
+};
 
-function TeamProjectCard({
-  project: p,
-  canApprove,
-  archiving,
-  approving,
-  rejecting,
-  onArchive,
-  onApprove,
-  onReject,
+function HeadManagerSectorCard({
+  sector,
+  fakeUser,
+  employees,
 }: {
-  project: RawApiProject;
-  canApprove: boolean;
-  archiving: boolean;
-  approving: boolean;
-  rejecting: boolean;
-  onArchive: () => void;
-  onApprove: () => void;
-  onReject: () => void;
+  sector: HeadSectorGroup;
+  fakeUser: AuthSessionUser;
+  employees: EmployeeDirectoryEntry[];
 }) {
-  const status = mapStatusNum(p.status);
-  const st = STATUS_CONFIG[status] ?? STATUS_CONFIG.draft;
-  const busy = archiving || approving || rejecting;
+  const [adminTeamId, setAdminTeamId] = useState<string | null>(null);
 
   return (
-    <div className="flex flex-col gap-2 rounded-[14px] border border-[#f0f2f4] bg-[#f9fafb] p-4">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.72rem] font-bold ${st.cls}`}>
-          {st.label}
-        </span>
-        {p.areas[0] && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-[0.72rem] font-semibold text-[#475569]">
-            <FiTag className="h-3 w-3" />
-            {p.areas[0]}
-          </span>
-        )}
-      </div>
-      <h3 className="text-[0.95rem] font-bold leading-snug text-[#1e1e1e]">{p.name}</h3>
-      {p.short_description && (
-        <p className="line-clamp-2 text-[0.82rem] text-[#6b7280] leading-snug">{p.short_description}</p>
-      )}
-      <div className="flex items-center gap-3 pt-1 text-[0.76rem] text-[#9ca3af]">
-        {p.main_department && (
-          <span className="flex items-center gap-1.5">
-            <FiUsers className="h-3.5 w-3.5" />
-            {p.main_department}
-          </span>
-        )}
-        {p.last_update && (
-          <span className="flex items-center gap-1.5">
-            <FiCalendar className="h-3.5 w-3.5" />
-            {formatShortDate(p.last_update)}
-          </span>
-        )}
+    <div className="overflow-hidden rounded-2xl border border-[#e0eaf3] bg-white shadow-[0_2px_12px_rgba(20,33,51,0.06)]">
+      {/* Header — amber tint for head_manager */}
+      <div className="flex items-center justify-between bg-[linear-gradient(135deg,#fffbeb,#fef3c7)] px-6 py-4">
+        <div>
+          <h2 className="text-[1.1rem] font-bold text-[#1e1e1e]">{sector.sectorName}</h2>
+          <p className="mt-0.5 text-[0.8rem] text-[#6b7280]">
+            {sector.teams.length} {sector.teams.length === 1 ? "time" : "times"}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setAdminTeamId(sector.teams[0]?.id ?? null)}
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-[#fde68a] bg-white text-[#d97706] shadow-[0_2px_8px_rgba(217,119,6,0.15)] transition hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(217,119,6,0.25)]"
+          title={`Administrar ${sector.sectorName}`}
+          aria-label={`Administrar ${sector.sectorName}`}
+        >
+          <FiSettings className="h-4 w-4" />
+        </button>
       </div>
 
-      {canApprove && (
-        <div className="flex gap-2 pt-1 flex-wrap">
-          {status === "draft" && (
-            <>
-              <button type="button" onClick={onApprove} disabled={busy}
-                className="inline-flex items-center gap-1.5 rounded-full bg-[#dcfce7] px-3 py-1 text-[0.74rem] font-semibold text-[#166534] transition hover:bg-[#bbf7d0] disabled:opacity-50">
-                {approving ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiCheck className="h-3.5 w-3.5" />}
-                Aprovar
-              </button>
-              <button type="button" onClick={onReject} disabled={busy}
-                className="inline-flex items-center gap-1.5 rounded-full bg-[#fee2e2] px-3 py-1 text-[0.74rem] font-semibold text-[#991b1b] transition hover:bg-[#fecaca] disabled:opacity-50">
-                {rejecting ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiX className="h-3.5 w-3.5" />}
-                Rejeitar
-              </button>
-            </>
-          )}
-          {status === "active" && (
-            <button type="button" onClick={onArchive} disabled={busy}
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#fff7ed] px-3 py-1 text-[0.74rem] font-semibold text-[#c2410c] transition hover:bg-[#ffedd5] disabled:opacity-50">
-              {archiving ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiArchive className="h-3.5 w-3.5" />}
-              Arquivar
-            </button>
-          )}
+      {/* Teams grid — read-only display for head_manager */}
+      <div className="p-6">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {sector.teams.map((team) => (
+            <div
+              key={team.id}
+              className="flex flex-col items-center rounded-xl border border-[#e0eaf3] bg-[#f8fafd] p-4 text-center"
+            >
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#fef3c7,#fde68a)]">
+                <FiUsers className="h-5 w-5 text-[#92400e]" />
+              </div>
+              <span className="text-[0.88rem] font-semibold leading-tight text-[#1e1e1e]">
+                {team.name}
+              </span>
+            </div>
+          ))}
         </div>
+      </div>
+
+      {adminTeamId !== null && (
+        <SectorAdminModal
+          sector={sector}
+          initialTeamId={adminTeamId}
+          user={fakeUser}
+          employees={employees}
+          onClose={() => setAdminTeamId(null)}
+        />
       )}
     </div>
   );
 }
 
-// ─── Card de apresentação ─────────────────────────────────────────────────────
+// ─── Empty state ───────────────────────────────────────────────────────────────
 
-function PresentationCard({
-  presentation: p,
-  projectMap,
-  onOpen,
-}: {
-  presentation: PresentationSummary;
-  projectMap: Map<string, string>;
-  onOpen: () => void;
-}) {
-  const navigate = useNavigate();
-  const status = STATUS_CONFIG[p.status] ?? STATUS_CONFIG.draft;
-  const eventLabel = EVENT_LABELS[p.eventType] ?? p.eventType;
-
-  const projectNames = p.selectedProjects
-    .map((id) => projectMap.get(id))
-    .filter(Boolean) as string[];
-  const shownProjects = projectNames.slice(0, 3);
-  const hiddenCount  = projectNames.length - shownProjects.length;
-
+function NoTeamsState() {
   return (
-    <div className="flex h-full flex-col gap-5 rounded-[22px] border border-[#e5e7eb] bg-white p-6 shadow-[0_2px_16px_rgba(20,33,51,0.07)] transition hover:shadow-[0_6px_24px_rgba(20,33,51,0.11)]">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className={`inline-flex items-center rounded-full px-3 py-1 text-[0.76rem] font-bold ${status.cls}`}>
-          {status.label}
-        </span>
-        <span className="inline-flex items-center gap-1 rounded-full bg-[#f1f5f9] px-3 py-1 text-[0.76rem] font-semibold text-[#475569]">
-          <FiTag className="h-3 w-3" />
-          {eventLabel}
-        </span>
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#f1f5f9]">
+        <FiUsers className="h-8 w-8 text-[#cbd5e1]" />
       </div>
-
-      <div>
-        <h2 className="text-[1.2rem] font-bold leading-tight tracking-[-0.03em] text-[#1e1e1e]">
-          {p.title}
-        </h2>
-        {p.eventName && p.eventName !== p.title && (
-          <p className="mt-0.5 text-[0.88rem] text-[#878787]">{p.eventName}</p>
-        )}
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {p.mainFocus && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#f0fdf4] px-2.5 py-1 text-[0.76rem] font-semibold text-[#166534]">
-            <FiZap className="h-3 w-3" />
-            {p.mainFocus}
-          </span>
-        )}
-        {p.audience && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#f8fafc] px-2.5 py-1 text-[0.76rem] font-semibold text-[#475569]">
-            <FiUser className="h-3 w-3" />
-            {p.audience}
-          </span>
-        )}
-      </div>
-
-      {p.totalModuleCount > 0 && (
-        <div className="flex items-center gap-2">
-          <FiLayers className="h-4 w-4 text-[#9ca3af]" />
-          <span className="text-[0.84rem] text-[#6b7280]">
-            {p.totalModuleCount} módulo{p.totalModuleCount !== 1 ? "s" : ""}
-          </span>
-        </div>
-      )}
-
-      {shownProjects.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {shownProjects.map((name) => (
-            <span key={name} className="rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-[0.74rem] font-medium text-[#475569]">
-              {name}
-            </span>
-          ))}
-          {hiddenCount > 0 && (
-            <span className="rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-[0.74rem] font-medium text-[#9ca3af]">
-              +{hiddenCount}
-            </span>
-          )}
-        </div>
-      )}
-
-      <div className="mt-auto flex items-center justify-between gap-3 pt-2">
-        {p.updatedAt && (
-          <span className="flex items-center gap-1.5 text-[0.78rem] text-[#9ca3af]">
-            <FiCalendar className="h-3.5 w-3.5" />
-            {formatShortDate(p.updatedAt)}
-          </span>
-        )}
-        <button
-          type="button"
-          onClick={onOpen}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-[#eff6ff] px-4 py-2 text-[0.82rem] font-semibold text-[#1675b8] transition hover:bg-[#dbeafe]"
-        >
-          <FiArrowRight className="h-3.5 w-3.5" />
-          Abrir
-        </button>
-      </div>
+      <h2 className="text-[1.1rem] font-bold text-[#1e1e1e]">
+        Você não está em nenhum time
+      </h2>
+      <p className="mt-2 max-w-xs text-[0.88rem] text-[#6b7280]">
+        Entre em contato com um administrador para ser adicionado a um time.
+      </p>
     </div>
   );
 }

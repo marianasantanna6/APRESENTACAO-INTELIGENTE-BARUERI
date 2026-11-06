@@ -30,11 +30,6 @@ export function AdminRoute() {
     return <Navigate to={ROUTE_PATHS.login} replace />;
   }
 
-  // Approvers have no access to admin modules — send them to their screen
-  if (user.approver) {
-    return <Navigate to={ROUTE_PATHS.teams} replace />;
-  }
-
   if (!canAccessAdminModules(user)) {
     return <Navigate to={ROUTE_PATHS.presentations} replace />;
   }
@@ -49,11 +44,7 @@ export function CreatePresentationRoute() {
     return <Navigate to={ROUTE_PATHS.login} replace />;
   }
 
-  // Approvers cannot create presentations
-  if (user.approver) {
-    return <Navigate to={ROUTE_PATHS.teams} replace />;
-  }
-
+  // Per-team check: allow if the user can create in at least one team
   if (!canCreatePresentations(user)) {
     return <Navigate to={ROUTE_PATHS.presentations} replace />;
   }
@@ -70,8 +61,8 @@ export function ApproverRoute() {
   }
 
   if (!user.approver) {
-    // Non-approvers get sent to their natural home
-    return <Navigate to={ROUTE_PATHS.createPresentation} replace />;
+    // Non-approvers go to the Teams Dashboard
+    return <Navigate to={ROUTE_PATHS.presentations} replace />;
   }
 
   return <Outlet />;
