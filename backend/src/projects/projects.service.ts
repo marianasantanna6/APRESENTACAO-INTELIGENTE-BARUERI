@@ -1154,8 +1154,25 @@ export class ProjectsService {
       );
     }
 
-    await this.prisma.projects.delete({
-      where: { id: project.id },
+    await this.prisma.$transaction(async (tx) => {
+      const moment = new Date();
+
+      await tx.projects.update({
+        where: { id: project.id },
+        data: {
+          status: 3,
+          last_update: moment,
+        },
+      });
+
+      await tx.projects_logs.create({
+        data: {
+          user: BigInt(userId),
+          action: 'rejeitou',
+          project: project.id,
+          moment,
+        },
+      });
     });
 
     return { ok: true };
@@ -1260,42 +1277,50 @@ export class ProjectsService {
     }
 
     if (!authenticatedUser.head_manager) {
-      const managerRoles =
+      const allRoles =
         await this.prisma.users_role.findMany({
-          where: {
-            user: authenticatedUserId,
-            OR: [
-              { sector_manager: true },
-              { team_manager: true },
-            ],
-          },
+          where: { user: authenticatedUserId },
           select: {
             sector: true,
             team: true,
             sector_manager: true,
             team_manager: true,
+            team_approver: true,
           },
         });
 
-      if (managerRoles.length > 0) {
-        const sectorIds = Array.from(
-          new Set(
-            managerRoles.flatMap((role) =>
-              role.sector_manager ? [role.sector] : [],
-            ),
+      const sectorIds = Array.from(
+        new Set(
+          allRoles.flatMap((role) =>
+            role.sector_manager ? [role.sector] : [],
           ),
-        );
+        ),
+      );
 
-        const managedTeamIds = Array.from(
-          new Set(
-            managerRoles.flatMap((role) =>
-              role.team_manager && role.team !== null
-                ? [role.team]
-                : [],
-            ),
+      const managedTeamIds = Array.from(
+        new Set(
+          allRoles.flatMap((role) =>
+            role.team_manager && role.team !== null
+              ? [role.team]
+              : [],
           ),
-        );
+        ),
+      );
 
+      const approverTeamIds = Array.from(
+        new Set(
+          allRoles.flatMap((role) =>
+            role.team_approver && role.team !== null
+              ? [role.team]
+              : [],
+          ),
+        ),
+      );
+
+      const isManager = sectorIds.length > 0 || managedTeamIds.length > 0;
+      const isApprover = approverTeamIds.length > 0;
+
+      if (isManager) {
         const teamsFromSectors =
           sectorIds.length > 0
             ? await this.prisma.teams.findMany({
@@ -1325,6 +1350,27 @@ export class ProjectsService {
             },
           },
         ];
+      } else if (isApprover) {
+        // Approver vê projetos em rascunho (status=1) dos times onde é aprovador.
+        // Para outros status, só vê os próprios projetos.
+        const isFilteringDrafts = filters.status === '1';
+        if (isFilteringDrafts) {
+          where.AND = [
+            ...(where.AND ?? []),
+            {
+              team: {
+                in: approverTeamIds,
+              },
+            },
+          ];
+        } else {
+          where.AND = [
+            ...(where.AND ?? []),
+            {
+              user: authenticatedUserId,
+            },
+          ];
+        }
       } else {
         where.AND = [
           ...(where.AND ?? []),

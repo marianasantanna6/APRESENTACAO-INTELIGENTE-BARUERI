@@ -22,6 +22,7 @@ import {
   canCreatePresentations,
 } from "../../lib/accessControl";
 import { ROUTE_PATHS } from "../../router/paths";
+import { useNotifications } from "../../hooks/useNotifications";
 
 type SidebarItemDef = {
   labelKey: string;
@@ -331,6 +332,23 @@ function AdminConsoleLayoutContent() {
   const canSeeAdminModules = canAccessAdminModules(user);
   const canSeeCreateFlow = canCreatePresentations(user);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const notificationsHook = useNotifications();
+
+  useEffect(() => {
+    if (!notificationsHook.isOpen) return;
+    function handleClick(e: MouseEvent) {
+      const panel = document.querySelector("[data-notif-panel]");
+      const btn = document.querySelector("[data-notif-btn]");
+      if (
+        panel && !panel.contains(e.target as Node) &&
+        btn && !btn.contains(e.target as Node)
+      ) {
+        notificationsHook.close();
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [notificationsHook]);
 
   // Pure approvers (no creator capability in any team) get the Teams Dashboard at /apresentacoes
   // and the minimal layout for account/settings. Mixed users (approver + creator) get full layout.
@@ -378,6 +396,13 @@ function AdminConsoleLayoutContent() {
         activeItem={activeHeaderItem}
         canCreate={canSeeCreateFlow}
         logoTo={ROUTE_PATHS.presentations}
+        notifications={{
+          items: notificationsHook.notifications,
+          unreadCount: notificationsHook.unreadCount,
+          isOpen: notificationsHook.isOpen,
+          onOpen: notificationsHook.open,
+          onClose: notificationsHook.close,
+        }}
         onLogout={handleLogout}
         presentationsTo={ROUTE_PATHS.presentations}
         showDesktopLogo

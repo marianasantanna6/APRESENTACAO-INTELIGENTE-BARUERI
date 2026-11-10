@@ -5,6 +5,7 @@ interface ProjectsLogsFilters {
   user?: string;
   project?: string;
   action?: string;
+  mine_projects?: boolean;
 }
 
 @Injectable()
@@ -38,6 +39,7 @@ export class ProjectsLogsService {
     const userFilter = this.parseId(filters.user);
     const projectFilter = this.parseId(filters.project);
     const actionFilter = filters.action?.trim();
+    const mineProjects = filters.mine_projects === true;
 
     const currentUser = await this.prisma.users.findUnique({
       where: { id: actor },
@@ -64,6 +66,16 @@ export class ProjectsLogsService {
         contains: actionFilter,
         mode: 'insensitive',
       };
+    }
+
+    // mine_projects=true: retorna logs de projetos cujo criador é o usuário autenticado
+    if (mineProjects) {
+      where.projects = {
+        is: {
+          user: actor,
+        },
+      };
+      return this.getLogs(where);
     }
 
     // Head manager pode consultar todos os logs.

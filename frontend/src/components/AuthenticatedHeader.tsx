@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { FiHelpCircle, FiLogOut, FiMenu, FiX } from "react-icons/fi";
+import { FiBell, FiCheck, FiHelpCircle, FiLogOut, FiMenu, FiX } from "react-icons/fi";
 import { Link } from "react-router-dom";
 import createLogo from "../assets/images/create-logo.png";
 import { ROUTE_PATHS } from "../router/paths";
 import type { AuthSessionUser } from "../types/auth";
 import { AdminAvatar } from "./AdminConsole";
+import type { Notification } from "../hooks/useNotifications";
 
 type HeaderActiveItem = "create" | "presentations";
 
@@ -13,6 +14,13 @@ type AuthenticatedHeaderProps = {
   canCreate: boolean;
   customCenterNav?: React.ReactNode;
   logoTo: string;
+  notifications?: {
+    items: Notification[];
+    unreadCount: number;
+    isOpen: boolean;
+    onOpen: () => void;
+    onClose: () => void;
+  };
   onLogout?: () => void;
   presentationsTo: string;
   showDesktopLogo?: boolean;
@@ -50,6 +58,7 @@ export default function AuthenticatedHeader({
   canCreate,
   customCenterNav,
   logoTo,
+  notifications,
   onLogout,
   presentationsTo,
   showDesktopLogo = true,
@@ -153,6 +162,92 @@ export default function AuthenticatedHeader({
               </div>
             </Link>
           ) : null}
+
+          {notifications && (
+            <div className="relative hidden md:block">
+              <button
+                type="button"
+                data-notif-btn
+                aria-label={`Notificações${notifications.unreadCount > 0 ? ` (${notifications.unreadCount} não lidas)` : ""}`}
+                onClick={notifications.isOpen ? notifications.onClose : notifications.onOpen}
+                data-header-action="button"
+                className={`${iconButtonClass}`}
+              >
+                <span className="relative">
+                  <FiBell className="h-5.5 w-5.5 text-white" />
+                  {notifications.unreadCount > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#ef4444] text-[0.6rem] font-bold text-white">
+                      {notifications.unreadCount > 9 ? "9+" : notifications.unreadCount}
+                    </span>
+                  )}
+                </span>
+              </button>
+
+              {notifications.isOpen && (
+                <div data-notif-panel className="absolute right-0 top-full z-50 mt-2 w-80 rounded-2xl border border-[#e5e7eb] bg-white shadow-[0_12px_40px_rgba(20,33,51,0.18)]">
+                  <div className="flex items-center justify-between border-b border-[#f3f4f6] px-4 py-3">
+                    <h3 className="text-[0.88rem] font-bold text-[#1e1e1e]">Notificações</h3>
+                    <button
+                      type="button"
+                      onClick={notifications.onClose}
+                      className="flex h-6 w-6 items-center justify-center rounded-full text-[#9ca3af] hover:bg-[#f3f4f6]"
+                    >
+                      <FiX className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <div className="max-h-72 overflow-y-auto">
+                    {notifications.items.length === 0 ? (
+                      <div className="flex flex-col items-center py-10 text-center">
+                        <FiBell className="mb-2 h-8 w-8 text-[#d1d5db]" />
+                        <p className="text-[0.84rem] text-[#9ca3af]">Nenhuma notificação</p>
+                      </div>
+                    ) : (
+                      <ul className="divide-y divide-[#f9fafb]">
+                        {notifications.items.map((n) => (
+                          <li key={n.id} className={`px-4 py-3 ${n.read ? "" : "bg-[#eff6ff]"}`}>
+                            <div className="flex items-start gap-3">
+                              <div
+                                className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
+                                  n.action === "aprovou"
+                                    ? "bg-[#dcfce7] text-[#15803d]"
+                                    : "bg-[#fee2e2] text-[#b91c1c]"
+                                }`}
+                              >
+                                {n.action === "aprovou" ? (
+                                  <FiCheck className="h-3.5 w-3.5" />
+                                ) : (
+                                  <FiX className="h-3.5 w-3.5" />
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[0.84rem] font-semibold text-[#1e1e1e]">
+                                  {n.action === "aprovou"
+                                    ? "Projeto aprovado"
+                                    : "Projeto rejeitado"}
+                                </p>
+                                <p className="mt-0.5 text-[0.76rem] text-[#9ca3af]">
+                                  {new Date(n.moment).toLocaleDateString("pt-BR", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </p>
+                              </div>
+                              {!n.read && (
+                                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#1675b8]" />
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <Link
             to={ROUTE_PATHS.help}
