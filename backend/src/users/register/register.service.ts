@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { normalizeCpf, normalizeText } from '../../common/normalizer';
@@ -26,6 +26,13 @@ export class RegisterService {
 
     const cpf = normalizeCpf(dto.cpf);
     const email = normalizeText(dto.email);
+
+    if (!email.endsWith('@barueri.sp.gov.br')) {
+      throw new BadRequestException(
+        'Apenas emails @barueri.sp.gov.br podem ser cadastrados',
+      );
+    }
+
     const existingUser = await this.prisma.users.findFirst({
       where: { OR: [{ email }, { cpf }] }
     });
