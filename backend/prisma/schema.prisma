@@ -57,8 +57,8 @@ model projects {
   slides_json         Json?
   awards              awards[]
   indicators          indicators[]
-  teams               teams           @relation(fields: [team], references: [id], onDelete: Cascade)
   users               users           @relation(fields: [user], references: [id], onUpdate: Restrict, map: "project_user_fkey")
+  teams               teams           @relation(fields: [team], references: [id], onDelete: Cascade)
   projects_logs       projects_logs[]
 }
 
@@ -70,8 +70,8 @@ model projects_logs {
   action   String
   project  BigInt
   moment   DateTime @default(now()) @db.Timestamptz(6)
-  projects projects @relation(fields: [project], references: [id], onDelete: Cascade, map: "project-logs_project_fkey")
   users    users    @relation(fields: [user], references: [id], onUpdate: Restrict, map: "log-analytics_user_fkey")
+  projects projects @relation(fields: [project], references: [id], onDelete: Cascade, map: "project-logs_project_fkey")
 
   @@map("projects-logs")
 }
