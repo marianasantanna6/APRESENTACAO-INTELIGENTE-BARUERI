@@ -1157,14 +1157,18 @@ export class ProjectsService {
       );
     }
 
-    await this.prisma.$transaction(async (tx) => {
+    const updatedProject = await this.prisma.$transaction(async (tx) => {
       const moment = new Date();
 
-      await tx.projects.update({
+      const updated = await tx.projects.update({
         where: { id: project.id },
         data: {
           status: 3,
           last_update: moment,
+        },
+        include: {
+          awards: true,
+          indicators: true,
         },
       });
 
@@ -1176,9 +1180,35 @@ export class ProjectsService {
           moment,
         },
       });
+
+      return updated;
     });
 
-    return { ok: true };
+    return {
+      id: updatedProject.id.toString(),
+      name: updatedProject.name,
+      user: updatedProject.user.toString(),
+      team: updatedProject.team.toString(),
+      version: updatedProject.version.toString(),
+      family: updatedProject.family.toString(),
+      slides_url: updatedProject.slides_url,
+      short_description: updatedProject.short_description,
+      full_description: updatedProject.full_description,
+      source: updatedProject.source,
+      main_department: updatedProject.main_department,
+      related_departments: updatedProject.related_departments,
+      areas: updatedProject.areas,
+      ods: updatedProject.ods,
+      theme: updatedProject.theme,
+      audience: updatedProject.audience,
+      technologies: updatedProject.technologies,
+      implementation_date: updatedProject.implementation_date,
+      last_update: updatedProject.last_update,
+      keywords: updatedProject.keywords,
+      status: updatedProject.status,
+      awards: updatedProject.awards,
+      indicators: updatedProject.indicators,
+    };
   }
 
   async searchAwards(
