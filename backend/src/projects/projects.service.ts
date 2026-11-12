@@ -1183,14 +1183,12 @@ export class ProjectsService {
 
   async searchAwards(
     filters: {
-      search?: string;
       name?: string;
       institution?: string;
     },
     userId: string,
   ) {
     const projects = await this.find({}, userId);
-    const normalizedSearch = normalizeText(filters.search ?? '');
     const normalizedName = normalizeText(filters.name ?? '');
     const normalizedInstitution = normalizeText(
       filters.institution ?? '',
@@ -1199,13 +1197,6 @@ export class ProjectsService {
     return projects.flatMap((project) =>
       project.awards
         .filter((award) => {
-          const matchesGeneralSearch =
-            !normalizedSearch ||
-            normalizeText(award.name).includes(normalizedSearch) ||
-            normalizeText(award.institution).includes(normalizedSearch) ||
-            (award.description !== null &&
-              normalizeText(award.description).includes(normalizedSearch));
-
           const matchesName =
             !normalizedName ||
             normalizeText(award.name).includes(normalizedName);
@@ -1213,9 +1204,7 @@ export class ProjectsService {
             !normalizedInstitution ||
             normalizeText(award.institution).includes(normalizedInstitution);
 
-          return (
-            matchesGeneralSearch && matchesName && matchesInstitution
-          );
+          return matchesName && matchesInstitution;
         }),
     );
   }

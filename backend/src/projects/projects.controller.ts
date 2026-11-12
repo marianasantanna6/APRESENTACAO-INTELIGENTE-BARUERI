@@ -76,13 +76,12 @@ export class ProjectsController {
   @Get('awards')
   @UseGuards(JwtAuthGuard)
   searchAwards(
-    @Query('search') search: string | undefined,
     @Query('name') name: string | undefined,
     @Query('institution') institution: string | undefined,
     @Req() req: any,
   ) {
     return this.projectsService.searchAwards(
-      { search, name, institution },
+      { name, institution },
       req.user.id,
     );
   }

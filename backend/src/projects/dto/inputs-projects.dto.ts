@@ -2,9 +2,9 @@ import {IsArray, IsDateString, IsInt, IsNotEmpty, IsOptional, IsString,  Validat
 import { Type } from 'class-transformer';
 
 class CreateAwardDto {
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  name?: string;
+  name!: string;
 
   @IsNotEmpty()
   @IsString()
