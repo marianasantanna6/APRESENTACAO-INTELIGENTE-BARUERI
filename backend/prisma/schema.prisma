@@ -16,6 +16,7 @@ model awards {
   year          Int
   description   String?
   link          String?
+  name          String   @default("")
   projects      projects @relation(fields: [project_award], references: [id], onDelete: Cascade)
 }
 

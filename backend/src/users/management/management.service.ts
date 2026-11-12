@@ -3,6 +3,10 @@ import { Injectable, ConflictException, ForbiddenException, NotFoundException, U
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { normalizeText } from '../../common/normalizer';
+import {
+  deleteProfilePicture,
+  uploadProfilePicture,
+} from '../../common/profile-picture-storage';
 
 type UpdateManagementInput = {
   current_password: string;
@@ -172,18 +176,32 @@ export class ManagementService {
       updateData.email = normalizedEmail;
     }
 
+    const uploadedPhoto =
+      typeof data.photo === 'string' && data.photo.startsWith('data:')
+        ? await uploadProfilePicture(data.photo)
+        : undefined;
+
     if (data.photo !== undefined) {
-      updateData.photo = data.photo;
+      updateData.photo = uploadedPhoto?.publicUrl ?? data.photo;
     }
 
     if (data.head_manager !== undefined) {
       updateData.head_manager = data.head_manager;
     }
 
-    const updatedUser = await this.prisma.users.update({
-      where: { id: userId },
-      data: updateData,
-    });
+    let updatedUser;
+    try {
+      updatedUser = await this.prisma.users.update({
+        where: { id: userId },
+        data: updateData,
+      });
+    } catch (error) {
+      if (uploadedPhoto) {
+        await deleteProfilePicture(uploadedPhoto.path).catch(() => undefined);
+      }
+
+      throw error;
+    }
 
     return {
       id: updatedUser.id.toString(),

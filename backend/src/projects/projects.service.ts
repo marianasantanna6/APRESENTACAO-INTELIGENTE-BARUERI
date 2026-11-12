@@ -221,7 +221,7 @@ export class ProjectsService {
 
     const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/+$/, '');
     const supabaseKey = process.env.SUPABASE_SECRET_KEY;
-    const bucketName = process.env.SUPABASE_BUCKET_NAME;
+    const bucketName = process.env.SUPABASE_SLIDES_BUCKET;
 
     if (!supabaseUrl || !supabaseKey || !bucketName) {
       throw new InternalServerErrorException('Configuração do Supabase incompleta');
@@ -262,7 +262,7 @@ export class ProjectsService {
     const supabaseUrl =
       process.env.SUPABASE_URL?.replace(/\/+$/, '');
     const supabaseKey = process.env.SUPABASE_SECRET_KEY;
-    const bucketName = process.env.SUPABASE_BUCKET_NAME;
+    const bucketName = process.env.SUPABASE_SLIDES_BUCKET;
 
     if (!supabaseUrl || !supabaseKey || !bucketName) {
       throw new InternalServerErrorException(
@@ -270,7 +270,7 @@ export class ProjectsService {
       );
     }
 
-    const path = `projects/${randomUUID()}.pptx`;
+    const path = `${randomUUID()}.pptx`;
 
     const encodedPath = path
       .split('/')
@@ -326,7 +326,7 @@ export class ProjectsService {
     const supabaseUrl =
       process.env.SUPABASE_URL?.replace(/\/+$/, '');
     const supabaseKey = process.env.SUPABASE_SECRET_KEY;
-    const bucketName = process.env.SUPABASE_BUCKET_NAME;
+    const bucketName = process.env.SUPABASE_SLIDES_BUCKET;
 
     if (!supabaseUrl || !supabaseKey || !bucketName) {
       throw new Error(
@@ -537,6 +537,7 @@ export class ProjectsService {
                 ? {
                     awards: {
                       create: dto.awards.map((award) => ({
+                        name: award.name ?? '',
                         institution: award.institution,
                         year: award.year,
                         description: award.description,
@@ -695,6 +696,7 @@ export class ProjectsService {
               ? {
                   awards: {
                     create: dto.awards.map((award) => ({
+                      name: award.name ?? '',
                       institution: award.institution,
                       year: award.year,
                       description: award.description,
@@ -863,6 +865,7 @@ export class ProjectsService {
             await tx.awards.createMany({
               data: dto.awards.map((award) => ({
                 project_award: project.id,
+                name: award.name ?? '',
                 institution: award.institution,
                 year: award.year,
                 description: award.description,
@@ -1154,11 +1157,67 @@ export class ProjectsService {
       );
     }
 
-    await this.prisma.projects.delete({
-      where: { id: project.id },
+    await this.prisma.$transaction(async (tx) => {
+      const moment = new Date();
+
+      await tx.projects.update({
+        where: { id: project.id },
+        data: {
+          status: 3,
+          last_update: moment,
+        },
+      });
+
+      await tx.projects_logs.create({
+        data: {
+          user: BigInt(userId),
+          action: 'rejeitou',
+          project: project.id,
+          moment,
+        },
+      });
     });
 
     return { ok: true };
+  }
+
+  async searchAwards(
+    filters: {
+      search?: string;
+      name?: string;
+      institution?: string;
+    },
+    userId: string,
+  ) {
+    const projects = await this.find({}, userId);
+    const normalizedSearch = normalizeText(filters.search ?? '');
+    const normalizedName = normalizeText(filters.name ?? '');
+    const normalizedInstitution = normalizeText(
+      filters.institution ?? '',
+    );
+
+    return projects.flatMap((project) =>
+      project.awards
+        .filter((award) => {
+          const matchesGeneralSearch =
+            !normalizedSearch ||
+            normalizeText(award.name).includes(normalizedSearch) ||
+            normalizeText(award.institution).includes(normalizedSearch) ||
+            (award.description !== null &&
+              normalizeText(award.description).includes(normalizedSearch));
+
+          const matchesName =
+            !normalizedName ||
+            normalizeText(award.name).includes(normalizedName);
+          const matchesInstitution =
+            !normalizedInstitution ||
+            normalizeText(award.institution).includes(normalizedInstitution);
+
+          return (
+            matchesGeneralSearch && matchesName && matchesInstitution
+          );
+        }),
+    );
   }
 
   async find(

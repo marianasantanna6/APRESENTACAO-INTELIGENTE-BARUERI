@@ -2,6 +2,10 @@ import {IsArray, IsDateString, IsInt, IsNotEmpty, IsOptional, IsString,  Validat
 import { Type } from 'class-transformer';
 
 class CreateAwardDto {
+  @IsOptional()
+  @IsString()
+  name?: string;
+
   @IsNotEmpty()
   @IsString()
   institution!: string;
