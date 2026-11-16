@@ -103,8 +103,14 @@ function LoginPage() {
     setIsSubmitting(true);
 
     try {
+      const raw = formValues.identifier.trim();
+      const isCpf = /^[\d.\-/]+$/.test(raw);
+      const identifier = (!isCpf && !raw.includes("@"))
+        ? raw + "@barueri.sp.gov.br"
+        : raw;
+
       const result = await login({
-        identifier: formValues.identifier,
+        identifier,
         password: formValues.password,
       });
 
@@ -160,19 +166,24 @@ function LoginPage() {
           onSubmit={handleSubmit}
         >
           <div>
-            <input
-              type="text"
-              value={formValues.identifier}
-              disabled={isSubmitting}
-              onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                updateField("identifier", event.target.value)
-              }
-              data-login-field="text"
-              placeholder="CPF / E-mail"
-              className={`h-15.25 w-full rounded-[20px] border bg-[#f8fafc] px-5 text-[0.98rem] font-medium text-[#1e1e1e] shadow-[0_4px_10px_rgba(0,0,0,0.25)] outline-none transition focus:-translate-y-0.5 focus:border-[#1675b8] focus:ring-4 focus:ring-[#1675b8]/15 disabled:cursor-not-allowed disabled:opacity-70 sm:text-[1.15rem] ${
-                errors.identifier ? "border-[#d64545]" : "border-[#d5d5d5]"
-              }`}
-            />
+            <div className={`flex h-15.25 w-full items-center rounded-[20px] border bg-[#f8fafc] shadow-[0_4px_10px_rgba(0,0,0,0.25)] transition focus-within:border-[#1675b8] focus-within:ring-4 focus-within:ring-[#1675b8]/15 ${
+              errors.identifier ? "border-[#d64545]" : "border-[#d5d5d5]"
+            }`}>
+              <input
+                type="text"
+                value={formValues.identifier}
+                disabled={isSubmitting}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  updateField("identifier", event.target.value)
+                }
+                data-login-field="text"
+                placeholder="nome.sobrenome"
+                className="min-w-0 flex-1 bg-transparent pl-5 text-[0.98rem] font-medium text-[#1e1e1e] outline-none disabled:cursor-not-allowed disabled:opacity-70 sm:text-[1.15rem]"
+              />
+              <span className="shrink-0 select-none pr-5 text-[0.82rem] font-medium text-[#1675b8] sm:text-[0.9rem]">
+                @barueri.sp.gov.br
+              </span>
+            </div>
             {errors.identifier ? (
               <p className="mt-2 px-2 text-sm font-medium text-[#d64545]">
                 {errors.identifier}

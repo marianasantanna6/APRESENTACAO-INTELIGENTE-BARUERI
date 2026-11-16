@@ -271,13 +271,14 @@ export function useProjectEditor(
   }
 
   // Prêmios
-  function addAward() {
+  function addAward(prefill?: Partial<ProjectAward>) {
     const award: ProjectAward = {
       id: generateId("award", draft.name || "proj"),
-      name: "",
-      organization: "",
-      year: String(new Date().getFullYear()),
-      description: "",
+      name: prefill?.name ?? "",
+      organization: prefill?.organization ?? "",
+      year: prefill?.year ?? String(new Date().getFullYear()),
+      description: prefill?.description ?? "",
+      link: prefill?.link ?? "",
     };
     patch({ awards: [...draft.awards, award] });
   }

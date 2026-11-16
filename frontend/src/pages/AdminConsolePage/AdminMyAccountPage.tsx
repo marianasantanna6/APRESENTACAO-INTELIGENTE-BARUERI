@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { AdminAvatar, AdminPanel } from "../../components/AdminConsole";
 import { useModalAccessibility } from "../../hooks";
 import { useAuth } from "../../context";
+import { authFetch } from "../../lib/apiClient";
 import { formatCpf } from "../../lib/formatters";
 import { ROUTE_PATHS } from "../../router/paths";
 
@@ -109,6 +110,8 @@ export default function AdminMyAccountPage() {
   );
   const [toast, setToast] = useState<ToastState | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [confirmPasswordForPhoto, setConfirmPasswordForPhoto] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [passwordForm, setPasswordForm] = useState<PasswordFormState>(
     initialPasswordForm,
@@ -185,23 +188,46 @@ export default function AdminMyAccountPage() {
   }
 
   async function handleSaveProfile() {
-    if (!hasPendingProfileChanges) {
+    if (!hasPendingProfileChanges) return;
+
+    if (!confirmPasswordForPhoto.trim()) {
+      setConfirmPasswordError("Informe sua senha para confirmar.");
       return;
     }
 
+    setConfirmPasswordError("");
     setIsSavingProfile(true);
-    await waitForMockRequest();
 
-    const result = updateAccount({ avatarDataUrl: draftAvatarDataUrl });
+    try {
+      const res = await authFetch(`/api/management/${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          current_password: confirmPasswordForPhoto,
+          photo: draftAvatarDataUrl,
+        }),
+      });
 
-    setIsSavingProfile(false);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const msg = data?.message ?? "Erro ao salvar a foto.";
+        if (res.status === 401) {
+          setConfirmPasswordError("Senha incorreta.");
+        } else {
+          showToast("error", msg);
+        }
+        return;
+      }
 
-    if ("message" in result) {
-      showToast("error", result.message);
-      return;
+      const data = await res.json();
+      updateAccount({ avatarDataUrl: data.photo ?? draftAvatarDataUrl });
+      setConfirmPasswordForPhoto("");
+      showToast("success", "Foto de perfil atualizada.");
+    } catch {
+      showToast("error", "Não foi possível conectar ao servidor.");
+    } finally {
+      setIsSavingProfile(false);
     }
-
-    showToast("success", "Alterações salvas com sucesso.");
   }
 
   function updatePasswordField(
@@ -326,10 +352,28 @@ export default function AdminMyAccountPage() {
               </div>
 
               {hasPendingProfileChanges ? (
-                <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#edf7ff] px-4 py-2 text-[0.82rem] font-semibold text-[#3d83bc]">
-                  <FiCamera className="h-4 w-4" />
-                  Nova foto pronta para salvar
-                </span>
+                <div className="mt-4 flex w-full max-w-xs flex-col items-center gap-2">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-[#edf7ff] px-4 py-2 text-[0.82rem] font-semibold text-[#3d83bc]">
+                    <FiCamera className="h-4 w-4" />
+                    Nova foto pronta para salvar
+                  </span>
+                  <div className="relative w-full">
+                    <FiLock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9ca3af] pointer-events-none" />
+                    <input
+                      type="password"
+                      value={confirmPasswordForPhoto}
+                      onChange={(e) => {
+                        setConfirmPasswordForPhoto(e.target.value);
+                        setConfirmPasswordError("");
+                      }}
+                      placeholder="Confirme sua senha"
+                      className={`w-full rounded-xl border bg-[#f8fafc] py-2.5 pl-9 pr-3 text-[0.85rem] text-[#1e1e1e] outline-none transition focus:border-[#1675b8] focus:ring-2 focus:ring-[#1675b8]/20 ${confirmPasswordError ? "border-[#d64545]" : "border-[#d5d5d5]"}`}
+                    />
+                  </div>
+                  {confirmPasswordError && (
+                    <p className="text-[0.78rem] font-medium text-[#d64545]">{confirmPasswordError}</p>
+                  )}
+                </div>
               ) : null}
             </div>
 

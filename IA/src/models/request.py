@@ -10,6 +10,7 @@ MAX_CONTEXT_CHARS = 20_000
 class ProjectAwardRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
+    name: str = Field(default="", max_length=300)
     institution: str = Field(min_length=1, max_length=300)
     year: int = Field(ge=1900, le=2200)
     description: str | None = Field(default=None, max_length=2_000)
