@@ -1078,6 +1078,7 @@ export class ProjectsService {
       keywords?: string;
       status?: string;
       implementation_date?: string;
+      mine?: string;
     },
     userId: string,
   ) {
@@ -1160,43 +1161,53 @@ export class ProjectsService {
       }
     }
 
-    if (!authenticatedUser.head_manager) {
-      const managerRoles =
+    if (filters.mine === 'true') {
+      where.user = authenticatedUserId;
+    } else if (!authenticatedUser.head_manager) {
+      const allRoles =
         await this.prisma.users_role.findMany({
-          where: {
-            user: authenticatedUserId,
-            OR: [
-              { sector_manager: true },
-              { team_manager: true },
-            ],
-          },
+          where: { user: authenticatedUserId },
           select: {
             sector: true,
             team: true,
             sector_manager: true,
             team_manager: true,
+            team_approver: true,
           },
         });
 
-      if (managerRoles.length > 0) {
-        const sectorIds = Array.from(
-          new Set(
-            managerRoles.flatMap((role) =>
-              role.sector_manager ? [role.sector] : [],
-            ),
+      const sectorIds = Array.from(
+        new Set(
+          allRoles.flatMap((role) =>
+            role.sector_manager ? [role.sector] : [],
           ),
-        );
+        ),
+      );
 
-        const managedTeamIds = Array.from(
-          new Set(
-            managerRoles.flatMap((role) =>
-              role.team_manager && role.team !== null
-                ? [role.team]
-                : [],
-            ),
+      const managedTeamIds = Array.from(
+        new Set(
+          allRoles.flatMap((role) =>
+            role.team_manager && role.team !== null
+              ? [role.team]
+              : [],
           ),
-        );
+        ),
+      );
 
+      const approverTeamIds = Array.from(
+        new Set(
+          allRoles.flatMap((role) =>
+            role.team_approver && role.team !== null
+              ? [role.team]
+              : [],
+          ),
+        ),
+      );
+
+      const isManager = sectorIds.length > 0 || managedTeamIds.length > 0;
+      const isApprover = approverTeamIds.length > 0;
+
+      if (isManager) {
         const teamsFromSectors =
           sectorIds.length > 0
             ? await this.prisma.teams.findMany({
@@ -1226,6 +1237,29 @@ export class ProjectsService {
             },
           },
         ];
+      } else if (isApprover) {
+        // Approver vê projetos dos times onde é aprovador quando:
+        // - filtrando rascunhos (status=1) para a fila de aprovação, ou
+        // - buscando por ID específico (para abrir a apresentação completa)
+        const isFilteringDrafts = filters.status === '1';
+        const isFetchingById = !!filters.id;
+        if (isFilteringDrafts || isFetchingById) {
+          where.AND = [
+            ...(where.AND ?? []),
+            {
+              team: {
+                in: approverTeamIds,
+              },
+            },
+          ];
+        } else {
+          where.AND = [
+            ...(where.AND ?? []),
+            {
+              user: authenticatedUserId,
+            },
+          ];
+        }
       } else {
         where.AND = [
           ...(where.AND ?? []),

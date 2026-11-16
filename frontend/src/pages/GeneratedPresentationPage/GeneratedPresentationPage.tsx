@@ -3,6 +3,7 @@ import { FaFilter, FaSearch } from "react-icons/fa";
 import {
   FiArrowLeft,
   FiArrowRight,
+  FiEdit2,
   FiAward,
   FiBarChart2,
   FiCalendar,
@@ -34,7 +35,7 @@ import {
   FiX,
   FiZap,
 } from "react-icons/fi";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { DEFAULT_PRESENTATION_FILTERS } from "../../api/presentation";
 import AuthenticatedHeader from "../../components/AuthenticatedHeader";
 import { InstitutionalPresenterMode } from "../../components/InstitutionalPresenterMode/InstitutionalPresenterMode";
@@ -67,10 +68,8 @@ import type { ProjectSummary } from "../../types/project";
 // ─── Metadados de exibição ────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<PresentationStatus, { label: string; cls: string }> = {
-  draft:     { label: "Rascunho",    cls: "bg-[#fef9c3] text-[#92400e]" },
-  ready:     { label: "Pronto",      cls: "bg-[#dbeafe] text-[#1e40af]" },
-  presented: { label: "Apresentado", cls: "bg-[#dcfce7] text-[#166534]" },
-  archived:  { label: "Arquivado",   cls: "bg-[#f1f5f9] text-[#475569]" },
+  draft:  { label: "Pendente",  cls: "bg-[#fef9c3] text-[#92400e]" },
+  active: { label: "Aprovado",  cls: "bg-[#dcfce7] text-[#166534]" },
 };
 
 const EVENT_LABELS: Record<EventType, string> = {
@@ -413,18 +412,27 @@ function InstitutionalHeader({
   onBack,
   onToast,
   onOpenPresenterMode,
-  onSaveAsTemplate,
   onShare,
   onDownloadPptx,
+  onExportPdf,
+  onNewVersion,
+  onApprove,
+  onReject,
+  backLabel,
   hideStructure,
 }: {
   presentation: InstitutionalPresentation;
   projects: ProjectSummary[];
   onBack: () => void;
+  backLabel?: string;
   onToast: (msg: string) => void;
   onOpenPresenterMode: () => void;
   onShare?: () => void;
   onDownloadPptx?: () => void;
+  onExportPdf?: () => void;
+  onNewVersion?: () => void;
+  onApprove?: () => void;
+  onReject?: () => void;
   hideStructure?: boolean;
 }) {
   const status = STATUS_CONFIG[p.status] ?? STATUS_CONFIG.draft;
@@ -442,9 +450,29 @@ function InstitutionalHeader({
           className="inline-flex items-center gap-2 text-[0.9rem] font-semibold text-[#6b7280] transition hover:text-[#1675b8]"
         >
           <FiArrowLeft className="h-4 w-4" />
-          Minhas Apresentações
+          {backLabel ?? "Minhas Apresentações"}
         </button>
         <div className="flex flex-wrap items-center gap-2">
+          {onApprove && (
+            <button
+              type="button"
+              onClick={onApprove}
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#16a34a] px-4 py-2 text-[0.86rem] font-bold text-white shadow-[0_4px_12px_rgba(22,163,74,0.3)] transition hover:bg-[#15803d]"
+            >
+              <FiCheck className="h-3.5 w-3.5" />
+              Aprovar
+            </button>
+          )}
+          {onReject && (
+            <button
+              type="button"
+              onClick={onReject}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#fecaca] bg-[#fef2f2] px-4 py-2 text-[0.86rem] font-semibold text-[#dc2626] transition hover:bg-[#fee2e2]"
+            >
+              <FiX className="h-3.5 w-3.5" />
+              Rejeitar
+            </button>
+          )}
           {onDownloadPptx && (
             <button
               type="button"
@@ -455,22 +483,36 @@ function InstitutionalHeader({
               Baixar PPTX
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => onToast("Exportação em PDF será conectada em breve.")}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[#e2e8f0] bg-white px-4 py-2 text-[0.86rem] font-semibold text-[#475569] transition hover:bg-[#f8fafc]"
-          >
-            <FiFileText className="h-3.5 w-3.5" />
-            Exportar PDF
-          </button>
-          <button
-            type="button"
-            onClick={onShare ?? (() => onToast("Compartilhamento indisponível."))}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[#e2e8f0] bg-white px-4 py-2 text-[0.86rem] font-semibold text-[#475569] transition hover:bg-[#f8fafc]"
-          >
-            <FiShare2 className="h-3.5 w-3.5" />
-            Compartilhar
-          </button>
+          {onExportPdf && (
+            <button
+              type="button"
+              onClick={onExportPdf}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#e2e8f0] bg-white px-4 py-2 text-[0.86rem] font-semibold text-[#475569] transition hover:bg-[#f8fafc]"
+            >
+              <FiFileText className="h-3.5 w-3.5" />
+              Exportar PDF
+            </button>
+          )}
+          {onShare && (
+            <button
+              type="button"
+              onClick={onShare}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#e2e8f0] bg-white px-4 py-2 text-[0.86rem] font-semibold text-[#475569] transition hover:bg-[#f8fafc]"
+            >
+              <FiShare2 className="h-3.5 w-3.5" />
+              Compartilhar
+            </button>
+          )}
+          {onNewVersion && (
+            <button
+              type="button"
+              onClick={onNewVersion}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#c7d2fe] bg-[#eef2ff] px-4 py-2 text-[0.86rem] font-semibold text-[#4338ca] transition hover:bg-[#e0e7ff]"
+            >
+              <FiEdit2 className="h-3.5 w-3.5" />
+              Nova versão
+            </button>
+          )}
           <button
             type="button"
             onClick={onOpenPresenterMode}
@@ -665,6 +707,7 @@ export default function GeneratedPresentationPage() {
   // ── Apresentação institucional (quando vem do wizard com ?pid) ──
   const presentationId = searchParams.get("pid");
   const downloadUrlParam = searchParams.get("dlUrl");
+  const returnTo = searchParams.get("returnTo");
 
   // Fontes reais consultadas pela IA nesta geração
   const [iaSources, setIaSources] = useState<
@@ -704,7 +747,7 @@ export default function GeneratedPresentationPage() {
       .then(async (res) => {
         if (!res.ok) return;
         const list = await res.json() as Array<{
-          id: string; name: string; user: string; version: string;
+          id: string; name: string; user: string; version: string; family: string; team: string;
           status: number; short_description?: string | null;
           audience?: string | null; areas: string[];
           last_update: string;
@@ -712,6 +755,9 @@ export default function GeneratedPresentationPage() {
         }>;
         const project = list[0];
         if (!project) return;
+        setProjectFamily(project.family);
+        setProjectTeam(project.team);
+        setProjectRawStatus(project.status);
         const pres: InstitutionalPresentation = {
           id: project.id,
           title: project.name,
@@ -768,6 +814,9 @@ export default function GeneratedPresentationPage() {
   const [presenterModeOpen, setPresenterModeOpen] = useState(false);
   const [presenterInitialSlideId, setPresenterInitialSlideId] = useState<string | undefined>(undefined);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [projectFamily, setProjectFamily] = useState<string | null>(null);
+  const [projectTeam, setProjectTeam] = useState<string | null>(null);
+  const [projectRawStatus, setProjectRawStatus] = useState<number | null>(null);
 
   const activeCategory = filters.category;
   const activeYear = filters.year;
@@ -833,6 +882,38 @@ export default function GeneratedPresentationPage() {
       URL.revokeObjectURL(url);
     } catch {
       setToast({ message: "Erro ao baixar o PPTX. Tente novamente." });
+    }
+  }
+
+  async function handleApproveProject() {
+    if (!presentationId) return;
+    try {
+      const res = await authFetch(`/api/projects/${presentationId}/approve`, { method: "PATCH" });
+      if (!res.ok) throw new Error();
+      setToast({ message: "Projeto aprovado com sucesso!" });
+      setProjectRawStatus(2);
+      if (institutionalPresentation) {
+        setInstitutionalPresentation({ ...institutionalPresentation, status: "active" });
+      }
+      if (returnTo) setTimeout(() => navigate(returnTo), 1200);
+    } catch {
+      setToast({ message: "Erro ao aprovar o projeto. Tente novamente." });
+    }
+  }
+
+  async function handleRejectProject() {
+    if (!presentationId) return;
+    try {
+      const res = await authFetch(`/api/projects/${presentationId}/reject`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      setToast({ message: "Projeto rejeitado." });
+      setProjectRawStatus(3);
+      if (institutionalPresentation) {
+        setInstitutionalPresentation({ ...institutionalPresentation, status: "draft" });
+      }
+      if (returnTo) setTimeout(() => navigate(returnTo), 1200);
+    } catch {
+      setToast({ message: "Erro ao rejeitar o projeto. Tente novamente." });
     }
   }
 
@@ -960,6 +1041,16 @@ export default function GeneratedPresentationPage() {
       presentationsTo={presentationsRoute}
       showMobilePresentationsShortcut
       user={user}
+      customCenterNav={
+        returnTo === ROUTE_PATHS.teams ? (
+          <Link
+            to={returnTo}
+            className="flex h-10 items-center justify-center rounded-[50px] border border-[#1675b8] bg-[rgba(22,117,184,0.5)] px-3 text-[1rem] font-semibold text-white shadow-[0_4px_12px_rgba(0,0,0,0.12)] lg:h-11 lg:px-3.5"
+          >
+            Projetos Pendentes
+          </Link>
+        ) : undefined
+      }
     />
   );
 
@@ -1021,8 +1112,19 @@ export default function GeneratedPresentationPage() {
           <InstitutionalHeader
             presentation={institutionalPresentation}
             projects={institutionalProjects}
-            onBack={() => navigate(presentationsRoute)}
+            onBack={() => navigate(returnTo ?? presentationsRoute)}
+            backLabel={returnTo === ROUTE_PATHS.teams ? "Voltar à análise" : undefined}
             onToast={(msg) => setToast({ message: msg })}
+            onApprove={
+              projectRawStatus === 1 && institutionalPresentation.createdBy !== user?.id
+                ? handleApproveProject
+                : undefined
+            }
+            onReject={
+              projectRawStatus === 1 && institutionalPresentation.createdBy !== user?.id
+                ? handleRejectProject
+                : undefined
+            }
             onOpenPresenterMode={() => {
               if (iaSlides?.length) {
                 setIaPresenterIndex(0);
@@ -1031,8 +1133,34 @@ export default function GeneratedPresentationPage() {
                 setPresenterModeOpen(true);
               }
             }}
-            onShare={() => setShareModalOpen(true)}
-            onDownloadPptx={downloadUrlParam ? handleDownloadPptx : undefined}
+            onShare={
+              institutionalPresentation.createdBy === user?.id &&
+              institutionalPresentation.status === "active"
+                ? () => setShareModalOpen(true)
+                : undefined
+            }
+            onDownloadPptx={
+              downloadUrlParam &&
+              institutionalPresentation.createdBy === user?.id &&
+              institutionalPresentation.status === "active"
+                ? handleDownloadPptx
+                : undefined
+            }
+            onExportPdf={
+              institutionalPresentation.createdBy === user?.id &&
+              institutionalPresentation.status === "active"
+                ? () => setToast({ message: "Exportação em PDF será conectada em breve." })
+                : undefined
+            }
+            onNewVersion={
+              institutionalPresentation.createdBy === user?.id &&
+              projectRawStatus !== 1 &&
+              projectFamily
+                ? () => navigate(
+                    `${ROUTE_PATHS.createPresentation}?editFamily=${projectFamily}${projectTeam ? `&teamId=${projectTeam}` : ""}`
+                  )
+                : undefined
+            }
             hideStructure={!!iaSlides?.length}
           />
 

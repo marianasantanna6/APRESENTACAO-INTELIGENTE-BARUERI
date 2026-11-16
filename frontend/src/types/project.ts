@@ -165,4 +165,6 @@ export type ProjectFilters = {
   status?: ProjectStatus | "";
   department?: string;
   governmentArea?: GovernmentArea | "";
+  teamId?: string;
+  mine?: boolean;
 };

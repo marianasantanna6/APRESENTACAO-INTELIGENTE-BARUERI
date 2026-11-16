@@ -6,6 +6,12 @@ import {
 } from "../lib/accessControl";
 import { ROUTE_PATHS } from "./paths";
 
+function isApproverInAnyTeam(user: ReturnType<typeof useAuth>["user"]) {
+  if (!user) return false;
+  if (user.teams && user.teams.length > 0) return user.teams.some((t) => t.approver);
+  return !!user.approver;
+}
+
 export function ProtectedRoute() {
   const location = useLocation();
   const { isAuthenticated } = useAuth();
@@ -52,7 +58,7 @@ export function CreatePresentationRoute() {
   return <Outlet />;
 }
 
-/** Only approvers can access the Teams approval screen */
+/** Approvers and managers can access the Teams screen */
 export function ApproverRoute() {
   const { user } = useAuth();
 
@@ -60,8 +66,7 @@ export function ApproverRoute() {
     return <Navigate to={ROUTE_PATHS.login} replace />;
   }
 
-  if (!user.approver) {
-    // Non-approvers go to the Teams Dashboard
+  if (!isApproverInAnyTeam(user) && !canAccessAdminModules(user)) {
     return <Navigate to={ROUTE_PATHS.presentations} replace />;
   }
 

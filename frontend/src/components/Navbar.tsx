@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FiHelpCircle, FiMenu, FiUser, FiX } from "react-icons/fi";
 import { Link } from "react-router-dom";
-import navbarLogo from "../assets/images/create-logo.png";
+import { BarueriLogo } from "./BarueriLogo";
 import { ROUTE_PATHS } from "../router";
 
 const iconButtonClass =
@@ -27,11 +27,7 @@ function Navbar() {
     >
       <div className="mx-auto flex max-w-310 items-center justify-between gap-6 px-4 py-4 sm:px-6 lg:px-8 md:relative">
         <a href="#inicio" aria-label="Ir para o início" className="shrink-0">
-          <img
-            src={navbarLogo}
-            alt="Logo Barueri"
-            className="h-auto w-29 sm:w-37.5"
-          />
+          <BarueriLogo variant="light" brasaoSize={38} />
         </a>
 
         <nav

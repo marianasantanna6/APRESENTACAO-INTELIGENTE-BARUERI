@@ -82,11 +82,11 @@ export function ProjectFiltersBar({ filters, departments, onChange, resultCount 
       </div>
 
       {/* ── Linha 2: filtros dropdown ── */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 text-[0.8rem] font-medium text-[#6b7280]">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="inline-flex items-center gap-1.5 self-center text-[0.8rem] font-medium text-[#6b7280]">
           <FiSliders className="h-3.5 w-3.5" />
           Filtrar por:
-        </span>
+        </div>
 
         {/* Categoria */}
         <FilterSelect
@@ -139,7 +139,7 @@ export function ProjectFiltersBar({ filters, departments, onChange, resultCount 
         </FilterSelect>
 
         {/* Contagem */}
-        <span className="ml-auto text-[0.8rem] text-[#9ca3af]">
+        <span className="ml-auto self-center text-[0.8rem] text-[#9ca3af]">
           {resultCount} {resultCount === 1 ? "projeto" : "projetos"}
         </span>
       </div>
@@ -159,18 +159,29 @@ function FilterSelect({
   children: React.ReactNode;
 }) {
   const active = value !== "";
+  const id = `filter-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
-    <select
-      aria-label={label}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className={`rounded-lg border px-3 py-1.5 text-[0.82rem] font-medium transition focus:outline-none focus:ring-2 focus:ring-[#6fa8d6]/20 ${
-        active
-          ? "border-[#6fa8d6] bg-[#eff6ff] text-[#1d4ed8]"
-          : "border-[#e5e7eb] bg-white text-[#4b5563] hover:border-[#d1d5db]"
-      }`}
-    >
-      {children}
-    </select>
+    <div className="flex flex-col gap-0.5">
+      <label
+        htmlFor={id}
+        className={`text-[0.7rem] font-semibold uppercase tracking-wide ${
+          active ? "text-[#1d4ed8]" : "text-[#9ca3af]"
+        }`}
+      >
+        {label}
+      </label>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`rounded-lg border px-3 py-1.5 text-[0.82rem] font-medium transition focus:outline-none focus:ring-2 focus:ring-[#6fa8d6]/20 ${
+          active
+            ? "border-[#6fa8d6] bg-[#eff6ff] text-[#1d4ed8]"
+            : "border-[#e5e7eb] bg-white text-[#4b5563] hover:border-[#d1d5db]"
+        }`}
+      >
+        {children}
+      </select>
+    </div>
   );
 }

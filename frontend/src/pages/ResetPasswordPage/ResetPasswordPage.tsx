@@ -1,7 +1,7 @@
 import type { CSSProperties, ChangeEvent, FormEvent } from "react";
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import loginLogo from "../../assets/images/create-logo.png";
+import { BarueriLogo } from "../../components/BarueriLogo";
 import { ROUTE_PATHS } from "../../router/paths";
 
 type FormState = "idle" | "submitting" | "success";
@@ -130,7 +130,7 @@ function ResetPasswordPage() {
             aria-label="Voltar para a página inicial"
             className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2"
           >
-            <img src={loginLogo} alt="Logo Barueri" className="h-auto w-50 drop-shadow-[0_8px_16px_rgba(0,0,0,0.12)] sm:w-64" />
+            <BarueriLogo variant="light" brasaoSize={80} className="drop-shadow-[0_8px_16px_rgba(0,0,0,0.12)]" />
           </Link>
 
           <div className="mt-4 flex flex-col items-center gap-5 text-center">
@@ -183,7 +183,7 @@ function ResetPasswordPage() {
           aria-label="Voltar para a página inicial"
           className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2"
         >
-          <img src={loginLogo} alt="Logo Barueri" className="h-auto w-50 drop-shadow-[0_8px_16px_rgba(0,0,0,0.12)] sm:w-64" />
+          <BarueriLogo variant="light" brasaoSize={80} className="drop-shadow-[0_8px_16px_rgba(0,0,0,0.12)]" />
         </Link>
 
         {formState === "success" ? (

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   FiAward,
   FiBarChart2,
@@ -11,7 +11,6 @@ import {
   FiHash,
   FiLayers,
   FiLink,
-  FiMonitor,
   FiSettings,
   FiTag,
   FiTarget,
@@ -47,6 +46,7 @@ type ApiProject = {
   last_update: string | null;
   keywords: string[];
   status: number;
+  slides_url: string | null;
   awards: { institution: string; year: number; description: string | null; link: string | null }[];
   indicators: { label: string; value: string; measure: string | null; source: string; year: number }[];
 };
@@ -63,12 +63,6 @@ function authHeader(): HeadersInit {
 
 type DraftStatus = "pending" | "approved" | "rejected";
 
-type MockSlide = {
-  id: string;
-  title: string;
-  type: "capa" | "dados" | "projeto" | "indicadores" | "ods" | "encerramento";
-};
-
 type DraftProject = {
   id: string;
   name: string;
@@ -80,6 +74,7 @@ type DraftProject = {
   submittedAt: string;
   categories: ProjectCategory[];
   status: DraftStatus;
+  slidesUrl: string | null;
   // Campos do formulário
   mainDepartment: string;
   relatedDepartments: string[];
@@ -93,7 +88,6 @@ type DraftProject = {
   sources: string[];
   awards: { institution: string; year: number; description: string; link?: string }[];
   indicators: { label: string; value: string; measure: string; source: string; year: number }[];
-  slides: MockSlide[];
 };
 
 // ─── ODS ──────────────────────────────────────────────────────────────────────
@@ -106,266 +100,6 @@ const ODS_LABELS: Record<number, string> = {
   12: "Consumo Responsável", 13: "Ação Climática", 14: "Vida na Água",
   15: "Vida Terrestre", 16: "Paz e Justiça", 17: "Parcerias",
 };
-
-const SLIDE_STYLES: Record<MockSlide["type"], { bg: string; icon: React.ReactNode; label: string }> = {
-  capa:         { bg: "bg-[#142133]",  icon: <FiLayers className="h-5 w-5" />,    label: "Capa" },
-  dados:        { bg: "bg-[#1d4ed8]",  icon: <FiBarChart2 className="h-5 w-5" />, label: "Dados" },
-  projeto:      { bg: "bg-[#15803d]",  icon: <FiFolder className="h-5 w-5" />,    label: "Projeto" },
-  indicadores:  { bg: "bg-[#7c3aed]",  icon: <FiTarget className="h-5 w-5" />,    label: "Indicadores" },
-  ods:          { bg: "bg-[#b45309]",  icon: <FiGlobe className="h-5 w-5" />,     label: "ODS" },
-  encerramento: { bg: "bg-[#374151]",  icon: <FiMonitor className="h-5 w-5" />,   label: "Encerramento" },
-};
-
-// ─── Mock de projetos ─────────────────────────────────────────────────────────
-
-const INITIAL_DRAFTS: DraftProject[] = [
-  {
-    id: "draft-1",
-    name: "Sistema de Monitoramento de Indicadores Sociais",
-    shortDescription: "Plataforma integrada para monitoramento em tempo real de indicadores sociais da cidade de Barueri.",
-    fullDescription: "O sistema propõe uma plataforma centralizada que agrega dados de diferentes secretarias e exibe indicadores como IDH, acesso a saneamento, taxa de escolaridade e cobertura de saúde em dashboards interativos. A solução permitirá que gestores públicos acompanhem a evolução dos índices mês a mês e tomem decisões baseadas em evidências, reduzindo o tempo de análise de semanas para horas.",
-    team: "Planejamento Territorial",
-    sector: "Planejamento",
-    submittedBy: "Bianca Souza",
-    submittedAt: "2026-09-10T14:30:00",
-    categories: ["Social", "Transformação Digital"],
-    status: "pending",
-    mainDepartment: "Secretaria de Planejamento Urbano",
-    relatedDepartments: ["Secretaria de Saúde", "Secretaria de Educação", "Secretaria de Assistência Social"],
-    areas: ["Social", "Tecnologia da Informação", "Gestão Pública"],
-    ods: [3, 10, 11, 16],
-    theme: "Monitoramento social e governança baseada em dados",
-    audience: "Gestores públicos municipais e secretários",
-    technologies: ["React", "Node.js", "PostgreSQL", "Power BI"],
-    implementationDate: "2026-11-01",
-    keywords: ["indicadores sociais", "monitoramento", "gestão pública", "dados"],
-    sources: ["https://barueri.sp.gov.br/planejamento", "https://ibge.gov.br"],
-    awards: [],
-    indicators: [
-      { label: "Secretarias integradas", value: "8", measure: "secretarias", source: "Prefeitura de Barueri", year: 2026 },
-      { label: "Tempo de análise reduzido", value: "85", measure: "%", source: "Estudo interno", year: 2026 },
-    ],
-    slides: [
-      { id: "s1-1", title: "Capa Institucional", type: "capa" },
-      { id: "s1-2", title: "Dados do Município", type: "dados" },
-      { id: "s1-3", title: "Monitoramento em Tempo Real", type: "projeto" },
-      { id: "s1-4", title: "Indicadores de Resultado", type: "indicadores" },
-      { id: "s1-5", title: "ODS Relacionados", type: "ods" },
-      { id: "s1-6", title: "Encerramento", type: "encerramento" },
-    ],
-  },
-  {
-    id: "draft-2",
-    name: "App de Saúde Comunitária",
-    shortDescription: "Aplicativo mobile para agentes de saúde registrarem visitas domiciliares e reportarem indicadores de saúde pública.",
-    fullDescription: "O aplicativo funciona offline e sincroniza os dados quando o agente tem conexão à internet. Cada visita gera um registro georreferenciado com dados do paciente, medicamentos prescritos e alertas de risco. Um painel web centralizado exibe mapas de calor por bairro para identificar áreas prioritárias de intervenção, integrando-se ao sistema nacional de saúde do município.",
-    team: "Planejamento Territorial",
-    sector: "Planejamento",
-    submittedBy: "Amanda Araújo",
-    submittedAt: "2026-09-11T09:15:00",
-    categories: ["Saúde", "Governo Digital"],
-    status: "pending",
-    mainDepartment: "Secretaria de Saúde",
-    relatedDepartments: ["Secretaria de Planejamento Urbano", "Atenção Básica Municipal"],
-    areas: ["Saúde Pública", "Tecnologia Mobile", "Georreferenciamento"],
-    ods: [3, 11],
-    theme: "Saúde preventiva e atenção básica digital",
-    audience: "Agentes comunitários de saúde e coordenadores de UBS",
-    technologies: ["React Native", "PostgreSQL", "PostGIS", "NestJS"],
-    implementationDate: "2026-10-15",
-    keywords: ["saúde comunitária", "agentes de saúde", "mobile", "UBS"],
-    sources: ["https://aps.saude.gov.br", "https://barueri.sp.gov.br/saude"],
-    awards: [{ institution: "Prêmio Inovação em Saúde Pública SP", year: 2026, description: "Destaque em solução digital para atenção básica", link: "https://exemplo.com" }],
-    indicators: [
-      { label: "Visitas domiciliares registradas/mês", value: "4.200", measure: "visitas", source: "Secretaria de Saúde", year: 2026 },
-      { label: "Redução no tempo de registro", value: "70", measure: "%", source: "Relatório piloto", year: 2026 },
-    ],
-    slides: [
-      { id: "s2-1", title: "Capa Institucional", type: "capa" },
-      { id: "s2-2", title: "Panorama de Saúde Barueri", type: "dados" },
-      { id: "s2-3", title: "App Saúde Comunitária", type: "projeto" },
-      { id: "s2-4", title: "Resultados do Piloto", type: "indicadores" },
-      { id: "s2-5", title: "Encerramento", type: "encerramento" },
-    ],
-  },
-  {
-    id: "draft-3",
-    name: "Painel de Arrecadação Municipal",
-    shortDescription: "Dashboard interativo para acompanhamento da arrecadação de ISS, IPTU e demais impostos municipais em tempo real.",
-    fullDescription: "O painel consolida dados dos sistemas tributários do município e apresenta comparativos mensais e anuais de arrecadação por categoria de imposto e por bairro. Alertas automáticos notificam a equipe de fiscalização quando há queda relevante em determinada área. O sistema inclui módulo de projeção de receita para auxiliar no planejamento orçamentário do exercício seguinte.",
-    team: "Orçamento Municipal",
-    sector: "Financeiro",
-    submittedBy: "Bernardo Carvalho",
-    submittedAt: "2026-09-09T16:45:00",
-    categories: ["Economia", "Governo Digital"],
-    status: "pending",
-    mainDepartment: "Secretaria de Finanças",
-    relatedDepartments: ["Secretaria de Planejamento", "Receita Municipal"],
-    areas: ["Finanças Públicas", "Business Intelligence", "Fiscalização"],
-    ods: [8, 16, 17],
-    theme: "Transparência fiscal e eficiência na arrecadação",
-    audience: "Secretários de Finanças, equipe de fiscalização e prefeito",
-    technologies: ["Power BI", "SQL Server", "Python", "Azure"],
-    implementationDate: "2026-12-01",
-    keywords: ["arrecadação", "IPTU", "ISS", "finanças municipais", "dashboard"],
-    sources: ["https://prefeitura.sp.gov.br/financas", "https://sefin.barueri.sp.gov.br"],
-    awards: [],
-    indicators: [
-      { label: "Receitas monitoradas em tempo real", value: "12", measure: "categorias", source: "Secretaria de Finanças", year: 2026 },
-      { label: "Melhora na previsão orçamentária", value: "92", measure: "% acurácia", source: "Projeção interna", year: 2026 },
-    ],
-    slides: [
-      { id: "s3-1", title: "Capa Institucional", type: "capa" },
-      { id: "s3-2", title: "Arrecadação Municipal 2026", type: "dados" },
-      { id: "s3-3", title: "Painel Tributário Integrado", type: "projeto" },
-      { id: "s3-4", title: "Projeções e Resultados", type: "indicadores" },
-      { id: "s3-5", title: "ODS 8 e 16", type: "ods" },
-      { id: "s3-6", title: "Encerramento", type: "encerramento" },
-    ],
-  },
-  {
-    id: "draft-4",
-    name: "Mapa de Riscos Ambientais",
-    shortDescription: "Sistema de georreferenciamento para identificação e monitoramento de áreas de risco ambiental no município.",
-    fullDescription: "Utilizando dados de satélite, sensores de qualidade do ar e histórico de desastres, a plataforma cria camadas de risco ambiental sobrepostas ao mapa da cidade. A equipe de Gestão Ambiental pode cadastrar vistorias e laudos técnicos diretamente no sistema, criar alertas automáticos para moradores de áreas críticas e gerar relatórios para órgãos reguladores como CETESB e IBAMA.",
-    team: "Gestão Ambiental",
-    sector: "Meio Ambiente",
-    submittedBy: "Fábio Costa",
-    submittedAt: "2026-09-08T11:00:00",
-    categories: ["Meio Ambiente", "Cidades Inteligentes"],
-    status: "pending",
-    mainDepartment: "Secretaria de Meio Ambiente",
-    relatedDepartments: ["Defesa Civil", "Secretaria de Obras", "Secretaria de Saúde"],
-    areas: ["Meio Ambiente", "Georreferenciamento", "Defesa Civil"],
-    ods: [11, 13, 15],
-    theme: "Gestão ambiental inteligente e prevenção de riscos",
-    audience: "Equipe de fiscalização ambiental, Defesa Civil e gestores",
-    technologies: ["GIS", "QGIS", "Python", "API Google Maps", "PostgreSQL PostGIS"],
-    implementationDate: "2026-11-15",
-    keywords: ["risco ambiental", "georreferenciamento", "CETESB", "sustentabilidade"],
-    sources: ["https://cetesb.sp.gov.br", "https://ibama.gov.br", "https://barueri.sp.gov.br/meioambiente"],
-    awards: [],
-    indicators: [
-      { label: "Áreas de risco mapeadas", value: "47", measure: "áreas", source: "Secretaria de Meio Ambiente", year: 2026 },
-      { label: "Tempo de emissão de laudo", value: "3", measure: "dias (antes: 15)", source: "Defesa Civil", year: 2026 },
-    ],
-    slides: [
-      { id: "s4-1", title: "Capa Institucional", type: "capa" },
-      { id: "s4-2", title: "Dados Ambientais Barueri", type: "dados" },
-      { id: "s4-3", title: "Mapa de Riscos Integrado", type: "projeto" },
-      { id: "s4-4", title: "ODS 11, 13 e 15", type: "ods" },
-      { id: "s4-5", title: "Indicadores Ambientais", type: "indicadores" },
-      { id: "s4-6", title: "Encerramento", type: "encerramento" },
-    ],
-  },
-  {
-    id: "draft-5",
-    name: "Programa de Capacitação Digital",
-    shortDescription: "Iniciativa de letramento digital para servidores públicos municipais com trilhas de aprendizado personalizadas.",
-    fullDescription: "O programa oferece trilhas de capacitação em ferramentas de escritório, segurança da informação, uso de sistemas internos e alfabetização em dados. Cada servidor tem um plano de desenvolvimento individual gerado automaticamente com base no cargo e nas lacunas identificadas em avaliação diagnóstica. Certificados digitais são emitidos ao término de cada trilha e ficam vinculados ao prontuário funcional.",
-    team: "Gestão de Pessoas",
-    sector: "Recursos Humanos",
-    submittedBy: "Mariana Lima",
-    submittedAt: "2026-09-07T13:20:00",
-    categories: ["Educação", "Inovação"],
-    status: "pending",
-    mainDepartment: "Secretaria de Gestão de Pessoas",
-    relatedDepartments: ["Secretaria de Tecnologia", "Escola de Governo Municipal"],
-    areas: ["Gestão de Pessoas", "Educação Corporativa", "Transformação Digital"],
-    ods: [4, 8, 10],
-    theme: "Capacitação digital e desenvolvimento de servidores públicos",
-    audience: "Servidores públicos municipais de todos os níveis",
-    technologies: ["LMS Moodle", "Microsoft 365", "Power Automate", "Node.js"],
-    implementationDate: "2026-10-01",
-    keywords: ["capacitação", "letramento digital", "servidores", "treinamento"],
-    sources: ["https://escola.sp.gov.br", "https://barueri.sp.gov.br/gestao-pessoas"],
-    awards: [{ institution: "Prêmio Gestão Pública Eficiente", year: 2026, description: "Melhor programa de capacitação em município paulista", link: "https://exemplo.com" }],
-    indicators: [
-      { label: "Servidores capacitados", value: "1.200", measure: "servidores", source: "RH Municipal", year: 2026 },
-      { label: "Horas de treinamento entregues", value: "8.400", measure: "horas", source: "LMS interno", year: 2026 },
-      { label: "Taxa de conclusão", value: "87", measure: "%", source: "LMS interno", year: 2026 },
-    ],
-    slides: [
-      { id: "s5-1", title: "Capa Institucional", type: "capa" },
-      { id: "s5-2", title: "Perfil dos Servidores Municipais", type: "dados" },
-      { id: "s5-3", title: "Programa de Capacitação Digital", type: "projeto" },
-      { id: "s5-4", title: "Resultados e Certificações", type: "indicadores" },
-      { id: "s5-5", title: "ODS 4, 8 e 10", type: "ods" },
-      { id: "s5-6", title: "Encerramento", type: "encerramento" },
-    ],
-  },
-  {
-    id: "draft-6",
-    name: "Central de Atendimento Digital ao Cidadão",
-    shortDescription: "Portal unificado de serviços municipais com atendimento via chatbot e integração com sistemas de protocolo.",
-    fullDescription: "O portal centraliza mais de 80 serviços municipais em um único endereço digital, com autenticação via Gov.br. Um chatbot com IA guia o cidadão até o serviço correto e pode resolver demandas simples sem intervenção humana. Casos complexos são encaminhados para atendentes com todo o histórico do cidadão já preenchido, reduzindo o tempo médio de atendimento de 25 para 8 minutos.",
-    team: "Gestão de Pessoas",
-    sector: "Recursos Humanos",
-    submittedBy: "Roberto Alves",
-    submittedAt: "2026-09-06T10:00:00",
-    categories: ["Governo Digital", "Inovação"],
-    status: "pending",
-    mainDepartment: "Secretaria de Governo Digital",
-    relatedDepartments: ["Todas as secretarias", "Central de Atendimento ao Cidadão"],
-    areas: ["Governo Digital", "Inteligência Artificial", "Atendimento ao Cidadão"],
-    ods: [11, 16, 17],
-    theme: "Digitalização de serviços públicos e melhoria no atendimento",
-    audience: "Cidadãos de Barueri e servidores de atendimento",
-    technologies: ["React", "NestJS", "OpenAI API", "Gov.br OAuth", "Redis"],
-    implementationDate: "2027-02-01",
-    keywords: ["portal cidadão", "chatbot", "serviços digitais", "Gov.br"],
-    sources: ["https://gov.br/servicos", "https://barueri.sp.gov.br/cidadao"],
-    awards: [],
-    indicators: [
-      { label: "Serviços digitalizados", value: "80+", measure: "serviços", source: "Sec. Governo Digital", year: 2026 },
-      { label: "Redução no tempo de atendimento", value: "68", measure: "%", source: "Central de Atendimento", year: 2026 },
-      { label: "Satisfação do cidadão", value: "4.7", measure: "/5", source: "Pesquisa NPS", year: 2026 },
-    ],
-    slides: [
-      { id: "s6-1", title: "Capa Institucional", type: "capa" },
-      { id: "s6-2", title: "Demanda por Serviços Digitais", type: "dados" },
-      { id: "s6-3", title: "Central Digital ao Cidadão", type: "projeto" },
-      { id: "s6-4", title: "Indicadores de Satisfação", type: "indicadores" },
-      { id: "s6-5", title: "Encerramento", type: "encerramento" },
-    ],
-  },
-  {
-    id: "draft-7",
-    name: "Plataforma de Mobilidade Urbana Integrada",
-    shortDescription: "Integração de dados de transporte público, ciclovias e estacionamentos para otimização do tráfego.",
-    fullDescription: "A plataforma agrega dados em tempo real de ônibus, metrô, bicicletas compartilhadas e vagas de estacionamento, exibindo um mapa multimodal acessível pelo site e aplicativo municipal. Um algoritmo de otimização sugere rotas com menor tempo de deslocamento e menor emissão de carbono. O sistema também alimenta painéis de informação instalados em terminais de ônibus e estações de metrô.",
-    team: "Infraestrutura e Obras",
-    sector: "Infraestrutura",
-    submittedBy: "Cláudio Santos",
-    submittedAt: "2026-09-05T15:30:00",
-    categories: ["Mobilidade Urbana", "Cidades Inteligentes"],
-    status: "pending",
-    mainDepartment: "Secretaria de Mobilidade Urbana",
-    relatedDepartments: ["Secretaria de Obras", "Empresa Municipal de Transportes", "Secretaria de Meio Ambiente"],
-    areas: ["Mobilidade Urbana", "Smart City", "Transporte Público"],
-    ods: [7, 11, 13],
-    theme: "Mobilidade sustentável e cidades inteligentes",
-    audience: "Cidadãos, gestores de transporte e secretaria de obras",
-    technologies: ["React Native", "APIs de Trânsito", "IoT Sensors", "Elasticsearch", "Python"],
-    implementationDate: "2027-03-01",
-    keywords: ["mobilidade urbana", "transporte público", "smart city", "tráfego"],
-    sources: ["https://cetsp.com.br", "https://barueri.sp.gov.br/mobilidade"],
-    awards: [],
-    indicators: [
-      { label: "Modais integrados", value: "5", measure: "modais", source: "Sec. Mobilidade", year: 2026 },
-      { label: "Redução de emissões prevista", value: "22", measure: "%", source: "Estudo técnico", year: 2026 },
-      { label: "Usuários esperados/mês", value: "180.000", measure: "cidadãos", source: "Projeção", year: 2026 },
-    ],
-    slides: [
-      { id: "s7-1", title: "Capa Institucional", type: "capa" },
-      { id: "s7-2", title: "Mobilidade em Barueri", type: "dados" },
-      { id: "s7-3", title: "Plataforma Multimodal", type: "projeto" },
-      { id: "s7-4", title: "Projeções de Impacto", type: "indicadores" },
-      { id: "s7-5", title: "ODS 7, 11 e 13", type: "ods" },
-      { id: "s7-6", title: "Encerramento", type: "encerramento" },
-    ],
-  },
-];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -497,22 +231,13 @@ export default function TeamsPage() {
               source: i.source,
               year: i.year,
             })),
-            // slides ainda não existem no backend — mock padrão
-            slides: [
-              { id: `${p.id}-capa`, title: "Capa Institucional", type: "capa" as const },
-              { id: `${p.id}-dados`, title: "Dados do Projeto", type: "dados" as const },
-              { id: `${p.id}-projeto`, title: p.name, type: "projeto" as const },
-              ...(p.ods.length > 0 ? [{ id: `${p.id}-ods`, title: `ODS ${p.ods.join(", ")}`, type: "ods" as const }] : []),
-              ...(p.indicators.length > 0 ? [{ id: `${p.id}-ind`, title: "Indicadores", type: "indicadores" as const }] : []),
-              { id: `${p.id}-enc`, title: "Encerramento", type: "encerramento" as const },
-            ],
+            slidesUrl: p.slides_url ?? null,
           };
         });
 
-        setDrafts(mapped.length > 0 ? mapped : INITIAL_DRAFTS);
+        setDrafts(mapped);
       } catch {
-        // Backend fora do ar — usa dados mock para demonstração
-        setDrafts(INITIAL_DRAFTS);
+        setDrafts([]);
       } finally {
         setLoading(false);
       }
@@ -552,6 +277,11 @@ export default function TeamsPage() {
   function handleReject(project: DraftProject) {
     setConfirmReject(project);
     setDetailProject(null);
+  }
+
+  function handleViewPresentation(project: DraftProject) {
+    setDetailProject(null);
+    navigate(`${ROUTE_PATHS.generatedPresentation}?id=${project.id}&returnTo=${ROUTE_PATHS.teams}`);
   }
 
   async function confirmRejectAction() {
@@ -684,6 +414,7 @@ export default function TeamsPage() {
           onClose={() => setDetailProject(null)}
           onApprove={handleApprove}
           onReject={handleReject}
+          onViewPresentation={handleViewPresentation}
         />
       )}
 
@@ -750,11 +481,13 @@ function DetailModal({
   onClose,
   onApprove,
   onReject,
+  onViewPresentation,
 }: {
   project: DraftProject;
   onClose: () => void;
   onApprove: (id: string) => void;
   onReject: (p: DraftProject) => void;
+  onViewPresentation: (p: DraftProject) => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#142133]/60 backdrop-blur-[3px] sm:items-center sm:p-4">
@@ -944,43 +677,33 @@ function DetailModal({
             )}
           </Section>
 
-          {/* Preview dos slides */}
-          <Section title="Preview dos Slides" icon={<FiMonitor className="h-4 w-4" />}>
-            <div className="flex gap-3 overflow-x-auto pb-2">
-              {p.slides.map((slide, idx) => {
-                const style = SLIDE_STYLES[slide.type];
-                return (
-                  <div key={slide.id} className="flex w-[120px] shrink-0 flex-col items-center gap-2">
-                    <div className={`flex h-[75px] w-[120px] flex-col items-center justify-center gap-1 rounded-[10px] ${style.bg} text-white shadow-[0_2px_8px_rgba(0,0,0,0.18)]`}>
-                      {style.icon}
-                      <span className="text-[0.6rem] font-bold uppercase tracking-wide opacity-80">{style.label}</span>
-                    </div>
-                    <span className="text-center text-[0.68rem] font-semibold leading-tight text-[#6b7280]">
-                      {idx + 1}. {slide.title}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </Section>
         </div>
 
         {/* Rodapé com ações */}
-        <div className="flex gap-3 border-t border-[#f3f4f6] p-5 pt-4">
+        <div className="flex flex-col gap-2 border-t border-[#f3f4f6] p-5 pt-4">
           <button
             type="button"
-            onClick={() => onReject(p)}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full border border-[#fecaca] bg-[#fef2f2] py-3 text-[0.92rem] font-semibold text-[#dc2626] transition hover:bg-[#fee2e2]"
+            onClick={() => onViewPresentation(p)}
+            className="flex w-full items-center justify-center gap-2 rounded-full border border-[#1675b8] bg-[rgba(22,117,184,0.08)] py-3 text-[0.92rem] font-semibold text-[#1675b8] transition hover:bg-[rgba(22,117,184,0.15)]"
           >
-            <FiX className="h-4 w-4" /> Rejeitar
+            <FiExternalLink className="h-4 w-4" /> Ver apresentação completa
           </button>
-          <button
-            type="button"
-            onClick={() => { onApprove(p.id); onClose(); }}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#16a34a] py-3 text-[0.92rem] font-bold text-white shadow-[0_4px_12px_rgba(22,163,74,0.3)] transition hover:bg-[#15803d]"
-          >
-            <FiCheck className="h-4 w-4" /> Aprovar
-          </button>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => onReject(p)}
+              className="flex flex-1 items-center justify-center gap-2 rounded-full border border-[#fecaca] bg-[#fef2f2] py-3 text-[0.92rem] font-semibold text-[#dc2626] transition hover:bg-[#fee2e2]"
+            >
+              <FiX className="h-4 w-4" /> Rejeitar
+            </button>
+            <button
+              type="button"
+              onClick={() => { onApprove(p.id); onClose(); }}
+              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#16a34a] py-3 text-[0.92rem] font-bold text-white shadow-[0_4px_12px_rgba(22,163,74,0.3)] transition hover:bg-[#15803d]"
+            >
+              <FiCheck className="h-4 w-4" /> Aprovar
+            </button>
+          </div>
         </div>
       </div>
     </div>

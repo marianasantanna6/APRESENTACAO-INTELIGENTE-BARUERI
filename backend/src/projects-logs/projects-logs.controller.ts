@@ -15,6 +15,7 @@ export class ProjectsLogsController {
     @Query('user') user?: string,
     @Query('project') project?: string,
     @Query('action') action?: string,
+    @Query('mine_projects') mine_projects?: string,
   ) {
     if (!req.user?.id) {
       throw new BadRequestException(
@@ -26,6 +27,7 @@ export class ProjectsLogsController {
       user,
       project,
       action,
+      mine_projects: mine_projects === 'true',
     });
   }
 }
