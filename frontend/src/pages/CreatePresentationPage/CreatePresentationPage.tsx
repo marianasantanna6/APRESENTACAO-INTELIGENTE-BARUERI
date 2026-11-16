@@ -16,6 +16,7 @@ import {
   FiArrowRight,
   FiAward,
   FiBookOpen,
+  FiEdit2,
   FiFileText,
   FiGlobe,
   FiImage,
@@ -137,6 +138,67 @@ function CreatePresentationPage() {
     }
   }, [userTeams]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Edição (nova versão) ──
+  const [editFamilyId, setEditFamilyId] = useState<number>(0);
+  const [editBanner, setEditBanner] = useState<string | null>(null);
+
+  useEffect(() => {
+    const familyParam = searchParams.get("editFamily");
+    if (!familyParam) return;
+    authFetch(`/api/projects?family=${encodeURIComponent(familyParam)}`)
+      .then(async (res) => {
+        if (!res.ok) return;
+        const list = await res.json() as Array<{
+          id: string; name: string; family: string; team: string; version: string; status: number;
+          short_description?: string | null; full_description?: string | null;
+          areas: string[]; ods: number[]; technologies: string[]; keywords: string[];
+          main_department?: string | null; related_departments: string[];
+          implementation_date?: string | null; audience?: string | null; theme?: string | null;
+          source: { url: string; name: string }[];
+          awards: { institution: string; year: number; description: string | null; link: string | null }[];
+          indicators: { label: string; value: string; measure: string | null; source: string; year: number }[];
+        }>;
+        // Pega a versão mais recente que não esteja pendente (status=1)
+        const project = list
+          .filter((p) => p.status !== 1)
+          .sort((a, b) => parseInt(b.version) - parseInt(a.version))[0];
+        if (!project) return;
+        setEditFamilyId(parseInt(project.family, 10));
+        setEditBanner(project.name);
+        if (audience === "") setAudience(project.audience ?? "");
+        if (!eventName && project.theme) setEventName(project.theme);
+        ed.patch({
+          name: project.name,
+          shortDescription: project.short_description ?? "",
+          fullDescription: project.full_description ?? "",
+          categories: project.areas as ProjectCategory[],
+          ods: project.ods as import("../../types/project").OdsGoal[],
+          technologies: project.technologies,
+          keywords: project.keywords,
+          mainDepartment: project.main_department ?? "",
+          relatedDepartments: project.related_departments,
+          implementationDate: project.implementation_date ?? "",
+          officialLinks: project.source.map((s) => ({ id: s.url, url: s.url, label: s.name, type: "portal" as const })),
+          awards: project.awards.map((a) => ({
+            id: a.institution + a.year,
+            name: a.institution,
+            organization: a.institution,
+            year: String(a.year),
+            description: a.description ?? "",
+            link: a.link ?? "",
+          })),
+          indicators: project.indicators.map((i) => ({
+            id: i.label,
+            label: i.label,
+            value: i.value,
+            unit: i.measure ?? "",
+            source: i.source,
+            year: String(i.year),
+          })),
+        });
+      });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Salvando ──
   const [isSaving, setIsSaving]   = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -240,7 +302,7 @@ function CreatePresentationPage() {
         name: ed.draft.name.trim(),
         user: userId,
         team: teamId,
-        family: 0,
+        family: editFamilyId,
         source: sources,
         main_department: ed.draft.mainDepartment || user.department || "Prefeitura de Barueri",
         related_departments: ed.draft.relatedDepartments,
@@ -339,6 +401,28 @@ function CreatePresentationPage() {
                 </span>
               </span>
             </h1>
+
+            {/* Banner de nova versão */}
+            {editBanner && (
+              <div className="mt-6 flex w-full items-center justify-between gap-3 rounded-2xl border border-[#c7d2fe] bg-[#eef2ff] px-5 py-3">
+                <div className="flex items-center gap-2.5">
+                  <FiEdit2 className="h-4.5 w-4.5 shrink-0 text-[#4338ca]" />
+                  <p className="text-[0.86rem] text-[#3730a3]">
+                    Criando <strong className="font-bold">nova versão</strong> de{" "}
+                    <strong className="font-bold">"{editBanner}"</strong>.{" "}
+                    Revise os campos, ajuste o que precisar e clique em Gerar.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditBanner(null)}
+                  className="shrink-0 rounded-full p-1 text-[#4338ca] hover:bg-[#c7d2fe]/40"
+                  aria-label="Fechar aviso"
+                >
+                  <FiX className="h-4 w-4" />
+                </button>
+              </div>
+            )}
 
             {/* Banner de template carregado */}
             {templateBanner && (

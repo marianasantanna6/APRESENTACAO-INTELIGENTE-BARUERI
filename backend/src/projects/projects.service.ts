@@ -1194,6 +1194,7 @@ export class ProjectsService {
       keywords?: string;
       status?: string;
       implementation_date?: string;
+      mine?: string;
     },
     userId: string,
   ) {
@@ -1276,7 +1277,9 @@ export class ProjectsService {
       }
     }
 
-    if (!authenticatedUser.head_manager) {
+    if (filters.mine === 'true') {
+      where.user = authenticatedUserId;
+    } else if (!authenticatedUser.head_manager) {
       const allRoles =
         await this.prisma.users_role.findMany({
           where: { user: authenticatedUserId },
@@ -1351,10 +1354,12 @@ export class ProjectsService {
           },
         ];
       } else if (isApprover) {
-        // Approver vê projetos em rascunho (status=1) dos times onde é aprovador.
-        // Para outros status, só vê os próprios projetos.
+        // Approver vê projetos dos times onde é aprovador quando:
+        // - filtrando rascunhos (status=1) para a fila de aprovação, ou
+        // - buscando por ID específico (para abrir a apresentação completa)
         const isFilteringDrafts = filters.status === '1';
-        if (isFilteringDrafts) {
+        const isFetchingById = !!filters.id;
+        if (isFilteringDrafts || isFetchingById) {
           where.AND = [
             ...(where.AND ?? []),
             {

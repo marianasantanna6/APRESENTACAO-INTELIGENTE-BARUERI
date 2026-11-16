@@ -4,10 +4,8 @@ import {
   FiCheckCircle,
   FiFolder,
   FiLayers,
-  FiPlus,
 } from "react-icons/fi";
 import {
-  AddToPresentationModal,
   EMPTY_FILTERS,
   ProjectCard,
   ProjectFiltersBar,
@@ -15,11 +13,12 @@ import {
   RoleBanner,
 } from "../../components/InstitutionalProjects";
 import type { ProjectFiltersState } from "../../components/InstitutionalProjects";
-import { ProjectEditor } from "../../components/ProjectEditor";
 import { useAuth } from "../../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { usePermissions } from "../../hooks/usePermissions";
 import { projectService } from "../../services/projectService";
 import type { InstitutionalProject, ProjectSummary } from "../../types/project";
+import { ROUTE_PATHS } from "../../router/paths";
 import { ROLE_LABELS } from "../../types/user";
 import type { UserRole } from "../../types/user";
 
@@ -28,8 +27,7 @@ import type { UserRole } from "../../types/user";
 type Toast = { id: number; type: "success" | "error"; message: string };
 type ModalState =
   | { kind: "none" }
-  | { kind: "view";              project: InstitutionalProject }
-  | { kind: "addToPresentation"; projectId: string; projectName: string };
+  | { kind: "view"; project: InstitutionalProject };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -66,16 +64,13 @@ function applyFilters(
 export default function InstitutionalProjectsPage() {
   const { user } = useAuth();
   const perms = usePermissions();
+  const navigate = useNavigate();
 
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProjectFiltersState>(EMPTY_FILTERS);
   const [modal, setModal] = useState<ModalState>({ kind: "none" });
   const [toasts, setToasts] = useState<Toast[]>([]);
-
-  // Editor state
-  const [editorProject, setEditorProject] = useState<InstitutionalProject | null>(null);
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
 
   // Role resolvido para exibição no banner
   const resolvedRole = perms.resolvedRole ?? "publico-externo";
@@ -129,6 +124,16 @@ export default function InstitutionalProjectsPage() {
 
   // ── Handlers ──
   async function handleView(id: string) {
+    // Se o projeto tiver slides reais (teamId = id do projeto no backend), navega para o visualizador
+    const summary = projects.find((p) => p.id === id);
+    if (summary?.slidesUrl) {
+      const params = new URLSearchParams({ pid: id });
+      params.set("dlUrl", summary.slidesUrl);
+      params.set("returnTo", ROUTE_PATHS.institutionalProjects);
+      navigate(`${ROUTE_PATHS.generatedPresentation}?${params.toString()}`);
+      return;
+    }
+    // Fallback: modal de texto com detalhes do projeto
     try {
       const full = await projectService.getProjectById(id);
       if (full) setModal({ kind: "view", project: full });
@@ -137,62 +142,8 @@ export default function InstitutionalProjectsPage() {
     }
   }
 
-  async function handleArchive(id: string) {
-    try {
-      await projectService.archiveProject(id);
-      setProjects((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, status: "archived" as const } : p)),
-      );
-      toast("success", "Projeto arquivado com sucesso.");
-    } catch {
-      toast("error", "Erro ao arquivar projeto.");
-    }
-  }
-
-
-  function handleApprove(id: string) {
-    setProjects((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, status: "active" as const } : p)),
-    );
-    toast("success", "Projeto aprovado e marcado como ativo.");
-  }
-
-  // ── Editor handlers ──
-  function openNewEditor() {
-    setEditorProject(null);
-    setIsEditorOpen(true);
-  }
-
-  async function openEditEditor(id: string) {
-    try {
-      const full = await projectService.getProjectById(id);
-      if (full) {
-        setEditorProject(full);
-        setIsEditorOpen(true);
-      }
-    } catch {
-      toast("error", "Erro ao carregar projeto para edição.");
-    }
-  }
-
-  function handleEditorSaved() {
-    setIsEditorOpen(false);
-    // Recarrega lista para refletir criação/edição
-    projectService.getProjects().then(setProjects);
-    toast("success", "Projeto salvo com sucesso.");
-  }
-
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      {/* ── Editor overlay ── */}
-      {isEditorOpen && (
-        <ProjectEditor
-          initial={editorProject}
-          onClose={() => setIsEditorOpen(false)}
-          onSaved={handleEditorSaved}
-        />
-      )}
-
       {/* ── Toast container ── */}
       <div className="fixed bottom-6 right-6 z-50 space-y-2" aria-live="polite">
         {toasts.map((t) => (
@@ -200,25 +151,13 @@ export default function InstitutionalProjectsPage() {
         ))}
       </div>
 
-      {/* ── Modais ── */}
+      {/* ── Modal de detalhes ── */}
       {modal.kind === "view" && (
         <ProjectViewModal
           project={modal.project}
           allProjects={projects}
-          canEdit={perms.canEditProject({ projectDepartment: modal.project.mainDepartment })}
+          canEdit={false}
           onClose={() => setModal({ kind: "none" })}
-          onUpdateRelated={async (projectId, relatedIds) => {
-            await projectService.updateProject(projectId, { relatedProjectIds: relatedIds });
-            projectService.getProjects().then(setProjects);
-          }}
-        />
-      )}
-      {modal.kind === "addToPresentation" && (
-        <AddToPresentationModal
-          projectId={modal.projectId}
-          projectName={modal.projectName}
-          onClose={() => setModal({ kind: "none" })}
-          onSuccess={(msg) => toast("success", msg)}
         />
       )}
 
@@ -234,20 +173,9 @@ export default function InstitutionalProjectsPage() {
             </h1>
           </div>
           <p className="mt-1.5 text-[0.88rem] text-[#6b7280]">
-            Gerencie os projetos e iniciativas do município de Barueri.
+            Projetos e iniciativas do município de Barueri.
           </p>
         </div>
-
-        {perms.canCreateProject() && (
-          <button
-            type="button"
-            onClick={openNewEditor}
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[linear-gradient(135deg,#6fa8d6,#4f84c4)] px-4 py-2.5 text-[0.9rem] font-semibold text-white shadow-[0_6px_20px_rgba(97,159,208,0.4)] transition hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(97,159,208,0.5)]"
-          >
-            <FiPlus className="h-4.5 w-4.5" />
-            Novo Projeto
-          </button>
-        )}
       </header>
 
       {/* ── Banner de cargo ── */}
@@ -284,28 +212,13 @@ export default function InstitutionalProjectsPage() {
         <EmptyState />
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((project) => {
-            const canEdit               = perms.canEditProject({ projectDepartment: project.mainDepartment });
-            const canArchive            = perms.canArchiveProject();
-            const canApprove            = perms.canApproveContent();
-            const canAddToPresentation  = perms.canCreateProject();
-
-            return (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                actions={{ canEdit, canArchive, canApprove, canAddToPresentation }}
-                onView={handleView}
-                onEdit={openEditEditor}
-                onArchive={handleArchive}
-                onApprove={handleApprove}
-                onAddToPresentation={(id) => {
-                  const name = projects.find((p) => p.id === id)?.name ?? "";
-                  setModal({ kind: "addToPresentation", projectId: id, projectName: name });
-                }}
-              />
-            );
-          })}
+          {filtered.map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              onView={handleView}
+            />
+          ))}
         </div>
       )}
     </div>

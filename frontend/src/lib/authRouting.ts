@@ -2,8 +2,13 @@ import { canAccessAdminModules, canCreatePresentations } from "./accessControl";
 import type { AuthSessionUser } from "../types/auth";
 import { ROUTE_PATHS } from "../router/paths";
 
-export function getDefaultRouteForUser(_user: AuthSessionUser) {
-  return ROUTE_PATHS.createPresentation;
+export function getDefaultRouteForUser(user: AuthSessionUser) {
+  // Pure approver (has approver role but cannot create) → approval queue
+  if (!canCreatePresentations(user)) {
+    return ROUTE_PATHS.teams;
+  }
+  // Everyone else lands on the presentations list, not directly on the create wizard
+  return ROUTE_PATHS.presentations;
 }
 
 export function getPresentationsRouteForUser(_user: AuthSessionUser | null) {

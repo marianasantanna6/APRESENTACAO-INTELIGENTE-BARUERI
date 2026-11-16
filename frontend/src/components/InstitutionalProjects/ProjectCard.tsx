@@ -1,30 +1,15 @@
 import {
-  FiArchive,
   FiCalendar,
-  FiEdit2,
   FiEye,
   FiMapPin,
-  FiPlusCircle,
 } from "react-icons/fi";
 import type { ProjectSummary } from "../../types/project";
 import { ProjectCategoryBadge } from "./ProjectCategoryBadge";
 import { ProjectStatusBadge } from "./ProjectStatusBadge";
 
-type CardActions = {
-  canEdit: boolean;
-  canArchive: boolean;
-  canApprove: boolean;
-  canAddToPresentation?: boolean;
-};
-
 type Props = {
   project: ProjectSummary;
-  actions: CardActions;
   onView: (id: string) => void;
-  onEdit: (id: string) => void;
-  onArchive: (id: string) => void;
-  onApprove: (id: string) => void;
-  onAddToPresentation?: (id: string) => void;
 };
 
 function formatDate(iso: string) {
@@ -35,15 +20,7 @@ function formatDate(iso: string) {
   });
 }
 
-export function ProjectCard({
-  project,
-  actions,
-  onView,
-  onEdit,
-  onArchive,
-  onApprove,
-  onAddToPresentation,
-}: Props) {
+export function ProjectCard({ project, onView }: Props) {
   const visibleCategories = project.categories.slice(0, 3);
   const extraCategories = project.categories.length - 3;
 
@@ -60,15 +37,6 @@ export function ProjectCard({
             </span>
           </div>
         </div>
-        {actions.canApprove && project.status === "draft" && (
-          <button
-            type="button"
-            onClick={() => onApprove(project.id)}
-            className="shrink-0 rounded-full bg-[#eff6ff] px-3 py-1 text-[0.72rem] font-bold text-[#1d4ed8] transition hover:bg-[#dbeafe]"
-          >
-            Aprovar
-          </button>
-        )}
       </div>
 
       {/* ── Corpo principal ── */}
@@ -100,67 +68,20 @@ export function ProjectCard({
         </p>
       </div>
 
-      {/* ── Rodapé: data + ações ── */}
+      {/* ── Rodapé: data + visualizar ── */}
       <div className="flex items-center justify-between gap-2 border-t border-[#f0f1f5] px-5 py-3">
         <span className="inline-flex items-center gap-1.5 text-[0.72rem] text-[#9ca3af]">
           <FiCalendar className="h-3 w-3" />
           {formatDate(project.lastUpdatedAt)}
         </span>
 
-        <div className="flex items-center gap-1">
-          {/* Visualizar — sempre visível */}
-          <ActionButton
-            icon={<FiEye className="h-3.5 w-3.5" />}
-            label="Visualizar"
-            onClick={() => onView(project.id)}
-            variant="default"
-          />
-
-          {/* Editar */}
-          {actions.canEdit && (
-            <ActionButton
-              icon={<FiEdit2 className="h-3.5 w-3.5" />}
-              label="Editar"
-              onClick={() => onEdit(project.id)}
-              variant="primary"
-            />
-          )}
-
-          {/* Arquivar */}
-          {actions.canArchive && project.status !== "archived" && (
-            <ActionButton
-              icon={<FiArchive className="h-3.5 w-3.5" />}
-              label="Arquivar"
-              onClick={() => onArchive(project.id)}
-              variant="warning"
-            />
-          )}
-
-          {/* Adicionar a apresentação */}
-          {actions.canAddToPresentation && onAddToPresentation && (
-            <ActionButton
-              icon={<FiPlusCircle className="h-3.5 w-3.5" />}
-              label="Adicionar a uma apresentação"
-              onClick={() => onAddToPresentation(project.id)}
-              variant="primary"
-            />
-          )}
-        </div>
+        <ActionButton
+          icon={<FiEye className="h-3.5 w-3.5" />}
+          label="Visualizar"
+          onClick={() => onView(project.id)}
+          variant="default"
+        />
       </div>
-
-      {/* Banner "Adicionar à apresentação" — aparece no hover quando permitido */}
-      {actions.canAddToPresentation && onAddToPresentation && (
-        <div className="overflow-hidden rounded-b-2xl border-t border-[#eff6ff] bg-[#f8fbff] px-5 py-2.5 opacity-0 transition-all group-hover:opacity-100">
-          <button
-            type="button"
-            onClick={() => onAddToPresentation(project.id)}
-            className="inline-flex items-center gap-1.5 text-[0.78rem] font-semibold text-[#1675b8] transition hover:underline"
-          >
-            <FiPlusCircle className="h-3.5 w-3.5" />
-            Adicionar a uma apresentação
-          </button>
-        </div>
-      )}
     </article>
   );
 }

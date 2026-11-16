@@ -117,6 +117,7 @@ export const realProjectService: ProjectServiceContract = {
       if (filters.department) params.set("main_department", filters.department);
       if (filters.query) params.set("name", filters.query);
       if (filters.teamId) params.set("team", filters.teamId);
+      if (filters.mine) params.set("mine", "true");
 
       const res = await authFetch(`/api/projects?${params.toString()}`);
       if (!res.ok) return [];

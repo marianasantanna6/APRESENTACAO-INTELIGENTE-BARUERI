@@ -1,22 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { IconType } from "react-icons";
 import {
   FiFolder,
   FiHelpCircle,
   FiLayers,
+  FiLogOut,
   FiMenu,
   FiSettings,
   FiShield,
   FiX,
 } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
-import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import AuthenticatedHeader from "../../components/AuthenticatedHeader";
 import {
   useAuth,
   useSystemPreferences,
 } from "../../context";
-import { useAdminConsole } from "../../context/AdminConsoleContext";
 import {
   canAccessAdminModules,
   canCreatePresentations,
@@ -93,9 +93,11 @@ function SidebarLink({
 function SidebarContent({
   canSeeAdminModules,
   onNavigate,
+  onLogout,
 }: {
   canSeeAdminModules: boolean;
   onNavigate?: () => void;
+  onLogout?: () => void;
 }) {
   const { t } = useTranslation();
   const visiblePrimaryDefs = primarySidebarDefs.filter(
@@ -115,8 +117,26 @@ function SidebarContent({
         </div>
       </nav>
 
-      <div className="border-t border-[#d7d7d7] px-4 py-5">
+      <div className="border-t border-[#d7d7d7] px-4 py-5 space-y-2">
         <SidebarLink def={settingsSidebarDef} onNavigate={onNavigate} />
+        <Link
+          to={ROUTE_PATHS.help}
+          onClick={onNavigate}
+          className="flex items-center gap-3 rounded-full px-4 py-3 text-[0.95rem] font-medium text-[#7a7a7a] transition-all hover:bg-white/70 hover:text-[#1e1e1e]"
+        >
+          <FiHelpCircle className="h-4.5 w-4.5" aria-hidden="true" />
+          {t("landing.help")}
+        </Link>
+        {onLogout && (
+          <button
+            type="button"
+            onClick={() => { onNavigate?.(); onLogout(); }}
+            className="flex w-full items-center gap-3 rounded-full px-4 py-3 text-[0.95rem] font-medium text-[#7a7a7a] transition-all hover:bg-white/70 hover:text-[#1e1e1e]"
+          >
+            <FiLogOut className="h-4.5 w-4.5" aria-hidden="true" />
+            Sair
+          </button>
+        )}
       </div>
     </>
   );
@@ -126,10 +146,12 @@ function MobileSidebar({
   canSeeAdminModules,
   isOpen,
   onClose,
+  onLogout,
 }: {
   canSeeAdminModules: boolean;
   isOpen: boolean;
   onClose: () => void;
+  onLogout?: () => void;
 }) {
   const { t } = useTranslation();
 
@@ -173,78 +195,9 @@ function MobileSidebar({
         <SidebarContent
           canSeeAdminModules={canSeeAdminModules}
           onNavigate={onClose}
+          onLogout={onLogout}
         />
       </div>
-    </div>
-  );
-}
-
-// ─── Filtro de Setor/Time (Master Admin) ─────────────────────────────────────
-
-function MasterAdminFilterBar() {
-  const { setores, times } = useAdminConsole();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const selectedSector = searchParams.get("setor") ?? "";
-  const selectedTeam = searchParams.get("time") ?? "";
-
-  const filteredTeams = useMemo(
-    () => (selectedSector ? times.filter((t) => t.secretariaId === selectedSector) : times),
-    [times, selectedSector],
-  );
-
-  function handleSector(val: string) {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (val) next.set("setor", val); else next.delete("setor");
-      next.delete("time");
-      return next;
-    }, { replace: true });
-  }
-
-  function handleTeam(val: string) {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (val) next.set("time", val); else next.delete("time");
-      return next;
-    }, { replace: true });
-  }
-
-  if (setores.length === 0 && times.length === 0) return null;
-
-  return (
-    <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-[#bfdbfe] bg-[#eff6ff] px-5 py-3">
-      <span className="text-[0.78rem] font-bold uppercase tracking-wider text-[#1d4ed8]">
-        Filtrar por
-      </span>
-      <select
-        value={selectedSector}
-        onChange={(e) => handleSector(e.target.value)}
-        className="rounded-xl border border-[#bfdbfe] bg-white px-3 py-1.5 text-[0.88rem] text-[#1e1e1e] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/30"
-      >
-        <option value="">Todos os Setores</option>
-        {setores.map((s) => (
-          <option key={s.id} value={s.id}>{s.nome}</option>
-        ))}
-      </select>
-      <select
-        value={selectedTeam}
-        onChange={(e) => handleTeam(e.target.value)}
-        className="rounded-xl border border-[#bfdbfe] bg-white px-3 py-1.5 text-[0.88rem] text-[#1e1e1e] focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/30"
-      >
-        <option value="">Todos os Times</option>
-        {filteredTeams.map((t) => (
-          <option key={t.id} value={t.id}>{t.nome}</option>
-        ))}
-      </select>
-      {(selectedSector || selectedTeam) && (
-        <button
-          type="button"
-          onClick={() => setSearchParams({}, { replace: true })}
-          className="text-[0.82rem] font-semibold text-[#1d4ed8] underline"
-        >
-          Limpar filtros
-        </button>
-      )}
     </div>
   );
 }
@@ -272,6 +225,38 @@ function ApproverCenterNav({ isSettings }: { isSettings: boolean }) {
         <FiSettings className="mr-1.5 inline-block h-4 w-4" />
         Configurações
       </NavLink>
+    </>
+  );
+}
+
+// ─── Nav central do admin console ────────────────────────────────────────────
+
+const adminNavPillClass =
+  "flex h-10 items-center justify-center rounded-[50px] border border-transparent px-3 text-[1rem] font-semibold whitespace-nowrap !text-white transition-all hover:-translate-y-0.5 hover:border-[#1675b8] hover:bg-[rgba(22,117,184,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] focus:outline-none focus:ring-4 focus:ring-white/25 lg:h-11 lg:px-3.5 lg:text-[1.05rem]";
+const adminActivePillClass = "border-[#1675b8] bg-[rgba(22,117,184,0.5)] shadow-[0_4px_12px_rgba(0,0,0,0.12)]";
+
+function AdminCenterNav({ canCreate }: { canCreate: boolean }) {
+  return (
+    <>
+      <NavLink
+        to={ROUTE_PATHS.presentations}
+        end
+        className={({ isActive }) => `${adminNavPillClass} ${isActive ? adminActivePillClass : ""}`}
+      >
+        Projetos
+      </NavLink>
+      {canCreate && (
+        <>
+          <div aria-hidden="true" className="h-6 w-0.5 bg-white/30" />
+          <NavLink
+            to={ROUTE_PATHS.createPresentation}
+            end
+            className={({ isActive }) => `${adminNavPillClass} ${isActive ? adminActivePillClass : ""}`}
+          >
+            Criar
+          </NavLink>
+        </>
+      )}
     </>
   );
 }
@@ -350,18 +335,16 @@ function AdminConsoleLayoutContent() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [notificationsHook]);
 
-  // Pure approvers (no creator capability in any team) get the Teams Dashboard at /apresentacoes
-  // and the minimal layout for account/settings. Mixed users (approver + creator) get full layout.
-  const isStrictApproverOnly = user?.approver && !canSeeCreateFlow;
+  // Pure approvers (no creator capability in any team) use minimal layout for settings/account.
+  // For other pages, redirect to /times (approval queue). Mixed users (approver + creator) get full layout.
+  const isStrictApproverOnly = !canSeeCreateFlow && !canSeeAdminModules && (user?.approver || user?.teams?.some((t) => t.approver));
   if (isStrictApproverOnly) {
     const minimalPages: string[] = [ROUTE_PATHS.myAccount, ROUTE_PATHS.settings];
-    if (!minimalPages.includes(location.pathname) && location.pathname !== ROUTE_PATHS.presentations) {
-      return <Navigate to={ROUTE_PATHS.presentations} replace />;
-    }
     if (minimalPages.includes(location.pathname)) {
       return <ApproverMinimalLayout />;
     }
-    // Fall through to full layout for /apresentacoes (Teams Dashboard)
+    // All other pages → approval queue
+    return <Navigate to={ROUTE_PATHS.teams} replace />;
   }
 
   const activeHeaderItem =
@@ -393,8 +376,8 @@ function AdminConsoleLayoutContent() {
       </a>
 
       <AuthenticatedHeader
-        activeItem={activeHeaderItem}
-        canCreate={canSeeCreateFlow}
+        canCreate={false}
+        customCenterNav={<AdminCenterNav canCreate={canSeeCreateFlow} />}
         logoTo={ROUTE_PATHS.presentations}
         notifications={{
           items: notificationsHook.notifications,
@@ -414,6 +397,7 @@ function AdminConsoleLayoutContent() {
         canSeeAdminModules={canSeeAdminModules}
         isOpen={isMobileSidebarOpen}
         onClose={() => setIsMobileSidebarOpen(false)}
+        onLogout={handleLogout}
       />
 
       <div className="md:flex">
@@ -421,7 +405,7 @@ function AdminConsoleLayoutContent() {
           data-surface="sidebar"
           className="hidden h-[calc(100vh-89px)] w-[228px] shrink-0 self-start overflow-y-auto border-r border-[#d7d7d7] bg-[#f4f5f7] md:sticky md:top-[89px] md:flex md:flex-col"
         >
-          <SidebarContent canSeeAdminModules={canSeeAdminModules} />
+          <SidebarContent canSeeAdminModules={canSeeAdminModules} onLogout={handleLogout} />
         </aside>
 
         <main
@@ -429,7 +413,6 @@ function AdminConsoleLayoutContent() {
           tabIndex={-1}
           className="min-h-[calc(100vh-89px)] min-w-0 flex-1 px-4 pb-10 pt-6 sm:px-6 lg:px-8 lg:pt-8"
         >
-          {user?.master_admin && <MasterAdminFilterBar />}
           <div className="mb-5 flex items-center justify-between gap-3 md:hidden">
             <button
               type="button"

@@ -166,4 +166,5 @@ export type ProjectFilters = {
   department?: string;
   governmentArea?: GovernmentArea | "";
   teamId?: string;
+  mine?: boolean;
 };

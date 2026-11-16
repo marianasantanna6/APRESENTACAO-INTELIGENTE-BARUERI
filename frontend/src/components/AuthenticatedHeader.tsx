@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FiBell, FiCheck, FiHelpCircle, FiLogOut, FiMenu, FiX } from "react-icons/fi";
 import { Link } from "react-router-dom";
-import createLogo from "../assets/images/create-logo.png";
+import { BarueriLogo } from "./BarueriLogo";
 import { ROUTE_PATHS } from "../router/paths";
 import type { AuthSessionUser } from "../types/auth";
 import { AdminAvatar } from "./AdminConsole";
@@ -86,11 +86,7 @@ export default function AuthenticatedHeader({
             className={getLogoVisibilityClass(showDesktopLogo, showMobileLogo)}
             onClick={handleCloseMobileMenu}
           >
-            <img
-              src={createLogo}
-              alt="Logo Barueri"
-              className="h-auto w-[108px] sm:w-[150px]"
-            />
+            <BarueriLogo variant="light" brasaoSize={38} />
           </Link>
         </div>
 
@@ -157,7 +153,7 @@ export default function AuthenticatedHeader({
                 textClassName="text-[0.82rem]"
                 className="ring-2 ring-white/60"
               />
-              <div className="hidden max-w-[136px] leading-tight sm:block xl:max-w-[160px]">
+              <div className="hidden max-w-[136px] leading-tight lg:block xl:max-w-[160px]">
                 <p className="truncate text-sm font-semibold !text-white">{user.name}</p>
               </div>
             </Link>

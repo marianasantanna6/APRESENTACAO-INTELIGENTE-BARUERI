@@ -3,7 +3,11 @@ import {
   FiArrowRight,
   FiCheck,
   FiClock,
+  FiEdit2,
+  FiEye,
+  FiFolder,
   FiGrid,
+  FiPlus,
   FiSettings,
   FiShield,
   FiUser,
@@ -11,12 +15,14 @@ import {
   FiX,
   FiZap,
 } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useAdminConsole } from "../../context/AdminConsoleContext";
 import { authFetch } from "../../lib/apiClient";
+import { canAccessAdminModules, canCreatePresentations } from "../../lib/accessControl";
 import type { AuthSessionUser } from "../../types/auth";
 import type { EmployeeDirectoryEntry, SetorEntry, TimeEntry } from "../../types/admin";
+import type { ProjectStatus } from "../../types/project";
 import { ROUTE_PATHS } from "../../router/paths";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -44,6 +50,276 @@ function groupTeamsBySector(teams: UserTeam[]): SectorGroup[] {
   return Array.from(map.values());
 }
 
+// ─── Manager: Minhas Apresentações ────────────────────────────────────────────
+
+type ApiProject = {
+  id: string;
+  name: string;
+  short_description: string | null;
+  status: number;
+  last_update: string | null;
+  team: string | null;
+  slides_url: string | null;
+  family: string | null;
+  version: string | null;
+};
+
+type MappedProject = {
+  id: string;
+  name: string;
+  shortDescription: string;
+  status: ProjectStatus;
+  lastUpdatedAt: string;
+  teamId: string | null;
+  slidesUrl: string | null;
+  family: string | null;
+  version: string | null;
+};
+
+function mapStatus(s: number): ProjectStatus {
+  if (s === 2) return "active";
+  if (s === 3) return "archived";
+  return "draft";
+}
+
+const STATUS_CONFIG: Record<ProjectStatus, { label: string; cls: string }> = {
+  draft:    { label: "Pendente",   cls: "bg-[#fef9c3] text-[#92400e]" },
+  active:   { label: "Aprovado",   cls: "bg-[#dcfce7] text-[#166534]" },
+  archived: { label: "Arquivado",  cls: "bg-[#f3f4f6] text-[#6b7280]" },
+};
+
+type StatusFilter = "all" | ProjectStatus;
+
+const STATUS_TABS: { key: StatusFilter; label: string }[] = [
+  { key: "all",      label: "Todos" },
+  { key: "draft",    label: "Pendentes" },
+  { key: "active",   label: "Aprovados" },
+  { key: "archived", label: "Arquivados" },
+];
+
+function formatDate(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function ManagerProjectsView() {
+  const { user } = useAuth();
+  const { times } = useAdminConsole();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [projects, setProjects] = useState<MappedProject[]>([]);
+  const [loading, setLoading] = useState(true);
+  const canCreate = canCreatePresentations(user);
+  const statusFilter = (searchParams.get("status") ?? "all") as StatusFilter;
+
+  useEffect(() => {
+    if (!user) return;
+    setLoading(true);
+    authFetch("/api/projects?mine=true")
+      .then((r) => (r.ok ? (r.json() as Promise<ApiProject[]>) : Promise.resolve([])))
+      .then((data) => {
+        setProjects(data.map((p) => ({
+          id: p.id,
+          name: p.name,
+          shortDescription: p.short_description ?? "",
+          status: mapStatus(p.status),
+          lastUpdatedAt: p.last_update ?? "",
+          teamId: p.team,
+          slidesUrl: p.slides_url,
+          family: p.family,
+          version: p.version,
+        })));
+      })
+      .catch(() => setProjects([]))
+      .finally(() => setLoading(false));
+  }, [user]);
+
+  const teamNameById = useMemo(
+    () => new Map(times.map((t) => [t.id, t.nome])),
+    [times],
+  );
+
+  const latestByFamily = useMemo(() => {
+    const map = new Map<string, MappedProject>();
+    for (const p of projects) {
+      const key = p.family ?? p.id;
+      const existing = map.get(key);
+      if (!existing || (p.version ?? "1") > (existing.version ?? "1")) map.set(key, p);
+    }
+    return Array.from(map.values());
+  }, [projects]);
+
+  const filtered = useMemo(
+    () => statusFilter === "all" ? latestByFamily : latestByFamily.filter((p) => p.status === statusFilter),
+    [latestByFamily, statusFilter],
+  );
+
+  function handleStatusTab(key: StatusFilter) {
+    setSearchParams(key === "all" ? {} : { status: key }, { replace: true });
+  }
+
+  return (
+    <div className="mx-auto max-w-5xl space-y-7">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[#eff6ff] px-3 py-1.5 text-[0.78rem] font-bold uppercase tracking-wider text-[#1675b8]">
+            <FiFolder className="h-3.5 w-3.5" />
+            Projetos
+          </div>
+          <h1 className="text-[1.9rem] font-extrabold tracking-[-0.04em] text-[#1e1e1e] sm:text-[2.3rem]">
+            Minhas Apresentações
+          </h1>
+          <p className="mt-1 text-[0.92rem] text-[#6b7280]">
+            {loading ? "Carregando..." : `${latestByFamily.length} apresentaç${latestByFamily.length !== 1 ? "ões" : "ão"} no total`}
+          </p>
+        </div>
+        {canCreate && (
+          <Link
+            to={ROUTE_PATHS.createPresentation}
+            className="inline-flex shrink-0 items-center gap-2 self-start rounded-full bg-[#1675b8] px-5 py-2.5 text-[0.92rem] font-semibold text-white shadow-[0_6px_20px_rgba(22,117,184,0.28)] transition hover:-translate-y-0.5 sm:self-auto"
+          >
+            <FiPlus className="h-4 w-4" />
+            Nova Apresentação
+          </Link>
+        )}
+      </div>
+
+      {/* Status filter tabs */}
+      <div className="flex flex-wrap gap-2">
+        {STATUS_TABS.map((tab) => {
+          const isActive = tab.key === statusFilter;
+          const count = tab.key === "all" ? latestByFamily.length : latestByFamily.filter((p) => p.status === tab.key).length;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => handleStatusTab(tab.key)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-[0.86rem] font-semibold transition-all ${
+                isActive
+                  ? "border-[#1675b8] bg-[#1675b8] text-white shadow-[0_4px_12px_rgba(22,117,184,0.25)]"
+                  : "border-[#e5e7eb] bg-white text-[#6b7280] hover:border-[#1675b8] hover:text-[#1675b8]"
+              }`}
+            >
+              {tab.label}
+              <span className={`rounded-full px-1.5 py-0.5 text-[0.72rem] font-bold ${isActive ? "bg-white/25 text-white" : "bg-[#f3f4f6] text-[#6b7280]"}`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {loading && (
+        <div className="flex items-center justify-center py-20">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#1675b8] border-t-transparent" />
+          <span className="ml-3 text-[1rem] font-medium text-[#6b7280]">Carregando apresentações...</span>
+        </div>
+      )}
+
+      {!loading && latestByFamily.length === 0 && (
+        <div className="flex flex-col items-center gap-5 rounded-[24px] border border-dashed border-[#d1d5db] bg-[#f9fafb] py-24 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#eff6ff]">
+            <FiFolder className="h-8 w-8 text-[#1675b8]" />
+          </div>
+          <div>
+            <p className="text-[1.1rem] font-bold text-[#374151]">Nenhuma apresentação</p>
+            <p className="mt-1 text-[0.92rem] text-[#9ca3af]">
+              {canCreate ? "Crie sua primeira apresentação para começar." : "Você ainda não possui apresentações."}
+            </p>
+          </div>
+          {canCreate && (
+            <Link
+              to={ROUTE_PATHS.createPresentation}
+              className="inline-flex items-center gap-2 rounded-full bg-[#1675b8] px-6 py-3 text-[0.92rem] font-semibold text-white shadow-[0_6px_20px_rgba(22,117,184,0.28)] transition hover:-translate-y-0.5"
+            >
+              <FiPlus className="h-4 w-4" />
+              Nova Apresentação
+            </Link>
+          )}
+        </div>
+      )}
+
+      {!loading && latestByFamily.length > 0 && filtered.length === 0 && (
+        <div className="flex flex-col items-center gap-3 rounded-[20px] border border-dashed border-[#e5e7eb] py-14 text-center">
+          <p className="text-[0.95rem] font-medium text-[#9ca3af]">Nenhuma apresentação com este filtro.</p>
+          <button type="button" onClick={() => handleStatusTab("all")} className="text-[0.88rem] font-semibold text-[#1675b8] underline">
+            Ver todas
+          </button>
+        </div>
+      )}
+
+      {!loading && filtered.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((project) => {
+            const statusCfg = STATUS_CONFIG[project.status];
+            const teamName = project.teamId ? (teamNameById.get(project.teamId) ?? null) : null;
+            return (
+              <div
+                key={project.id}
+                className="flex flex-col rounded-[20px] border border-[#e5e7eb] bg-white p-5 shadow-[0_2px_12px_rgba(20,33,51,0.06)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(20,33,51,0.12)]"
+              >
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[0.72rem] font-bold ${statusCfg.cls}`}>
+                    {statusCfg.label}
+                  </span>
+                  {teamName && (
+                    <span className="max-w-[120px] truncate text-[0.72rem] text-[#9ca3af]" title={teamName}>
+                      {teamName}
+                    </span>
+                  )}
+                </div>
+                <h3 className="mb-2 line-clamp-2 flex-1 text-[0.95rem] font-bold text-[#1e1e1e]">
+                  {project.name}
+                </h3>
+                {project.shortDescription && (
+                  <p className="mb-3 line-clamp-2 text-[0.82rem] text-[#6b7280]">{project.shortDescription}</p>
+                )}
+                <div className="mb-4 flex items-center gap-1.5 text-[0.78rem] text-[#9ca3af]">
+                  <FiClock className="h-3 w-3 shrink-0" />
+                  {formatDate(project.lastUpdatedAt)}
+                  {project.version && (
+                    <span className="ml-auto rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[0.7rem] font-semibold text-[#64748b]">
+                      v{project.version}
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  {project.slidesUrl && (
+                    <button
+                      type="button"
+                      onClick={() => navigate(`${ROUTE_PATHS.generatedPresentation}?id=${project.id}&returnTo=${ROUTE_PATHS.presentations}`)}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-[#1675b8] bg-[rgba(22,117,184,0.06)] py-2 text-[0.82rem] font-semibold text-[#1675b8] transition hover:bg-[rgba(22,117,184,0.12)]"
+                    >
+                      <FiEye className="h-3.5 w-3.5" />
+                      Ver
+                    </button>
+                  )}
+                  {canCreate && (
+                    <button
+                      type="button"
+                      onClick={() => navigate(`${ROUTE_PATHS.createPresentation}?edit=${project.family ?? project.id}`)}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-[#e5e7eb] py-2 text-[0.82rem] font-semibold text-[#6b7280] transition hover:border-[#1675b8] hover:text-[#1675b8]"
+                    >
+                      <FiEdit2 className="h-3.5 w-3.5" />
+                      Editar
+                    </button>
+                  )}
+                  {!project.slidesUrl && !canCreate && (
+                    <span className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-[#f3f4f6] py-2 text-[0.82rem] text-[#9ca3af]">
+                      Sem apresentação gerada
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function AdminProjectsPage() {
@@ -51,6 +327,11 @@ export default function AdminProjectsPage() {
   const { setores, times, employees } = useAdminConsole();
 
   if (!user) return null;
+
+  // Managers veem suas próprias apresentações; usuários comuns veem seus times
+  if (canAccessAdminModules(user)) {
+    return <ManagerProjectsView />;
+  }
 
   if (user.head_manager) {
     return <HeadManagerView setores={setores} times={times} employees={employees} />;

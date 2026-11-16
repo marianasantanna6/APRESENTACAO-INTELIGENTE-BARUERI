@@ -91,6 +91,7 @@ export class ProjectsController {
     @Query('keywords') keywords?: string,
     @Query('status') status?: string,
     @Query('implementation-date') implementation_date?: string,
+    @Query('mine') mine?: string,
   ) {
     return this.projectsService.find(
       {
@@ -108,6 +109,7 @@ export class ProjectsController {
         keywords,
         status,
         implementation_date,
+        mine,
       },
       req.user.id,
     );
