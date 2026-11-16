@@ -15,6 +15,13 @@ export class LoginService {
     const normalizedLoginEmail = normalizeText(login);
     const normalizedLoginCpf = normalizeCpf(login);
 
+    if (
+      normalizedLoginEmail.includes('@') &&
+      !normalizedLoginEmail.endsWith('@barueri.sp.gov.br')
+    ) {
+      throw new UnauthorizedException('Email ou CPF inválidos');
+    }
+
     const user = await this.prisma.users.findFirst({
       where: {
         OR: [

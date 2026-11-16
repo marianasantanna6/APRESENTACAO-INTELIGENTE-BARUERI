@@ -1,7 +1,11 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { normalizeCpf, normalizeText } from '../../common/normalizer';
+import {
+  deleteProfilePicture,
+  uploadProfilePicture,
+} from '../../common/profile-picture-storage';
 import { CreateRegisterDto } from './dto/inputs-register.dto';
 
 @Injectable()
@@ -26,6 +30,13 @@ export class RegisterService {
 
     const cpf = normalizeCpf(dto.cpf);
     const email = normalizeText(dto.email);
+
+    if (!email.endsWith('@barueri.sp.gov.br')) {
+      throw new BadRequestException(
+        'Apenas emails @barueri.sp.gov.br podem ser cadastrados',
+      );
+    }
+
     const existingUser = await this.prisma.users.findFirst({
       where: { OR: [{ email }, { cpf }] }
     });
@@ -36,15 +47,29 @@ export class RegisterService {
     const hashedPassword = await bcrypt.hash(
       dto.password, 10
     );
-    const user = await this.prisma.users.create({
-      data: {
-        name: dto.name,
-        email,
-        password: hashedPassword,
-        cpf,
-        photo: dto.photo,
-      },
-    });
+    const uploadedPhoto = dto.photo?.startsWith('data:')
+      ? await uploadProfilePicture(dto.photo)
+      : undefined;
+
+    let user;
+    try {
+      user = await this.prisma.users.create({
+        data: {
+          name: dto.name,
+          email,
+          password: hashedPassword,
+          cpf,
+          photo: uploadedPhoto?.publicUrl ?? dto.photo,
+        },
+      });
+    } catch (error) {
+      if (uploadedPhoto) {
+        await deleteProfilePicture(uploadedPhoto.path).catch(() => undefined);
+      }
+
+      throw error;
+    }
+
     return {
       id: user.id.toString(),
       name: user.name,

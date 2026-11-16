@@ -73,6 +73,19 @@ export class ProjectsController {
     res.end(buffer);
   }
 
+  @Get('awards')
+  @UseGuards(JwtAuthGuard)
+  searchAwards(
+    @Query('name') name: string | undefined,
+    @Query('institution') institution: string | undefined,
+    @Req() req: any,
+  ) {
+    return this.projectsService.searchAwards(
+      { name, institution },
+      req.user.id,
+    );
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard)
   find(

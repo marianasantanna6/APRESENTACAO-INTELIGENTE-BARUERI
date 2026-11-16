@@ -4,6 +4,10 @@ import { Type } from 'class-transformer';
 class CreateAwardDto {
   @IsNotEmpty()
   @IsString()
+  name!: string;
+
+  @IsNotEmpty()
+  @IsString()
   institution!: string;
 
   @IsNotEmpty()

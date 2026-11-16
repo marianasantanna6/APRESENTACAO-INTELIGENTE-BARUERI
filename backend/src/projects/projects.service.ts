@@ -221,7 +221,7 @@ export class ProjectsService {
 
     const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/+$/, '');
     const supabaseKey = process.env.SUPABASE_SECRET_KEY;
-    const bucketName = process.env.SUPABASE_BUCKET_NAME;
+    const bucketName = process.env.SUPABASE_SLIDES_BUCKET;
 
     if (!supabaseUrl || !supabaseKey || !bucketName) {
       throw new InternalServerErrorException('Configuração do Supabase incompleta');
@@ -262,7 +262,7 @@ export class ProjectsService {
     const supabaseUrl =
       process.env.SUPABASE_URL?.replace(/\/+$/, '');
     const supabaseKey = process.env.SUPABASE_SECRET_KEY;
-    const bucketName = process.env.SUPABASE_BUCKET_NAME;
+    const bucketName = process.env.SUPABASE_SLIDES_BUCKET;
 
     if (!supabaseUrl || !supabaseKey || !bucketName) {
       throw new InternalServerErrorException(
@@ -270,7 +270,7 @@ export class ProjectsService {
       );
     }
 
-    const path = `projects/${randomUUID()}.pptx`;
+    const path = `${randomUUID()}.pptx`;
 
     const encodedPath = path
       .split('/')
@@ -326,7 +326,7 @@ export class ProjectsService {
     const supabaseUrl =
       process.env.SUPABASE_URL?.replace(/\/+$/, '');
     const supabaseKey = process.env.SUPABASE_SECRET_KEY;
-    const bucketName = process.env.SUPABASE_BUCKET_NAME;
+    const bucketName = process.env.SUPABASE_SLIDES_BUCKET;
 
     if (!supabaseUrl || !supabaseKey || !bucketName) {
       throw new Error(
@@ -537,6 +537,7 @@ export class ProjectsService {
                 ? {
                     awards: {
                       create: dto.awards.map((award) => ({
+                        name: award.name ?? '',
                         institution: award.institution,
                         year: award.year,
                         description: award.description,
@@ -695,6 +696,7 @@ export class ProjectsService {
               ? {
                   awards: {
                     create: dto.awards.map((award) => ({
+                      name: award.name ?? '',
                       institution: award.institution,
                       year: award.year,
                       description: award.description,
@@ -863,6 +865,7 @@ export class ProjectsService {
             await tx.awards.createMany({
               data: dto.awards.map((award) => ({
                 project_award: project.id,
+                name: award.name ?? '',
                 institution: award.institution,
                 year: award.year,
                 description: award.description,
@@ -1154,14 +1157,18 @@ export class ProjectsService {
       );
     }
 
-    await this.prisma.$transaction(async (tx) => {
+    const updatedProject = await this.prisma.$transaction(async (tx) => {
       const moment = new Date();
 
-      await tx.projects.update({
+      const updated = await tx.projects.update({
         where: { id: project.id },
         data: {
           status: 3,
           last_update: moment,
+        },
+        include: {
+          awards: true,
+          indicators: true,
         },
       });
 
@@ -1173,9 +1180,63 @@ export class ProjectsService {
           moment,
         },
       });
+
+      return updated;
     });
 
-    return { ok: true };
+    return {
+      id: updatedProject.id.toString(),
+      name: updatedProject.name,
+      user: updatedProject.user.toString(),
+      team: updatedProject.team.toString(),
+      version: updatedProject.version.toString(),
+      family: updatedProject.family.toString(),
+      slides_url: updatedProject.slides_url,
+      short_description: updatedProject.short_description,
+      full_description: updatedProject.full_description,
+      source: updatedProject.source,
+      main_department: updatedProject.main_department,
+      related_departments: updatedProject.related_departments,
+      areas: updatedProject.areas,
+      ods: updatedProject.ods,
+      theme: updatedProject.theme,
+      audience: updatedProject.audience,
+      technologies: updatedProject.technologies,
+      implementation_date: updatedProject.implementation_date,
+      last_update: updatedProject.last_update,
+      keywords: updatedProject.keywords,
+      status: updatedProject.status,
+      awards: updatedProject.awards,
+      indicators: updatedProject.indicators,
+    };
+  }
+
+  async searchAwards(
+    filters: {
+      name?: string;
+      institution?: string;
+    },
+    userId: string,
+  ) {
+    const projects = await this.find({}, userId);
+    const normalizedName = normalizeText(filters.name ?? '');
+    const normalizedInstitution = normalizeText(
+      filters.institution ?? '',
+    );
+
+    return projects.flatMap((project) =>
+      project.awards
+        .filter((award) => {
+          const matchesName =
+            !normalizedName ||
+            normalizeText(award.name).includes(normalizedName);
+          const matchesInstitution =
+            !normalizedInstitution ||
+            normalizeText(award.institution).includes(normalizedInstitution);
+
+          return matchesName && matchesInstitution;
+        }),
+    );
   }
 
   async find(
