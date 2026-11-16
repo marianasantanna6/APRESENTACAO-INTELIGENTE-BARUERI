@@ -562,10 +562,6 @@ export class ProjectsService {
                   }
                 : {}),
             },
-            include: {
-              awards: true,
-              indicators: true,
-            },
           });
 
           // O próprio ID do projeto identifica sua família.
@@ -575,10 +571,6 @@ export class ProjectsService {
             await tx.projects.update({
               where: { id: project.id },
               data: { family },
-              include: {
-                awards: true,
-                indicators: true,
-              },
             });
 
           await tx.projects_logs.create({
@@ -592,33 +584,7 @@ export class ProjectsService {
 
           return {
             id: updatedProject.id.toString(),
-            name: updatedProject.name,
-            user: updatedProject.user.toString(),
-            team: updatedProject.team.toString(),
-            version: updatedProject.version.toString(),
-            family: updatedProject.family.toString(),
             slides_url: updatedProject.slides_url,
-            slides_json: updatedProject.slides_json ?? null,
-            short_description:
-              updatedProject.short_description,
-            full_description:
-              updatedProject.full_description,
-            source: updatedProject.source,
-            main_department: updatedProject.main_department,
-            related_departments:
-              updatedProject.related_departments,
-            areas: updatedProject.areas,
-            ods: updatedProject.ods,
-            theme: updatedProject.theme,
-            audience: updatedProject.audience,
-            technologies: updatedProject.technologies,
-            implementation_date:
-              updatedProject.implementation_date,
-            last_update: updatedProject.last_update,
-            keywords: updatedProject.keywords,
-            status: updatedProject.status,
-            awards: updatedProject.awards,
-            indicators: updatedProject.indicators,
           };
         }
 
@@ -721,10 +687,6 @@ export class ProjectsService {
                 }
               : {}),
           },
-          include: {
-            awards: true,
-            indicators: true,
-          },
         });
 
         await tx.projects_logs.create({
@@ -738,29 +700,7 @@ export class ProjectsService {
 
         return {
           id: newProject.id.toString(),
-          name: newProject.name,
-          user: newProject.user.toString(),
-          team: newProject.team.toString(),
-          version: newProject.version.toString(),
-          family: newProject.family.toString(),
           slides_url: newProject.slides_url,
-          short_description: newProject.short_description,
-          full_description: newProject.full_description,
-          source: newProject.source,
-          main_department: newProject.main_department,
-          related_departments: newProject.related_departments,
-          areas: newProject.areas,
-          ods: newProject.ods,
-          theme: newProject.theme,
-          audience: newProject.audience,
-          technologies: newProject.technologies,
-          implementation_date:
-            newProject.implementation_date,
-          last_update: newProject.last_update,
-          keywords: newProject.keywords,
-          status: newProject.status,
-          awards: newProject.awards,
-          indicators: newProject.indicators,
         };
       });
     } catch (error) {
@@ -826,8 +766,7 @@ export class ProjectsService {
       );
     }
 
-    const updatedProject =
-      await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx) => {
         const moment = new Date();
 
         const projectData: any = {
@@ -903,44 +842,9 @@ export class ProjectsService {
           },
         });
 
-        return tx.projects.findUnique({
-          where: { id: project.id },
-          include: {
-            awards: true,
-            indicators: true,
-          },
-        });
       });
 
-    return {
-      id: updatedProject!.id.toString(),
-      name: updatedProject!.name,
-      user: updatedProject!.user.toString(),
-      team: updatedProject!.team.toString(),
-      version: updatedProject!.version.toString(),
-      family: updatedProject!.family.toString(),
-      slides_url: updatedProject!.slides_url,
-      short_description:
-        updatedProject!.short_description,
-      full_description:
-        updatedProject!.full_description,
-      source: updatedProject!.source,
-      main_department: updatedProject!.main_department,
-      related_departments:
-        updatedProject!.related_departments,
-      areas: updatedProject!.areas,
-      ods: updatedProject!.ods,
-      theme: updatedProject!.theme,
-      audience: updatedProject!.audience,
-      technologies: updatedProject!.technologies,
-      implementation_date:
-        updatedProject!.implementation_date,
-      last_update: updatedProject!.last_update,
-      keywords: updatedProject!.keywords,
-      status: updatedProject!.status,
-      awards: updatedProject!.awards,
-      indicators: updatedProject!.indicators,
-    };
+    return { ok: true };
   }
 
   async approve(id: string, userId: string) {
@@ -975,19 +879,14 @@ export class ProjectsService {
       );
     }
 
-    const updatedProject =
-      await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx) => {
         const moment = new Date();
 
-        const updated = await tx.projects.update({
+        await tx.projects.update({
           where: { id: project.id },
           data: {
             status: 2,
             last_update: moment,
-          },
-          include: {
-            awards: true,
-            indicators: true,
           },
         });
 
@@ -1000,38 +899,9 @@ export class ProjectsService {
           },
         });
 
-        return updated;
       });
 
-    return {
-      id: updatedProject.id.toString(),
-      name: updatedProject.name,
-      user: updatedProject.user.toString(),
-      team: updatedProject.team.toString(),
-      version: updatedProject.version.toString(),
-      family: updatedProject.family.toString(),
-      slides_url: updatedProject.slides_url,
-      short_description:
-        updatedProject.short_description,
-      full_description:
-        updatedProject.full_description,
-      source: updatedProject.source,
-      main_department: updatedProject.main_department,
-      related_departments:
-        updatedProject.related_departments,
-      areas: updatedProject.areas,
-      ods: updatedProject.ods,
-      theme: updatedProject.theme,
-      audience: updatedProject.audience,
-      technologies: updatedProject.technologies,
-      implementation_date:
-        updatedProject.implementation_date,
-      last_update: updatedProject.last_update,
-      keywords: updatedProject.keywords,
-      status: updatedProject.status,
-      awards: updatedProject.awards,
-      indicators: updatedProject.indicators,
-    };
+    return { ok: true };
   }
 
   async deactivate(id: string, userId: string) {
@@ -1066,19 +936,14 @@ export class ProjectsService {
       );
     }
 
-    const updatedProject =
-      await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx) => {
         const moment = new Date();
 
-        const updated = await tx.projects.update({
+        await tx.projects.update({
           where: { id: project.id },
           data: {
             status: 3,
             last_update: moment,
-          },
-          include: {
-            awards: true,
-            indicators: true,
           },
         });
 
@@ -1091,38 +956,9 @@ export class ProjectsService {
           },
         });
 
-        return updated;
       });
 
-    return {
-      id: updatedProject.id.toString(),
-      name: updatedProject.name,
-      user: updatedProject.user.toString(),
-      team: updatedProject.team.toString(),
-      version: updatedProject.version.toString(),
-      family: updatedProject.family.toString(),
-      slides_url: updatedProject.slides_url,
-      short_description:
-        updatedProject.short_description,
-      full_description:
-        updatedProject.full_description,
-      source: updatedProject.source,
-      main_department: updatedProject.main_department,
-      related_departments:
-        updatedProject.related_departments,
-      areas: updatedProject.areas,
-      ods: updatedProject.ods,
-      theme: updatedProject.theme,
-      audience: updatedProject.audience,
-      technologies: updatedProject.technologies,
-      implementation_date:
-        updatedProject.implementation_date,
-      last_update: updatedProject.last_update,
-      keywords: updatedProject.keywords,
-      status: updatedProject.status,
-      awards: updatedProject.awards,
-      indicators: updatedProject.indicators,
-    };
+    return { ok: true };
   }
 
   async reject(id: string, userId: string) {
@@ -1157,18 +993,14 @@ export class ProjectsService {
       );
     }
 
-    const updatedProject = await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx) => {
       const moment = new Date();
 
-      const updated = await tx.projects.update({
+      await tx.projects.update({
         where: { id: project.id },
         data: {
           status: 3,
           last_update: moment,
-        },
-        include: {
-          awards: true,
-          indicators: true,
         },
       });
 
@@ -1181,34 +1013,9 @@ export class ProjectsService {
         },
       });
 
-      return updated;
     });
 
-    return {
-      id: updatedProject.id.toString(),
-      name: updatedProject.name,
-      user: updatedProject.user.toString(),
-      team: updatedProject.team.toString(),
-      version: updatedProject.version.toString(),
-      family: updatedProject.family.toString(),
-      slides_url: updatedProject.slides_url,
-      short_description: updatedProject.short_description,
-      full_description: updatedProject.full_description,
-      source: updatedProject.source,
-      main_department: updatedProject.main_department,
-      related_departments: updatedProject.related_departments,
-      areas: updatedProject.areas,
-      ods: updatedProject.ods,
-      theme: updatedProject.theme,
-      audience: updatedProject.audience,
-      technologies: updatedProject.technologies,
-      implementation_date: updatedProject.implementation_date,
-      last_update: updatedProject.last_update,
-      keywords: updatedProject.keywords,
-      status: updatedProject.status,
-      awards: updatedProject.awards,
-      indicators: updatedProject.indicators,
-    };
+    return { ok: true };
   }
 
   async searchAwards(
@@ -1223,20 +1030,36 @@ export class ProjectsService {
     const normalizedInstitution = normalizeText(
       filters.institution ?? '',
     );
+    const projectIds = projects.map((project) => BigInt(project.id));
 
-    return projects.flatMap((project) =>
-      project.awards
-        .filter((award) => {
-          const matchesName =
-            !normalizedName ||
-            normalizeText(award.name).includes(normalizedName);
-          const matchesInstitution =
-            !normalizedInstitution ||
-            normalizeText(award.institution).includes(normalizedInstitution);
+    if (projectIds.length === 0) {
+      return [];
+    }
 
-          return matchesName && matchesInstitution;
-        }),
-    );
+    const awards = await this.prisma.awards.findMany({
+      where: { project_award: { in: projectIds } },
+    });
+
+    return awards
+      .filter((award) => {
+        const matchesName =
+          !normalizedName ||
+          normalizeText(award.name).includes(normalizedName);
+        const matchesInstitution =
+          !normalizedInstitution ||
+          normalizeText(award.institution).includes(normalizedInstitution);
+
+        return matchesName && matchesInstitution;
+      })
+      .map((award) => ({
+        id: award.id.toString(),
+        project_award: award.project_award.toString(),
+        institution: award.institution,
+        year: award.year,
+        description: award.description,
+        link: award.link,
+        name: award.name,
+      }));
   }
 
   async find(
@@ -1460,7 +1283,6 @@ export class ProjectsService {
         user: project.user.toString(),
         team: project.team.toString(),
         version: project.version.toString(),
-        family: project.family.toString(),
         slides_url: project.slides_url,
         slides_json: project.slides_json ?? null,
         short_description: project.short_description,
@@ -1477,8 +1299,19 @@ export class ProjectsService {
         last_update: project.last_update,
         keywords: project.keywords,
         status: project.status,
-        awards: project.awards,
-        indicators: project.indicators,
+        awards: project.awards.map((award) => ({
+          institution: award.institution,
+          year: award.year,
+          description: award.description,
+          link: award.link,
+        })),
+        indicators: project.indicators.map((indicator) => ({
+          label: indicator.label,
+          value: indicator.value,
+          measure: indicator.measure,
+          source: indicator.source,
+          year: indicator.year,
+        })),
       })),
     );
   }

@@ -80,8 +80,6 @@ export class TeamsService {
     return {
       id: team.id.toString(),
       name: team.name,
-      sector: team.sector.toString(),
-      status: team.status,
     };
   }
 
@@ -186,7 +184,7 @@ export class TeamsService {
       name: team.name,
       sectorId: team.sector.toString(),
       sectorName: team.sectors.name,
-      status: team.status,
+      level_acess: team.level_acess,
     }));
   }
 

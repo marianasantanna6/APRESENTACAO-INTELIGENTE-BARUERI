@@ -25,16 +25,13 @@ export class ManagementService {
   async find() {
     const users = await this.prisma.users.findMany({
       orderBy: { id: 'asc' },
+      select: { id: true, name: true, email: true, status: true },
     });
 
     return users.map((user) => ({
       id: user.id.toString(),
       name: user.name,
       email: user.email,
-      password: user.password,
-      cpf: user.cpf,
-      photo: user.photo,
-      head_manager: user.head_manager,
       status: user.status,
     }));
   }
@@ -42,6 +39,7 @@ export class ManagementService {
   async findById(id: string) {
     const user = await this.prisma.users.findUnique({
       where: { id: BigInt(id) },
+      select: { id: true, name: true, email: true, status: true },
     });
 
     if (!user) {
@@ -52,10 +50,6 @@ export class ManagementService {
       id: user.id.toString(),
       name: user.name,
       email: user.email,
-      password: user.password,
-      cpf: user.cpf,
-      photo: user.photo,
-      head_manager: user.head_manager,
       status: user.status,
     };
   }
@@ -65,6 +59,7 @@ export class ManagementService {
 
     const user = await this.prisma.users.findFirst({
       where: { email: normalizedEmail },
+      select: { id: true, name: true, email: true, status: true },
     });
 
     if (!user) {
@@ -75,10 +70,6 @@ export class ManagementService {
       id: user.id.toString(),
       name: user.name,
       email: user.email,
-      password: user.password,
-      cpf: user.cpf,
-      photo: user.photo,
-      head_manager: user.head_manager,
       status: user.status,
     };
   }
@@ -86,16 +77,13 @@ export class ManagementService {
   async findByName(name: string) {
     const users = await this.prisma.users.findMany({
       where: { name: { contains: name, mode: 'insensitive' } },
+      select: { id: true, name: true, email: true, status: true },
     });
 
     return users.map((user) => ({
       id: user.id.toString(),
       name: user.name,
       email: user.email,
-      password: user.password,
-      cpf: user.cpf,
-      photo: user.photo,
-      head_manager: user.head_manager,
       status: user.status,
     }));
   }
@@ -189,9 +177,8 @@ export class ManagementService {
       updateData.head_manager = data.head_manager;
     }
 
-    let updatedUser;
     try {
-      updatedUser = await this.prisma.users.update({
+      await this.prisma.users.update({
         where: { id: userId },
         data: updateData,
       });
@@ -203,16 +190,7 @@ export class ManagementService {
       throw error;
     }
 
-    return {
-      id: updatedUser.id.toString(),
-      name: updatedUser.name,
-      email: updatedUser.email,
-      password: updatedUser.password,
-      cpf: updatedUser.cpf,
-      photo: updatedUser.photo,
-      head_manager: updatedUser.head_manager,
-      status: updatedUser.status,
-    };
+    return { ok: true };
   }
 
   async remove(id: string, adminEmail: string, adminPassword: string) {

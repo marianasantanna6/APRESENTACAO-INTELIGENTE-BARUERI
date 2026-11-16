@@ -133,36 +133,21 @@ export class UsersRoleService {
       );
     }
 
-    const usersRole =
-      await this.prisma.users_role.create({
-        data: {
-          user: BigInt(dto.user),
-          sector: BigInt(dto.sector),
-          team:
-            dto.team !== undefined
-              ? BigInt(dto.team)
-              : null,
-          sector_manager:
-            sectorManager,
-          team_manager:
-            teamManager,
-          team_approver:
-            teamApprover,
-        },
-      });
+    await this.prisma.users_role.create({
+      data: {
+        user: BigInt(dto.user),
+        sector: BigInt(dto.sector),
+        team:
+          dto.team !== undefined
+            ? BigInt(dto.team)
+            : null,
+        sector_manager: sectorManager,
+        team_manager: teamManager,
+        team_approver: teamApprover,
+      },
+    });
 
-    return {
-      id: usersRole.id.toString(),
-      user: usersRole.user.toString(),
-      sector: usersRole.sector.toString(),
-      team: usersRole.team?.toString() ?? null,
-      sector_manager:
-        usersRole.sector_manager,
-      team_manager:
-        usersRole.team_manager,
-      team_approver:
-        usersRole.team_approver,
-    };
+    return { ok: true };
   }
 
   async update(
@@ -274,24 +259,12 @@ export class UsersRoleService {
       updateData.team_approver = teamApprover;
     }
 
-    const updatedUsersRole =
-      await this.prisma.users_role.update({
-        where: { id: BigInt(id) },
-        data: updateData,
-      });
+    await this.prisma.users_role.update({
+      where: { id: BigInt(id) },
+      data: updateData,
+    });
 
-    return {
-      id: updatedUsersRole.id.toString(),
-      user: updatedUsersRole.user.toString(),
-      sector: updatedUsersRole.sector.toString(),
-      team: updatedUsersRole.team?.toString() ?? null,
-      sector_manager:
-        updatedUsersRole.sector_manager,
-      team_manager:
-        updatedUsersRole.team_manager,
-      team_approver:
-        updatedUsersRole.team_approver,
-    };
+    return { ok: true };
   }
 
   async remove(id: string, actorId: string) {
@@ -475,12 +448,6 @@ export class UsersRoleService {
       user: userRole.user.toString(),
       sector: userRole.sector.toString(),
       team: userRole.team?.toString() ?? null,
-      sector_manager:
-        userRole.sector_manager,
-      team_manager:
-        userRole.team_manager,
-      team_approver:
-        userRole.team_approver,
     }));
   }
 }

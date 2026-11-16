@@ -61,6 +61,7 @@ export class RegisterService {
           cpf,
           photo: uploadedPhoto?.publicUrl ?? dto.photo,
         },
+        select: { id: true, name: true, email: true },
       });
     } catch (error) {
       if (uploadedPhoto) {
@@ -74,10 +75,6 @@ export class RegisterService {
       id: user.id.toString(),
       name: user.name,
       email: user.email,
-      cpf: user.cpf,
-      photo: user.photo,
-      head_manager: user.head_manager,
-      status: user.status,
     };
   }
 }

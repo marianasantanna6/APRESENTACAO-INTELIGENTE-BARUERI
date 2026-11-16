@@ -87,10 +87,7 @@ export class LoginService {
         cpf: user.cpf,
         photo: user.photo ?? null,
 
-        // Mantidos para compatibilidade com o frontend atual.
-        teamId: primaryTeam?.id?.toString() ?? null,
         teamName: primaryTeam?.name ?? null,
-        sectorId: primarySector?.id?.toString() ?? null,
         sectorName: primarySector?.name ?? null,
         accessLevel: primaryTeam?.level_acess ?? 0,
         areaManager: primaryRole?.team_manager ?? false,

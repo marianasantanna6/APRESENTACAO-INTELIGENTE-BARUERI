@@ -26,11 +26,8 @@ export class PasswordResetService {
   async requestPasswordReset(email: string) {
     const normalizedEmail = normalizeText(email);
 
-    const genericMessage =
-      'Se o e-mail estiver cadastrado, você receberá instruções para redefinir sua senha.';
-
     if (!normalizedEmail) {
-      return { message: genericMessage };
+      return { ok: true };
     }
 
     const user = await this.prisma.users.findUnique({
@@ -38,7 +35,7 @@ export class PasswordResetService {
     });
 
     if (!user || !user.status) {
-      return { message: genericMessage };
+      return { ok: true };
     }
 
     const passwordVersion = createHash('sha256')
@@ -111,7 +108,7 @@ export class PasswordResetService {
       );
     }
 
-    return { message: genericMessage };
+    return { ok: true };
   }
 
   async resetPassword(token: string, newPassword: string) {
@@ -194,8 +191,6 @@ export class PasswordResetService {
       data: { password: hashedPassword },
     });
 
-    return {
-      message: 'Senha redefinida com sucesso',
-    };
+    return { ok: true };
   }
 }
