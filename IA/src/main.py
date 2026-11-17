@@ -18,7 +18,7 @@ from chains.research_chain import build_research_chain
 from config.settings import DEFAULT_GEMINI_MODEL, GEMINI_FALLBACK_MODELS, OUTPUT_DIR
 from services.claim_service import build_claim_evidence
 from services.presentation_service import validate_presentation
-from services.pptx_generator import criar_apresentacao
+from services.pptx_generator import criar_apresentacao, validate_pptx_file
 from services.research_context import merge_research_context
 from services.sources.registry import collect_current_sources
 from services.supabase_service import search_research_memories, store_research
@@ -309,6 +309,9 @@ def generate_research(
                 apresentacao,
                 _output_path(apresentacao["titulo"], presentation_id),
             )
+            # Capa + conteúdo + encerramento (+ referências): o arquivo precisa conter todos os
+            # slides validados e nenhum elemento pode ultrapassar a área do slide.
+            validate_pptx_file(caminho, minimum_slides=len(apresentacao["slides"]))
         except (OSError, ValueError, KeyError, TypeError) as exc:
             print(f"[ERRO] A apresentação foi validada, mas não pôde ser renderizada ou salva: {exc}")
             return None

@@ -3,7 +3,7 @@
 from collections.abc import Mapping, Sequence
 import re
 
-from config.pptx_style import load_style_guide, title_character_limit
+from config.pptx_style import load_style_guide, title_character_limit, visual_limits
 from models.research_data import ResearchSource
 
 
@@ -121,35 +121,21 @@ def validate_presentation(
         raise ValueError("A resposta da IA precisa ser um objeto JSON.")
 
     guide = load_style_guide()
-    rules = guide["regras_de_conteudo_e_concisao"]
     layout_catalog = guide["catalogo_de_layouts"]
-    max_points = int(rules["bullet_points"]["max_por_slide"])
-    max_words_per_point = int(rules["bullet_points"]["max_palavras_por_item"])
-    max_text_words = min(
-        int(rules["texto_de_apoio_max_palavras"]),
-        int(rules["titulos"].get("max_palavras_texto_apoio", rules["texto_de_apoio_max_palavras"])),
-    ) if "texto_de_apoio_max_palavras" in rules else 35
-    max_title_chars = int(rules["titulos"]["max_caracteres"])
-    max_kpis = int(rules["kpis_e_estatisticas"]["max_kpis_por_slide"])
-    max_kpi_label_words = int(rules["kpis_e_estatisticas"]["label_kpi_max_palavras"])
-    tags_element = next(
-        (
-            element
-            for element in layout_catalog.get("nuvem_de_tags", {}).get("elementos", [])
-            if element.get("id") == "itens_nuvem"
-        ),
-        {},
-    )
-    max_tags = int(tags_element.get("regras", {}).get("max_itens", 25))
-    recognition_element = next(
-        (
-            element
-            for element in layout_catalog.get("reconhecimento", {}).get("elementos", [])
-            if element.get("id") == "grade_premios"
-        ),
-        {},
-    )
-    max_recognitions = int(recognition_element.get("badge_template", {}).get("max_itens", 8))
+    limits = visual_limits(guide)
+    max_points = limits["pontos_max_por_slide"]
+    max_words_per_point = limits["palavras_max_por_ponto"]
+    max_text_words = limits["texto_apoio_max_palavras"]
+    max_title_chars = limits["titulo_max_caracteres"]
+    max_kpis = limits["kpis_max_por_slide"]
+    max_kpi_label_words = limits["palavras_max_no_rotulo_kpi"]
+    max_tags = limits["tags_max_por_slide"]
+    max_recognitions = limits["reconhecimentos_max_no_slide"]
+    max_blocks = limits["blocos_max_no_infografico"]
+    max_block_points = limits["pontos_max_por_bloco"]
+    max_cover_subtitle = limits["subtitulo_capa_max_caracteres"]
+    max_quote_subtext_words = limits["subtexto_citacao_max_palavras"]
+    max_cover_description_words = limits["descricao_capa_max_palavras"]
     allowed_layouts = set(layout_catalog).difference({"referencias"})
 
     title = _as_text(payload.get("titulo") or topic, "titulo")
@@ -159,6 +145,10 @@ def validate_presentation(
             f"O título da apresentação excede o limite de {cover_title_limit} caracteres da capa."
         )
     subtitle = _as_text(payload.get("subtitulo"), "subtitulo", allow_empty=True)
+    if len(subtitle) > max_cover_subtitle:
+        raise ValueError(
+            f"O subtítulo da apresentação excede o limite de {max_cover_subtitle} caracteres da capa."
+        )
     raw_slides = payload.get("slides")
     if not isinstance(raw_slides, list):
         raise ValueError("A resposta precisa conter 'slides' como lista.")
@@ -199,6 +189,11 @@ def validate_presentation(
         )
         if len(support_text.split()) > max_text_words:
             raise ValueError(f"O texto de apoio do slide {slide_number + 1} excede {max_text_words} palavras.")
+        if layout == "capa" and len(support_text.split()) > max_cover_description_words:
+            raise ValueError(
+                f"A descrição da capa (texto_apoio do slide {slide_number + 1}) excede "
+                f"{max_cover_description_words} palavras."
+            )
 
         points = _string_list(raw.get("pontos"), f"slides[{slide_number}].pontos")
         if len(points) > max_points:
@@ -206,6 +201,19 @@ def validate_presentation(
         if any(len(point.split()) > max_words_per_point for point in points):
             raise ValueError(
                 f"Cada ponto do slide {slide_number + 1} pode ter no máximo {max_words_per_point} palavras."
+            )
+
+        slide_subtitle = _as_text(
+            raw.get("subtitulo"), f"slides[{slide_number}].subtitulo", allow_empty=True
+        )
+        if layout == "capa" and len(slide_subtitle) > max_cover_subtitle:
+            raise ValueError(
+                f"O subtítulo da capa (slide {slide_number + 1}) excede {max_cover_subtitle} caracteres."
+            )
+        if layout == "destaque_citacao" and len(slide_subtitle.split()) > max_quote_subtext_words:
+            raise ValueError(
+                f"O subtítulo do slide {slide_number + 1} (destaque_citacao) excede "
+                f"{max_quote_subtext_words} palavras."
             )
 
         kpis = _validate_kpis(raw.get("kpis"), slide_number, max_kpis, max_kpi_label_words)
@@ -244,8 +252,10 @@ def validate_presentation(
             raise ValueError(f"O slide {slide_number + 1} excede o limite de {max_tags} tags.")
 
         blocks = raw.get("blocos") or []
-        if not isinstance(blocks, list) or len(blocks) > 4:
-            raise ValueError(f"O slide {slide_number + 1} pode conter no máximo 4 blocos de infográfico.")
+        if not isinstance(blocks, list) or len(blocks) > max_blocks:
+            raise ValueError(
+                f"O slide {slide_number + 1} pode conter no máximo {max_blocks} blocos de infográfico."
+            )
         normalized_blocks = []
         for block_index, block in enumerate(blocks, start=1):
             if not isinstance(block, Mapping):
@@ -256,7 +266,7 @@ def validate_presentation(
             block_points = _string_list(
                 block.get("pontos"), f"slides[{slide_number}].blocos[{block_index}].pontos"
             )
-            if len(block_points) > max_points or any(
+            if len(block_points) > max_block_points or any(
                 len(point.split()) > max_words_per_point for point in block_points
             ):
                 raise ValueError(f"Os pontos do bloco {block_index} excedem os limites visuais.")
@@ -292,18 +302,13 @@ def validate_presentation(
                             citation.get("autor"), "citacao.autor", allow_empty=True
                         ),
                     }
-                    quote_limit = int(
-                        next(
-                            (
-                                element
-                                for element in layout_catalog.get(layout, {}).get("elementos", [])
-                                if element.get("id") == "texto_destaque"
-                            ),
-                            {},
-                        ).get("max_chars", 10_000)
-                    )
+                    quote_limit = limits["citacao_max_caracteres"]
                     if len(candidate_citation["texto"]) > quote_limit:
                         citation_issue = f"o texto excede {quote_limit} caracteres"
+                    elif len(candidate_citation["autor"].split()) > max_quote_subtext_words:
+                        citation_issue = (
+                            f"a autoria excede {max_quote_subtext_words} palavras"
+                        )
                     else:
                         quote = re.sub(
                             r"\s+", " ", candidate_citation["texto"]
@@ -333,7 +338,7 @@ def validate_presentation(
         slides.append({
             "tipo_layout": layout,
             "titulo": slide_title.upper(),
-            "subtitulo": _as_text(raw.get("subtitulo"), "subtitulo", allow_empty=True),
+            "subtitulo": slide_subtitle,
             "texto_apoio": support_text,
             "pontos": points,
             "kpis": kpis,

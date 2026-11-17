@@ -235,6 +235,7 @@
           "id": "descricao_curta",
           "tipo": "texto",
           "conteudo": "[1 frase de propósito — máx 20 palavras]",
+          "max_palavras": 20,
           "tamanho_pt": 14,
           "peso": "Regular",
           "cor": "#B0BAC8",

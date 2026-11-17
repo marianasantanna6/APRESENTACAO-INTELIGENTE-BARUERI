@@ -2,7 +2,7 @@
 
 import json
 from langchain_core.prompts import PromptTemplate
-from config.pptx_style import load_style_guide, title_character_limit
+from config.pptx_style import load_style_guide, title_character_limit, visual_limits
 
 ACADEMIC_PROMPT_TEMPLATE = """
 Você é um pesquisador acadêmico que prepara apresentações institucionais claras e verificáveis.
@@ -43,7 +43,7 @@ Regras visuais resumidas do guia carregado pelo sistema:
 - Respeite todos os limites numéricos das regras visuais incluídas no contrato abaixo.
 - Cada slide deve obedecer às restrições específicas do seu layout; não transfira limites de um layout para outro.
 - Use somente os tipos de layout listados no contrato. Descreva uma imagem desejada; não invente nome de arquivo, URL ou asset.
-- Planeje de 6 a 9 slides no JSON quando as fontes oferecerem conteúdo suficiente. O sistema acrescenta uma página de referências; o PPTX final terá até 10 slides. Uma apresentação menor é preferível a conteúdo repetido ou não comprovado.
+- Planeje de 6 a 9 slides no JSON quando as fontes oferecerem conteúdo suficiente. O sistema acrescenta a página de referências (dividida em mais páginas apenas quando houver muitas fontes). Uma apresentação menor é preferível a conteúdo repetido ou não comprovado.
 
 Se houver erro de validação acima, corrija a resposta anterior atendendo a esse erro. Preserve os fatos e use somente as fontes fornecidas. Devolva novamente o objeto JSON completo, sem explicações.
 
@@ -60,55 +60,29 @@ def build_prompt_template() -> PromptTemplate:
         layout: title_character_limit(guide, layout)
         for layout in layouts
     }
-    quote_element = next(
-        (
-            element
-            for element in guide["catalogo_de_layouts"].get("destaque_citacao", {}).get("elementos", [])
-            if element.get("id") == "texto_destaque"
-        ),
-        {},
-    )
-    quote_limit = int(quote_element.get("max_chars", 10_000))
-    max_support_words = min(
-        int(content_rules.get("texto_de_apoio_max_palavras", 35)),
-        int(content_rules.get("titulos", {}).get(
-            "max_palavras_texto_apoio",
-            content_rules.get("texto_de_apoio_max_palavras", 35),
-        )),
-    )
-    max_points = int(content_rules["bullet_points"]["max_por_slide"])
-    max_words_per_point = int(content_rules["bullet_points"]["max_palavras_por_item"])
-    max_kpis = int(content_rules["kpis_e_estatisticas"]["max_kpis_por_slide"])
-    max_kpi_label_words = int(content_rules["kpis_e_estatisticas"]["label_kpi_max_palavras"])
-    tag_element = next(
-        (
-            element
-            for element in guide["catalogo_de_layouts"].get("nuvem_de_tags", {}).get("elementos", [])
-            if element.get("id") == "itens_nuvem"
-        ),
-        {},
-    )
-    max_tags = int(tag_element.get("regras", {}).get("max_itens", 25))
-    recognition_element = next(
-        (
-            element
-            for element in guide["catalogo_de_layouts"].get("reconhecimento", {}).get("elementos", [])
-            if element.get("id") == "grade_premios"
-        ),
-        {},
-    )
-    max_recognitions = int(recognition_element.get("badge_template", {}).get("max_itens", 8))
+    limits = visual_limits(guide)
+    quote_limit = limits["citacao_max_caracteres"]
+    max_support_words = limits["texto_apoio_max_palavras"]
+    max_words_per_point = limits["palavras_max_por_ponto"]
+    max_kpi_label_words = limits["palavras_max_no_rotulo_kpi"]
+    max_cover_subtitle = limits["subtitulo_capa_max_caracteres"]
+    max_quote_subtext_words = limits["subtexto_citacao_max_palavras"]
 
     visual_rules = {
         "titulo_maximo_caracteres_por_layout": title_limits,
+        "titulo_max_linhas": limits["titulo_max_linhas"],
+        "subtitulo_capa_max_caracteres": max_cover_subtitle,
+        "texto_apoio_capa_max_palavras": limits["descricao_capa_max_palavras"],
         "texto_apoio_max_palavras": max_support_words,
-        "pontos_max_por_slide": max_points,
+        "pontos_max_por_slide": limits["pontos_max_por_slide"],
         "palavras_max_por_ponto": max_words_per_point,
-        "kpis_max_por_slide": max_kpis,
+        "kpis_max_por_slide": limits["kpis_max_por_slide"],
         "palavras_max_no_rotulo_kpi": max_kpi_label_words,
-        "tags_max_por_slide": max_tags,
-        "blocos_max_no_infografico": 4,
-        "reconhecimentos_max_no_slide": max_recognitions,
+        "tags_max_por_slide": limits["tags_max_por_slide"],
+        "blocos_max_no_infografico": limits["blocos_max_no_infografico"],
+        "pontos_max_por_bloco": limits["pontos_max_por_bloco"],
+        "reconhecimentos_max_no_slide": limits["reconhecimentos_max_no_slide"],
+        "subtitulo_destaque_citacao_max_palavras": max_quote_subtext_words,
         "citacao_destaque": {
             "layout": "destaque_citacao",
             "max_caracteres": quote_limit,
@@ -126,14 +100,14 @@ def build_prompt_template() -> PromptTemplate:
 
     contract = {
         "titulo": f"título da apresentação (máximo de {title_limits['capa']} caracteres)",
-        "subtitulo": "subtítulo curto ou null",
+        "subtitulo": f"subtítulo curto da capa (máximo de {max_cover_subtitle} caracteres) ou null",
         "regras_visuais": visual_rules,
         "slides": [
             {
                 "tipo_layout": "um layout permitido: " + ", ".join(layouts),
                 "titulo": "título do slide",
-                "subtitulo": "texto opcional ou null",
-                "texto_apoio": f"até {max_support_words} palavras ou null",
+                "subtitulo": f"texto opcional ou null (no destaque_citacao, até {max_quote_subtext_words} palavras)",
+                "texto_apoio": f"até {max_support_words} palavras (na capa, até {limits['descricao_capa_max_palavras']}) ou null",
                 "pontos": [f"ponto objetivo de até {max_words_per_point} palavras"],
                 "kpis": [{"valor": "valor citado", "unidade": "unidade ou null", "label": f"rótulo de até {max_kpi_label_words} palavras"}],
                 "fontes": [],
