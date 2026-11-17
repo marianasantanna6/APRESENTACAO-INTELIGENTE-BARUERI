@@ -29,6 +29,9 @@ class ResearchResponse(BaseModel):
     rag: dict[str, Any]
     source_status: list[dict[str, Any]]
     claims: list[dict[str, Any]]
+    # Imagens dos slides do PPTX (na ordem) e PDF; vazios quando a conversão não está disponível.
+    slide_images: list[str] = []
+    pdf_url: str | None = None
 
 
 @app.get("/health")
@@ -88,6 +91,11 @@ def research(
         rag={"status": result.rag_status, "memories_retrieved": result.retrieved_count},
         source_status=result.source_status,
         claims=[claim.to_dict() for claim in result.claims],
+        slide_images=[
+            f"/presentations/{presentation_id}/slides/{number}"
+            for number in range(1, len(result.slide_images) + 1)
+        ],
+        pdf_url=f"/presentations/{presentation_id}/pdf" if result.pdf_path else None,
     )
 
 
@@ -102,3 +110,23 @@ def download_presentation(presentation_id: UUID) -> FileResponse:
         media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
         filename=f"apresentacao_{presentation_id}.pptx",
     )
+
+
+@app.get("/presentations/{presentation_id}/slides/{number}")
+def download_slide_image(presentation_id: UUID, number: int) -> FileResponse:
+    '''Serve a imagem (WebP) do slide ``number`` (1 = capa) da apresentação.'''
+    if number < 1 or number > 99:
+        raise HTTPException(status_code=404, detail="Slide não encontrado.")
+    path = OUTPUT_DIR / str(presentation_id) / f"slide_{number:02d}.webp"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Slide não encontrado.")
+    return FileResponse(path, media_type="image/webp")
+
+
+@app.get("/presentations/{presentation_id}/pdf")
+def download_presentation_pdf(presentation_id: UUID) -> FileResponse:
+    '''Serve o PDF da apresentação, gerado a partir do mesmo PPTX.'''
+    path = OUTPUT_DIR / str(presentation_id) / "apresentacao.pdf"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="PDF não encontrado.")
+    return FileResponse(path, media_type="application/pdf", filename=f"apresentacao_{presentation_id}.pdf")

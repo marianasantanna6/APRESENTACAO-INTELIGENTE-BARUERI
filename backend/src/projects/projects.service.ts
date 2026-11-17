@@ -11,6 +11,19 @@ import { PrismaService } from '../prisma/prisma.service';
 import { normalizeText } from '../common/normalizer';
 import { CreateProjectsDto } from './dto/inputs-projects.dto';
 
+type AiPresentationFiles = {
+  buffer: Buffer;
+  slidesJson: Record<string, unknown>;
+  slideImages: Buffer[];
+  pdf: Buffer | null;
+};
+
+type StoredFile = { path: string; publicUrl: string };
+
+const AI_BASE_URL = 'http://localhost:8000';
+const PPTX_CONTENT_TYPE =
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+
 @Injectable()
 export class ProjectsService {
   constructor(
@@ -19,15 +32,16 @@ export class ProjectsService {
 
   private async requestAi(
     dto: CreateProjectsDto,
-  ): Promise<{ buffer: Buffer; slidesJson: object }> {
+  ): Promise<AiPresentationFiles> {
     // Passo 1: POST /research → recebe JSON com download_url e presentation
     let researchRes: Response;
     try {
-      researchRes = await fetch('http://localhost:8000/research', {
+      researchRes = await fetch(`${AI_BASE_URL}/research`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(dto),
-        signal: AbortSignal.timeout(120_000),
+        // Inclui a conversão do PPTX em imagens (LibreOffice) feita pelo serviço de IA.
+        signal: AbortSignal.timeout(240_000),
       });
     } catch {
       throw new BadGatewayException(
@@ -44,7 +58,13 @@ export class ProjectsService {
       );
     }
 
-    let researchData: { download_url?: string; presentation_id?: string; presentation?: object };
+    let researchData: {
+      download_url?: string;
+      presentation_id?: string;
+      presentation?: Record<string, unknown>;
+      slide_images?: string[];
+      pdf_url?: string | null;
+    };
     try {
       researchData = await researchRes.json();
     } catch {
@@ -60,7 +80,7 @@ export class ProjectsService {
     }
 
     // Passo 2: GET /presentations/{id} → recebe o binário PPTX
-    const pptxUrl = `http://localhost:8000${researchData.download_url}`;
+    const pptxUrl = `${AI_BASE_URL}${researchData.download_url}`;
     let pptxRes: Response;
     try {
       pptxRes = await fetch(pptxUrl, {
@@ -100,7 +120,40 @@ export class ProjectsService {
       );
     }
 
-    return { buffer, slidesJson: researchData.presentation ?? {} };
+    // Passo 3 (opcional): imagens dos slides e PDF gerados a partir do mesmo PPTX.
+    // Se algo falhar, a apresentação segue sem pré-visualização em imagens.
+    const slideImages = await this.fetchAiFiles(
+      researchData.slide_images ?? [],
+    );
+    const [pdf] = researchData.pdf_url
+      ? await this.fetchAiFiles([researchData.pdf_url])
+      : [];
+
+    return {
+      buffer,
+      slidesJson: researchData.presentation ?? {},
+      slideImages,
+      pdf: pdf ?? null,
+    };
+  }
+
+  /** Baixa arquivos do serviço de IA; devolve lista vazia se qualquer um falhar. */
+  private async fetchAiFiles(paths: string[]): Promise<Buffer[]> {
+    const files: Buffer[] = [];
+    for (const path of paths) {
+      try {
+        const response = await fetch(`${AI_BASE_URL}${path}`, {
+          signal: AbortSignal.timeout(30_000),
+        });
+        if (!response.ok) return [];
+        const file = Buffer.from(await response.arrayBuffer());
+        if (file.length === 0) return [];
+        files.push(file);
+      } catch {
+        return [];
+      }
+    }
+    return files;
   }
 
   private async validateCreateRequest(
@@ -256,9 +309,11 @@ export class ProjectsService {
     void authenticatedUserId; // acesso verificado pela guarda JWT
   }
 
-  private async uploadPptxToSupabase(
-    pptxBuffer: Buffer,
-  ): Promise<{ path: string; publicUrl: string }> {
+  private async uploadToSupabase(
+    fileBuffer: Buffer,
+    path: string,
+    contentType: string,
+  ): Promise<StoredFile> {
     const supabaseUrl =
       process.env.SUPABASE_URL?.replace(/\/+$/, '');
     const supabaseKey = process.env.SUPABASE_SECRET_KEY;
@@ -269,8 +324,6 @@ export class ProjectsService {
         'Configuração do Supabase incompleta',
       );
     }
-
-    const path = `${randomUUID()}.pptx`;
 
     const encodedPath = path
       .split('/')
@@ -289,17 +342,16 @@ export class ProjectsService {
           headers: {
             apikey: supabaseKey,
             Authorization: `Bearer ${supabaseKey}`,
-            'Content-Type':
-              'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'Content-Type': contentType,
             'x-upsert': 'false',
           },
-          body: new Uint8Array(pptxBuffer),
+          body: new Uint8Array(fileBuffer),
           signal: AbortSignal.timeout(60_000),
         },
       );
     } catch {
       throw new BadGatewayException(
-        'Não foi possível enviar o PPTX ao Supabase Storage',
+        'Não foi possível enviar o arquivo ao Supabase Storage',
       );
     }
 
@@ -318,6 +370,55 @@ export class ProjectsService {
       publicUrl:
         `${supabaseUrl}/storage/v1/object/public/${encodedBucket}/${encodedPath}`,
     };
+  }
+
+  /**
+   * Envia o PPTX e, quando existirem, as imagens dos slides e o PDF
+   * ({uuid}.pptx, {uuid}/slide_NN.webp, {uuid}/apresentacao.pdf).
+   */
+  private async uploadPresentationFiles(files: AiPresentationFiles): Promise<{
+    pptx: StoredFile;
+    images: StoredFile[];
+    pdf: StoredFile | null;
+  }> {
+    const folder = randomUUID();
+    const pptx = await this.uploadToSupabase(
+      files.buffer,
+      `${folder}.pptx`,
+      PPTX_CONTENT_TYPE,
+    );
+    const extra: StoredFile[] = [];
+    try {
+      const images: StoredFile[] = [];
+      for (const [index, image] of files.slideImages.entries()) {
+        const number = String(index + 1).padStart(2, '0');
+        const stored = await this.uploadToSupabase(
+          image,
+          `${folder}/slide_${number}.webp`,
+          'image/webp',
+        );
+        extra.push(stored);
+        images.push(stored);
+      }
+      let pdf: StoredFile | null = null;
+      if (files.pdf) {
+        pdf = await this.uploadToSupabase(
+          files.pdf,
+          `${folder}/apresentacao.pdf`,
+          'application/pdf',
+        );
+        extra.push(pdf);
+      }
+      return { pptx, images, pdf };
+    } catch {
+      // A pré-visualização é complementar: remove o que subiu e segue só com o PPTX.
+      await Promise.all(
+        extra.map((file) =>
+          this.deletePptxFromSupabase(file.path).catch(() => undefined),
+        ),
+      );
+      return { pptx, images: [], pdf: null };
+    }
   }
 
   private async deletePptxFromSupabase(
@@ -428,11 +529,17 @@ export class ProjectsService {
 
     // Temporariamente, ia_prompt não é enviado à IA.
     // O campo será enviado quando a API Python estiver atualizada.
-    const { buffer: pptxBuffer, slidesJson } = await this.requestAi(dto);
+    const aiFiles = await this.requestAi(dto);
 
-    // Envia o arquivo para o bucket público.
-    const storedSlides =
-      await this.uploadPptxToSupabase(pptxBuffer);
+    // Envia os arquivos para o bucket público.
+    const stored = await this.uploadPresentationFiles(aiFiles);
+    const storedSlides = stored.pptx;
+    // Imagens e PDF do próprio PPTX: usados pelo modo apresentador e pela exportação em PDF.
+    const slidesJson = {
+      ...aiFiles.slidesJson,
+      imagens_slides: stored.images.map((image) => image.publicUrl),
+      pdf_url: stored.pdf?.publicUrl ?? null,
+    };
 
     try {
       return await this.prisma.$transaction(async (tx) => {
@@ -641,6 +748,7 @@ export class ProjectsService {
             version,
             family,
             slides_url: storedSlides.publicUrl,
+            slides_json: slidesJson,
             short_description: dto.short_description,
             full_description: dto.full_description,
             source: dto.source,
@@ -706,8 +814,11 @@ export class ProjectsService {
     } catch (error) {
       // A persistência falhou depois do upload:
       // tenta remover o arquivo do Storage.
-      await this.deletePptxFromSupabase(storedSlides.path)
-        .catch(() => undefined);
+      await Promise.all(
+        [storedSlides, ...stored.images, ...(stored.pdf ? [stored.pdf] : [])].map((file) =>
+          this.deletePptxFromSupabase(file.path).catch(() => undefined),
+        ),
+      );
 
       throw error;
     }

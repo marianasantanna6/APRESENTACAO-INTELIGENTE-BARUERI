@@ -386,6 +386,146 @@ function IaPresenterOverlay({
   );
 }
 
+// ─── Modo Apresentação com as imagens do PPTX ─────────────────────────────────
+// Exibe exatamente os slides do arquivo gerado pela IA (convertidos em imagem no
+// servidor), em vez de remontá-los em React a partir do JSON.
+
+function IaImagePresenterOverlay({
+  images,
+  enabled,
+  initialIndex,
+  onClose,
+}: {
+  images: string[];
+  enabled: Record<number, boolean>;
+  initialIndex: number;
+  onClose: () => void;
+}) {
+  const activeSlides = images
+    .map((src, i) => ({ src, origIndex: i }))
+    .filter(({ origIndex }) => enabled[origIndex] !== false);
+
+  const [curr, setCurr] = useState(() => {
+    const idx = activeSlides.findIndex(({ origIndex }) => origIndex === initialIndex);
+    return idx >= 0 ? idx : 0;
+  });
+
+  useEffect(() => {
+    document.documentElement.requestFullscreen?.().catch(() => {});
+    return () => { if (document.fullscreenElement) void document.exitFullscreen?.(); };
+  }, []);
+
+  // Pré-carrega os slides vizinhos para a troca ser instantânea.
+  useEffect(() => {
+    [curr - 1, curr + 1].forEach((i) => {
+      const neighbor = activeSlides[i];
+      if (neighbor) {
+        const img = new Image();
+        img.src = neighbor.src;
+      }
+    });
+  }, [curr, activeSlides]);
+
+  const total = activeSlides.length;
+
+  // Teclado na janela inteira: o autoFocus do React não foca <div>, então um onKeyDown
+  // no diálogo nunca receberia as setas.
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (["ArrowRight", "ArrowDown", "PageDown", " "].includes(e.key)) {
+        e.preventDefault();
+        setCurr(c => Math.min(c + 1, total - 1));
+      } else if (["ArrowLeft", "ArrowUp", "PageUp"].includes(e.key)) {
+        e.preventDefault();
+        setCurr(c => Math.max(c - 1, 0));
+      } else if (e.key === "Home") {
+        setCurr(0);
+      } else if (e.key === "End") {
+        setCurr(total - 1);
+      } else if (e.key === "Escape") {
+        onClose();
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [total, onClose]);
+
+  const slide = activeSlides[curr];
+  if (!slide) return null;
+
+  const canPrev = curr > 0;
+  const canNext = curr < total - 1;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Modo apresentação"
+      // Acima do seletor de idioma flutuante (#gt-wrapper, z-index 9999).
+      className="fixed inset-0 z-[10000] flex flex-col bg-black text-white outline-none"
+    >
+      <div className="flex items-center justify-between px-6 py-2.5 bg-white/5">
+        <span className="text-[0.8rem] font-bold uppercase tracking-widest text-white/60">
+          {curr + 1} / {activeSlides.length}
+        </span>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+          aria-label="Fechar modo apresentação"
+        >
+          <FiX className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="flex min-h-0 flex-1 items-center justify-center p-3 sm:p-5">
+        <img
+          key={slide.src}
+          src={slide.src}
+          alt={`Slide ${slide.origIndex + 1}`}
+          onClick={() => canNext && setCurr(c => c + 1)}
+          className="aspect-video h-auto max-h-full w-auto max-w-full cursor-pointer select-none object-contain shadow-[0_10px_40px_rgba(0,0,0,0.6)]"
+          draggable={false}
+        />
+      </div>
+
+      <div className="flex items-center justify-center gap-6 px-6 py-3 bg-white/5">
+        <button
+          type="button"
+          onClick={() => setCurr(c => c - 1)}
+          disabled={!canPrev}
+          aria-label="Slide anterior"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-30"
+        >
+          <FiArrowLeft className="h-5 w-5" />
+        </button>
+        <div className="flex gap-1.5">
+          {activeSlides.map((s, i) => (
+            <button
+              key={s.origIndex}
+              type="button"
+              aria-label={`Ir para o slide ${i + 1}`}
+              onClick={() => setCurr(i)}
+              className={`h-2 rounded-full transition-all ${
+                i === curr ? "w-6 bg-white" : "w-2 bg-white/30"
+              }`}
+            />
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => setCurr(c => c + 1)}
+          disabled={!canNext}
+          aria-label="Próximo slide"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-30"
+        >
+          <FiArrowRight className="h-5 w-5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
 type ToastState = { message: string };
@@ -738,6 +878,11 @@ export default function GeneratedPresentationPage() {
   const [iaSlideEnabled, setIaSlideEnabled] = useState<Record<number, boolean>>({});
   const [iaPresenterOpen, setIaPresenterOpen] = useState(false);
   const [iaPresenterIndex, setIaPresenterIndex] = useState(0);
+  // Imagens dos slides do próprio PPTX (vazio em projetos antigos → usa os cards em React).
+  const [iaSlideImages, setIaSlideImages] = useState<string[]>([]);
+  const [iaImageEnabled, setIaImageEnabled] = useState<Record<number, boolean>>({});
+  const [iaPdfUrl, setIaPdfUrl] = useState<string | null>(null);
+  const hasSlideImages = iaSlideImages.length > 0;
 
   useEffect(() => {
     if (!presentationId) return;
@@ -751,7 +896,13 @@ export default function GeneratedPresentationPage() {
           status: number; short_description?: string | null;
           audience?: string | null; areas: string[];
           last_update: string;
-          slides_json?: { titulo?: string; slides?: IaSlide[]; fontes?: IaFonteCatalog[] } | null;
+          slides_json?: {
+            titulo?: string;
+            slides?: IaSlide[];
+            fontes?: IaFonteCatalog[];
+            imagens_slides?: string[];
+            pdf_url?: string | null;
+          } | null;
         }>;
         const project = list[0];
         if (!project) return;
@@ -780,7 +931,17 @@ export default function GeneratedPresentationPage() {
 
         const rawSlides = project.slides_json?.slides;
         const rawFontes = project.slides_json?.fontes;
+        const rawImages = project.slides_json?.imagens_slides;
         if (Array.isArray(rawFontes)) setIaFonteCatalog(rawFontes);
+        if (Array.isArray(rawImages) && rawImages.every((src) => typeof src === "string")) {
+          setIaSlideImages(rawImages);
+          const initialImages: Record<number, boolean> = {};
+          rawImages.forEach((_, i) => { initialImages[i] = true; });
+          setIaImageEnabled(initialImages);
+        }
+        setIaPdfUrl(
+          typeof project.slides_json?.pdf_url === "string" ? project.slides_json.pdf_url : null,
+        );
         if (Array.isArray(rawSlides) && rawSlides.length > 0) {
           setIaSlides(rawSlides);
           const initial: Record<number, boolean> = {};
@@ -882,6 +1043,25 @@ export default function GeneratedPresentationPage() {
       URL.revokeObjectURL(url);
     } catch {
       setToast({ message: "Erro ao baixar o PPTX. Tente novamente." });
+    }
+  }
+
+  async function handleDownloadPdf() {
+    if (!iaPdfUrl) return;
+    try {
+      const res = await fetch(iaPdfUrl);
+      if (!res.ok) throw new Error("download failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${institutionalPresentation?.title ?? "apresentacao"}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(iaPdfUrl, "_blank", "noopener,noreferrer");
     }
   }
 
@@ -1149,7 +1329,9 @@ export default function GeneratedPresentationPage() {
             onExportPdf={
               institutionalPresentation.createdBy === user?.id &&
               institutionalPresentation.status === "active"
-                ? () => setToast({ message: "Exportação em PDF será conectada em breve." })
+                ? iaPdfUrl
+                  ? handleDownloadPdf
+                  : () => setToast({ message: "O PDF desta apresentação ainda não está disponível." })
                 : undefined
             }
             onNewVersion={
@@ -1222,7 +1404,9 @@ export default function GeneratedPresentationPage() {
                       Módulos da Apresentação
                     </h2>
                     <p className="text-[0.84rem] text-[#878787]">
-                      {Object.values(iaSlideEnabled).filter(Boolean).length} de {iaSlides.length} módulos ativos — clique no olho para ocultar/mostrar
+                      {hasSlideImages
+                        ? `${Object.values(iaImageEnabled).filter(Boolean).length} de ${iaSlideImages.length} slides ativos — os mesmos do arquivo PPTX; clique no olho para ocultar/mostrar`
+                        : `${Object.values(iaSlideEnabled).filter(Boolean).length} de ${iaSlides.length} módulos ativos — clique no olho para ocultar/mostrar`}
                     </p>
                   </div>
                 </div>
@@ -1236,6 +1420,41 @@ export default function GeneratedPresentationPage() {
                 </button>
               </div>
 
+              {hasSlideImages ? (
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {iaSlideImages.map((src, i) => {
+                    const active = iaImageEnabled[i] !== false;
+                    return (
+                      <div key={src} className={`relative transition-opacity ${active ? "opacity-100" : "opacity-40"}`}>
+                        <button
+                          type="button"
+                          aria-label={active ? "Ocultar slide" : "Mostrar slide"}
+                          onClick={() => setIaImageEnabled(prev => ({ ...prev, [i]: !(prev[i] !== false) }))}
+                          className="absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 shadow-md hover:bg-white transition-colors"
+                        >
+                          {active ? <FiEye className="h-3.5 w-3.5 text-[#1675b8]" /> : <FiEyeOff className="h-3.5 w-3.5 text-[#9ca3af]" />}
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Apresentar a partir do slide ${i + 1}`}
+                          onClick={() => { setIaPresenterIndex(i); setIaPresenterOpen(true); }}
+                          className="block w-full overflow-hidden rounded-[14px] border border-[#e2e8f0] bg-[#0e0c2c] shadow-[0_2px_12px_rgba(0,0,0,0.08)] transition-shadow hover:shadow-[0_6px_20px_rgba(0,0,0,0.16)]"
+                        >
+                          <img
+                            src={src}
+                            alt={`Slide ${i + 1}`}
+                            loading="lazy"
+                            className="aspect-video w-full object-contain"
+                          />
+                        </button>
+                        <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[0.7rem] font-bold text-white">
+                          {i + 1}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {iaSlides.map((slide, i) => {
                   const active = iaSlideEnabled[i] !== false;
@@ -1288,6 +1507,7 @@ export default function GeneratedPresentationPage() {
                   </div>
                 )}
               </div>
+              )}
             </section>
           )}
 
@@ -1440,7 +1660,15 @@ export default function GeneratedPresentationPage() {
         </main>
 
         {/* Modo apresentação para slides da IA */}
-        {iaPresenterOpen && iaSlides && (
+        {iaPresenterOpen && hasSlideImages && (
+          <IaImagePresenterOverlay
+            images={iaSlideImages}
+            enabled={iaImageEnabled}
+            initialIndex={iaPresenterIndex}
+            onClose={() => setIaPresenterOpen(false)}
+          />
+        )}
+        {iaPresenterOpen && !hasSlideImages && iaSlides && (
           <IaPresenterOverlay
             slides={iaSlides}
             enabled={iaSlideEnabled}

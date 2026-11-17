@@ -7,6 +7,7 @@ psycopg[binary]
 pgvector
 google-genai
 python-pptx
+pypdfium2
 Pillow
 matplotlib
 fastapi>=0.115,<1.0

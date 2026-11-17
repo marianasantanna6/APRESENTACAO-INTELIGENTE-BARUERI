@@ -160,10 +160,19 @@ def _set_gradient(shape, stops: list[tuple[float, str, float]], angle: float = 0
     sp_pr.find(qn("a:prstGeom")).addnext(grad)
 
 
+def _drop_theme_style(shape) -> None:
+    '''Remove o ``p:style`` padrão do python-pptx: ele herda do tema uma sombra externa
+    (effectRef 2) que escurece cartões, ícones e decorações, sobretudo em fundos claros.'''
+    style = shape._element.find(qn("p:style"))
+    if style is not None:
+        shape._element.remove(style)
+
+
 def _rect(slide, x, y, w, h, color: str | None, *, alpha: float | None = None,
           shape=MSO_SHAPE.RECTANGLE, line: str | None = None, line_pt: float = 1.0,
           dash: bool = False, name: str | None = None):
     sp = slide.shapes.add_shape(shape, Inches(x), Inches(y), Inches(w), Inches(h))
+    _drop_theme_style(sp)
     if color is None:
         sp.fill.background()
     else:
@@ -193,6 +202,7 @@ def add_background_rect(slide, color: str | RGBColor):
 
 def _line(slide, x1, y1, x2, y2, color: str, width_pt: float = 1.25):
     conn = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, Inches(x1), Inches(y1), Inches(x2), Inches(y2))
+    _drop_theme_style(conn)
     conn.line.color.rgb = _rgb(color)
     conn.line.width = Pt(width_pt)
     return conn
@@ -1050,7 +1060,7 @@ def _draw_divider(slide, data: dict, ctx: RenderContext) -> None:
     if ghost_size:
         add_text(slide, subtitle, 0.85, 1.75, 11.63, 1.0, size=ghost_size, min_size=ghost_size, bold=True,
                  face=FONT_TITLE, upper=True, align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.BOTTOM, max_lines=1,
-                 outline=(TEXT_SOFT, 1.25, True), name="supertitulo_fantasma")
+                 color=TEXT_SOFT, alpha=0.28, name="supertitulo_fantasma")
     _, title_fit = add_text(slide, title, 1.0, 2.85, 11.33, 1.5, size=44, min_size=28, bold=True,
                             face=FONT_TITLE, align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.TOP,
                             max_lines=ctx.limits["titulo_max_linhas"], spacing=1.08, ctx=ctx,
@@ -1207,11 +1217,11 @@ def _light_background(slide, assets: Path, asset_name: str, ctx: RenderContext) 
         place_image(slide, photo, 0, 0, SLIDE_WIDTH_IN, SLIDE_HEIGHT_IN, mode="cover", ctx=ctx, name="foto_fundo")
         _rect(slide, 0, 0, SLIDE_WIDTH_IN, SLIDE_HEIGHT_IN, LIGHT_BG, alpha=0.86, name="veu_claro")
     else:
-        _skyline(slide, 2.0, 11.3, 6.9, 5.2, "#C9D1DE", 0.35, seed=5)
+        _skyline(slide, 2.0, 11.3, 6.9, 5.2, "#C9D1DE", 0.3, seed=5)
 
 
 TAG_SIZES = [30, 22, 18, 26, 15, 20, 24, 16, 28, 14, 21, 17, 25, 13, 19]
-TAG_COLORS = [LIGHT_TEXT, LIGHT_WORD_GRAY, "#3A3F52", "#A5A9B3", "#000000"]
+TAG_COLORS = [LIGHT_TEXT, LIGHT_WORD_GRAY, "#3A3F52", "#7A7F8C", "#000000"]
 
 
 def _draw_tags(slide, data: dict, ctx: RenderContext) -> None:
@@ -1503,6 +1513,22 @@ LAYOUT_RENDERERS = {
 
 # ── Pontos de entrada ────────────────────────────────────────────────────────
 
+def _set_theme_link_colors(prs, color: str) -> None:
+    '''PowerPoint e LibreOffice pintam hyperlinks com a cor ``hlink`` do tema, ignorando a cor do texto.'''
+    from pptx.opc.constants import RELATIONSHIP_TYPE as RT
+    from lxml import etree
+
+    theme_part = prs.slide_master.part.part_related_by(RT.THEME)
+    root = etree.fromstring(theme_part.blob)
+    ns = {"a": "http://schemas.openxmlformats.org/drawingml/2006/main"}
+    for tag in ("hlink", "folHlink"):
+        for node in root.iterfind(f".//a:clrScheme/a:{tag}", ns):
+            for child in list(node):
+                node.remove(child)
+            etree.SubElement(node, f"{{{ns['a']}}}srgbClr", val=color.lstrip("#").upper())
+    theme_part._blob = etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True)
+
+
 def criar_apresentacao(presentation: dict, caminho_saida: str | Path, assets_dir: str | Path | None = None) -> Path:
     """Renderiza os slides em PPTX 16:9 no padrão visual SIT Barueri e retorna o caminho do arquivo.
 
@@ -1515,6 +1541,7 @@ def criar_apresentacao(presentation: dict, caminho_saida: str | Path, assets_dir
     prs = Presentation()
     prs.slide_width = Inches(SLIDE_WIDTH_IN)
     prs.slide_height = Inches(SLIDE_HEIGHT_IN)
+    _set_theme_link_colors(prs, LINK_BLUE)
     blank_layout = prs.slide_layouts[6]
     warnings: list[str] = []
     ods = sorted({int(v) for v in (presentation.get("ods") or []) if str(v).isdigit() and 1 <= int(v) <= 17})

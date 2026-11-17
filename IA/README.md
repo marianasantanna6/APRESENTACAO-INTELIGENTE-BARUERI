@@ -42,7 +42,7 @@ Os estados `failed` e `no_results` distinguem falha de consulta de uma busca sem
 
 ### Iniciar localmente
 
-Com Python 3.15 instalado, a partir da raiz do projeto no PowerShell:
+Com Python 3.13 instalado, a partir da raiz do projeto no PowerShell. Não use Python 3.15: várias dependências (por exemplo `zstandard`, `pydantic-core`, `PyYAML`) ainda não têm pacotes para ele, e um venv 3.15 com pacotes copiados de 3.13 falha ao importar `lxml`/`Pillow`.
 
 ```powershell
 py -3.13 -m venv .venv
@@ -50,7 +50,7 @@ py -3.13 -m venv .venv
 .\.venv\Scripts\python.exe -B -m uvicorn api:app --app-dir IA\src --host 127.0.0.1 --port 8000
 ```
 
-No Linux/macOS, use `python3.15 -m venv .venv` e `.venv/bin/python -B -m uvicorn api:app --app-dir IA/src --host 127.0.0.1 --port 8000`. A opção `-B` impede que esse processo Python grave arquivos `.pyc` ou diretórios `__pycache__`; ela não apaga arquivos de cache que já existam. O serviço escuta em `127.0.0.1:8000` para desenvolvimento local; `GET /health` deve retornar `{"status":"ok"}`. O arquivo `.python-version` registra o alvo informado: `3.15.0`.
+No Linux/macOS, use `python3.13 -m venv .venv` e `.venv/bin/python -B -m uvicorn api:app --app-dir IA/src --host 127.0.0.1 --port 8000`. A opção `-B` impede que esse processo Python grave arquivos `.pyc` ou diretórios `__pycache__`; ela não apaga arquivos de cache que já existam. O serviço escuta em `127.0.0.1:8000` para desenvolvimento local; `GET /health` deve retornar `{"status":"ok"}`.
 
 ### Endpoints implementados
 
@@ -129,6 +129,17 @@ Erros: `422` para corpo inválido; `502` quando fontes suficientes ou a geraçã
 #### `GET /presentations/{presentation_id}`
 
 Baixa o arquivo criado pela pesquisa. O identificador precisa ser o UUID recebido em `POST /research`; o serviço responde `200` com `application/vnd.openxmlformats-officedocument.presentationml.presentation`, ou `404` quando o PPTX não está no diretório local `output/`.
+
+#### `GET /presentations/{presentation_id}/slides/{numero}` e `GET /presentations/{presentation_id}/pdf`
+
+Imagens (WebP, 1920×1080) de cada slide do próprio PPTX e o PDF da apresentação. A resposta de `POST /research` lista essas rotas em `slide_images` (na ordem dos slides, incluindo referências) e `pdf_url`. O backend as copia para o Supabase e grava as URLs em `slides_json.imagens_slides` e `slides_json.pdf_url`; o modo apresentador da interface exibe essas imagens, ou seja, exatamente os mesmos slides do arquivo baixado.
+
+A conversão usa o **LibreOffice** em modo headless (PPTX → PDF) e o `pypdfium2` (PDF → imagens). Requisitos no servidor da IA:
+
+- LibreOffice instalado (`soffice` no `PATH`, no caminho padrão do Windows/Linux, ou em `LIBREOFFICE_PATH`). No Debian/Ubuntu: `apt-get install -y libreoffice-impress`.
+- Fonte **Montserrat** instalada no sistema (títulos dos slides); sem ela o LibreOffice usa outra fonte nas imagens. No Linux, copie os `.ttf` para `/usr/local/share/fonts/` e rode `fc-cache -f`.
+
+Se o LibreOffice não estiver disponível ou a conversão falhar, a geração continua: `slide_images` vem vazio, um aviso é adicionado a `presentation.limitacoes` e a interface volta a exibir os cards montados a partir do JSON. A conversão leva cerca de 10–25 s por apresentação; o backend usa timeout de 240 s em `POST /research`.
 
 O backend chama `http://127.0.0.1:8000` quando ambos estão no mesmo host. Em contêineres ou hospedagem separada, deve usar o nome/endereço privado definido pela equipe de implantação; não existe variável de ambiente de URL de backend ou frontend no código Python.
 

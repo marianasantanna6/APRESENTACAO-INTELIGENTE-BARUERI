@@ -140,3 +140,6 @@ class PresentationResult:
     sources: list[ResearchSource] = field(default_factory=list)
     claims: list[ClaimEvidence] = field(default_factory=list)
     source_status: list[dict[str, Any]] = field(default_factory=list)
+    # Pré-visualização: imagens dos slides do próprio PPTX (vazia se a conversão não estiver disponível).
+    slide_images: list[Path] = field(default_factory=list)
+    pdf_path: Path | None = None

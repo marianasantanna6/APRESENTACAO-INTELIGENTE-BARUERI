@@ -19,6 +19,7 @@ from config.settings import DEFAULT_GEMINI_MODEL, GEMINI_FALLBACK_MODELS, OUTPUT
 from services.claim_service import build_claim_evidence
 from services.presentation_service import validate_presentation
 from services.pptx_generator import criar_apresentacao, validate_pptx_file
+from services.slide_render_service import render_presentation_images
 from services.research_context import merge_research_context
 from services.sources.registry import collect_current_sources
 from services.supabase_service import search_research_memories, store_research
@@ -327,6 +328,13 @@ def generate_research(
         except (OSError, ValueError, KeyError, TypeError) as exc:
             print(f"[ERRO] A apresentação foi validada, mas não pôde ser renderizada ou salva: {exc}")
             return None
+
+        # Imagens dos slides para o modo apresentador da interface (mesmo conteúdo do PPTX).
+        rendered = render_presentation_images(caminho, caminho.with_suffix(""))
+        if not rendered.ok:
+            apresentacao["limitacoes"].append(
+                f"A pré-visualização em imagens não foi gerada: {rendered.error}."
+            )
         for limitacao in apresentacao["limitacoes"]:
             print(f"[LIMITAÇÃO] {limitacao}")
         return PresentationResult(
@@ -337,6 +345,8 @@ def generate_research(
             sources=contexto.fontes,
             claims=claims,
             source_status=source_status,
+            slide_images=rendered.images if rendered.ok else [],
+            pdf_path=rendered.pdf_path if rendered.ok else None,
         )
 
     if ultimo_erro is not None and _gemini_status(ultimo_erro) == 429:
