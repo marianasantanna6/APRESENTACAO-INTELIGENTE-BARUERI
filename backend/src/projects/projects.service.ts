@@ -1317,6 +1317,7 @@ export class ProjectsService {
         user: project.user.toString(),
         team: project.team.toString(),
         version: project.version.toString(),
+        family: project.family.toString(),
         slides_url: project.slides_url,
         slides_json: project.slides_json ?? null,
         short_description: project.short_description,

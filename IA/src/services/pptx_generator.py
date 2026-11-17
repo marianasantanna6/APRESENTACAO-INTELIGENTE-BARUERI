@@ -1,5 +1,6 @@
 '''Renderiza dados de apresentação como PPTX seguindo o visual dos cards web (IaSlideCard).'''
 
+import io
 from pathlib import Path
 import re
 
@@ -13,6 +14,7 @@ from pptx.util import Inches, Pt
 
 from config.pptx_style import load_style_guide
 from config.settings import ASSETS_DIR, PRESENTATION_CONTACT, PROJECT_ROOT
+from services.chart_generator import generate_kpi_chart
 
 
 SLIDE_WIDTH_IN  = 40 / 3   # 13.33"
@@ -263,8 +265,11 @@ def _add_bullets(slide, pontos: list[str], x: float, y: float, w: float, h: floa
         add_text_box(slide, point, x + 0.18, ry, w - 0.18, row_h, font_size, False, text_color)
 
 
-def _add_image_panel(slide, data: dict, x: float, y: float, w: float, h: float, assets_dir: Path) -> None:
-    """Renders an image panel; falls back to placeholder."""
+def _add_image_panel(
+    slide, data: dict, x: float, y: float, w: float, h: float, assets_dir: Path,
+    *, chart_stream: io.BytesIO | None = None,
+) -> None:
+    """Renders an image panel; falls back to chart stream, then placeholder."""
     requested = data.get("_imagem_arquivo") or "foto_conteudo.png"
     image = _asset(requested, assets_dir)
     panel = slide.shapes.add_shape(
@@ -276,6 +281,16 @@ def _add_image_panel(slide, data: dict, x: float, y: float, w: float, h: float, 
     if image:
         _add_picture(slide, image, x + 0.06, y + 0.06, w - 0.12, h - 0.12, fill=True)
         return
+    if chart_stream is not None:
+        try:
+            slide.shapes.add_picture(
+                chart_stream,
+                Inches(x + 0.06), Inches(y + 0.06),
+                Inches(w - 0.12), Inches(h - 0.12),
+            )
+            return
+        except Exception:
+            pass
     caption = data.get("imagem_descricao") or "Imagem de apoio pendente"
     add_text_box(slide, "IMAGEM / GRÁFICO", x + 0.3, y + h * 0.33, w - 0.6, 0.4,
                  14, True, C_BLUE, PP_ALIGN.CENTER)
@@ -340,6 +355,19 @@ def _draw_municipality(slide, data: dict, style: dict, guide: dict, assets: Path
     if kpis:
         _add_kpis_web(slide, kpis, 0.45, text_y, 12.3)
         text_y = 3.6
+        # Gráfico de barras abaixo dos chips de KPI quando há dados suficientes
+        if len(kpis) >= 2:
+            chart_stream = generate_kpi_chart(kpis)
+            if chart_stream:
+                try:
+                    slide.shapes.add_picture(
+                        chart_stream,
+                        Inches(0.45), Inches(text_y),
+                        Inches(12.3), Inches(2.6),
+                    )
+                    text_y += 2.7
+                except Exception:
+                    pass
     support = data.get("texto_apoio") or ""
     if support:
         add_text_box(slide, support, 0.45, text_y, 12.3, 0.72, 14, False, C_TEXT_MED)
@@ -395,10 +423,13 @@ def _draw_content(slide, data: dict, style: dict, guide: dict, assets: Path) -> 
     _add_badge(slide, idx, "conteudo_com_metrica", 0.45, 0.35)
     title = data.get("titulo") or ""
     add_text_box(slide, title, 0.45, 0.9, 12.3, 1.0, 26, True, C_TEXT)
-    _add_image_panel(slide, data, 0.4, 2.05, 5.6, 4.9, assets)
+    kpis = data.get("kpis") or []
+    # Gera gráfico matplotlib como painel esquerdo quando não há imagem de arquivo
+    has_image_file = bool(_asset(data.get("_imagem_arquivo") or "foto_conteudo.png", assets))
+    chart_stream = generate_kpi_chart(kpis) if kpis and not has_image_file else None
+    _add_image_panel(slide, data, 0.4, 2.05, 5.6, 4.9, assets, chart_stream=chart_stream)
     rx, rw = 6.35, SLIDE_WIDTH_IN - 6.35 - 0.4
     text_y = 2.05
-    kpis = data.get("kpis") or []
     if kpis:
         _add_kpis_web(slide, kpis, rx, text_y, rw)
         text_y += 1.6
