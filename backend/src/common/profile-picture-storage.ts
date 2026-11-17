@@ -78,6 +78,7 @@ export async function uploadProfilePicture(
         method: 'POST',
         headers: {
           apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
           'Content-Type': mimeType,
           'x-upsert': 'false',
         },
