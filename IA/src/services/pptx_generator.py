@@ -36,6 +36,20 @@ C_TEXT_LIGHT = _C(0x9c, 0xa3, 0xaf)  # #9ca3af  light gray text
 C_WHITE      = _C(0xFF, 0xFF, 0xFF)
 C_SLATE      = _C(0x47, 0x55, 0x69)  # #475569
 
+# ── SIT Barueri brand palette (estiliza_o_e_configura_o_pptx.md) ─────────────
+C_NAVY_DARK   = _C(0x05, 0x08, 0x2A)  # #05082A  fundo_primario (cover, divider, end)
+C_NAVY_MED    = _C(0x0A, 0x12, 0x30)  # #0A1230  fundo_secundario
+C_NAVY_BLUE   = _C(0x0A, 0x1F, 0x5C)  # #0A1F5C  azul_navy
+C_BLUE_MED    = _C(0x14, 0x60, 0xA8)  # #1460A8  azul_medio
+C_TEAL        = _C(0x00, 0xA9, 0x9D)  # #00A99D  verde_teal (KPI accent 1)
+C_YELLOW      = _C(0xF5, 0xC5, 0x18)  # #F5C518  amarelo_destaque (KPI accent 2)
+C_ORANGE      = _C(0xF5, 0xA6, 0x23)  # #F5A623  laranja_acento (KPI accent 3)
+C_GRAY_ON_DARK = _C(0xB0, 0xBA, 0xC8)  # #B0BAC8  cinza_texto (body on dark bg)
+C_LIGHT_ON_DARK = _C(0xE8, 0xED, 0xF5)  # #E8EDF5  subtitulo on dark bg
+
+# KPI accent colors — rotated per chip for visual variety
+_KPI_ACCENTS = [C_TEAL, C_YELLOW, C_ORANGE]
+
 LAYOUT_LABELS: dict[str, str] = {
     "capa":                    "Capa",
     "encerramento":            "Encerramento",
@@ -220,8 +234,9 @@ def _add_badge(slide, number: int, layout: str, x: float, y: float, *, dark_bg: 
     run.font.color.rgb = text_color
 
 
-def _add_kpis_web(slide, kpis: list[dict], x: float, y: float, w: float) -> None:
-    """Renders KPI chips matching the web card (#eff6ff bg, #1675b8 value)."""
+def _add_kpis_web(slide, kpis: list[dict], x: float, y: float, w: float, *,
+                  dark_bg: bool = False) -> None:
+    """Renders KPI chips with accent color rotation (teal/yellow/orange)."""
     if not kpis:
         return
     count  = min(len(kpis), 3)
@@ -233,24 +248,36 @@ def _add_kpis_web(slide, kpis: list[dict], x: float, y: float, w: float) -> None
             MSO_SHAPE.ROUNDED_RECTANGLE, Inches(cx), Inches(y), Inches(card_w), Inches(1.35)
         )
         card.fill.solid()
-        card.fill.fore_color.rgb = C_LIGHT_BLUE
-        card.line.color.rgb = C_KPI_BORDER
+        accent = _KPI_ACCENTS[i % len(_KPI_ACCENTS)]
+        if dark_bg:
+            card.fill.fore_color.rgb = C_NAVY_MED
+            card.line.color.rgb = C_NAVY_BLUE
+            label_color = C_GRAY_ON_DARK
+            ctx_color   = C_GRAY_ON_DARK
+        else:
+            card.fill.fore_color.rgb = C_LIGHT_BLUE
+            card.line.color.rgb = C_KPI_BORDER
+            label_color = C_TEXT_MED
+            ctx_color   = C_TEXT_LIGHT
         value = str(item.get("valor", ""))
         unit  = str(item.get("unidade") or "")
         label = str(item.get("label", ""))
         ctx   = str(item.get("contexto") or "")
         num   = f"{value}{unit}" if unit else value
         fs    = 36 if len(num) <= 6 else max(22, 36 - (len(num) - 6) * 3)
-        add_text_box(slide, num,          cx + 0.1, y + 0.1,  card_w - 0.2, 0.68, fs, True,  C_BLUE, PP_ALIGN.CENTER)
-        add_text_box(slide, label.upper(), cx + 0.1, y + 0.84, card_w - 0.2, 0.3,  9,  True,  C_TEXT_MED, PP_ALIGN.CENTER)
+        add_text_box(slide, num,           cx + 0.1, y + 0.1,  card_w - 0.2, 0.68, fs, True,  accent,      PP_ALIGN.CENTER)
+        add_text_box(slide, label.upper(), cx + 0.1, y + 0.84, card_w - 0.2, 0.3,  9,  True,  label_color, PP_ALIGN.CENTER)
         if ctx:
-            add_text_box(slide, ctx,       cx + 0.1, y + 1.15, card_w - 0.2, 0.3,  8,  False, C_TEXT_LIGHT, PP_ALIGN.CENTER)
+            add_text_box(slide, ctx,       cx + 0.1, y + 1.15, card_w - 0.2, 0.3,  8,  False, ctx_color,   PP_ALIGN.CENTER)
 
 
 def _add_bullets(slide, pontos: list[str], x: float, y: float, w: float, h: float,
-                 font_size: float = 13, text_color: RGBColor | None = None) -> None:
-    """Renders bullet points with blue circle markers."""
-    text_color = text_color or C_TEXT_GRAY
+                 font_size: float = 13, text_color: RGBColor | None = None, *,
+                 dark_bg: bool = False) -> None:
+    """Renders bullet points with circle markers."""
+    if text_color is None:
+        text_color = C_GRAY_ON_DARK if dark_bg else C_TEXT_GRAY
+    dot_color = C_TEAL if dark_bg else C_BLUE
     row_h = max(0.28, font_size / 72 * 1.5 + 0.08)
     for i, point in enumerate(pontos):
         ry = y + i * row_h
@@ -260,7 +287,7 @@ def _add_bullets(slide, pontos: list[str], x: float, y: float, w: float, h: floa
             MSO_SHAPE.OVAL, Inches(x), Inches(ry + 0.1), Inches(0.1), Inches(0.1)
         )
         dot.fill.solid()
-        dot.fill.fore_color.rgb = C_BLUE
+        dot.fill.fore_color.rgb = dot_color
         dot.line.fill.background()
         add_text_box(slide, point, x + 0.18, ry, w - 0.18, row_h, font_size, False, text_color)
 
@@ -311,10 +338,11 @@ def _add_branding(slide, assets_dir: Path, *, light: bool = False) -> None:
             x += picture.width / 914400 + 0.12
             found = True
     if not found:
+        # light=False → dark-bg slide → use lighter gray; light=True → white-bg slide
+        text_col = C_TEXT_LIGHT if light else C_GRAY_ON_DARK
         add_text_box(
             slide, "PREFEITURA DE BARUERI  •  SECRETARIA DE INOVAÇÃO E TECNOLOGIA",
-            0.35, 7.1, 7.9, 0.28, 8, True,
-            C_TEXT_LIGHT if light else C_TEXT_LIGHT,
+            0.35, 7.1, 7.9, 0.28, 8, True, text_col,
         )
 
 
@@ -329,18 +357,27 @@ def _add_source_footer(slide, data: dict, assets_dir: Path, *, light: bool = Fal
 # ── Slide renderers ───────────────────────────────────────────────────────────
 
 def _draw_cover(slide, data: dict, style: dict, guide: dict, assets: Path) -> None:
-    add_background_rect(slide, C_BLUE)
-    idx   = data.get("_slide_index", 1)
-    _add_badge(slide, idx, "capa", 0.45, 0.4, dark_bg=True)
+    add_background_rect(slide, C_NAVY_DARK)
+    # accent stripe along the left edge
+    strip = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE, 0, 0, Inches(0.18), Inches(SLIDE_HEIGHT_IN)
+    )
+    strip.fill.solid()
+    strip.fill.fore_color.rgb = C_TEAL
+    strip.line.fill.background()
+    idx = data.get("_slide_index", 1)
+    _add_badge(slide, idx, "capa", 0.45, 0.35, dark_bg=True)
+    # pre-title label
+    add_text_box(slide, "PREFEITURA DE", 0.65, 2.0, 12.0, 0.5, 20, True, C_GRAY_ON_DARK)
     title = data.get("titulo") or "APRESENTAÇÃO"
-    fs    = 54 if len(title) <= 32 else 44
-    add_text_box(slide, title.upper(), 0.65, 2.1, 12.0, 1.6, fs, True, C_WHITE)
+    fs = 68 if len(title) <= 22 else (54 if len(title) <= 32 else 44)
+    add_text_box(slide, title.upper(), 0.65, 2.52, 12.0, 1.8, fs, True, C_WHITE)
     subtitle = data.get("subtitulo") or ""
     if subtitle:
-        add_text_box(slide, subtitle, 0.65, 3.9, 12.0, 0.75, 22, False, C_WHITE)
+        add_text_box(slide, subtitle, 0.65, 4.42, 12.0, 0.75, 20, False, C_LIGHT_ON_DARK)
     support = data.get("texto_apoio") or ""
     if support and support != subtitle:
-        add_text_box(slide, support, 0.65, 4.78, 11.5, 0.65, 16, False, C_WHITE)
+        add_text_box(slide, support, 0.65, 5.22, 11.5, 0.65, 14, False, C_GRAY_ON_DARK)
     _add_branding(slide, assets)
 
 
@@ -379,38 +416,33 @@ def _draw_municipality(slide, data: dict, style: dict, guide: dict, assets: Path
 
 
 def _draw_divider(slide, data: dict, style: dict, guide: dict, assets: Path) -> None:
-    add_background_rect(slide, C_LIGHT_GRAY)
-    strip = slide.shapes.add_shape(
-        MSO_SHAPE.RECTANGLE, 0, 0, Inches(0.22), Inches(SLIDE_HEIGHT_IN)
-    )
-    strip.fill.solid()
-    strip.fill.fore_color.rgb = C_BLUE
-    strip.line.fill.background()
+    add_background_rect(slide, C_NAVY_DARK)
     idx = data.get("_slide_index", 1)
-    _add_badge(slide, idx, "divisor_secao", 0.5, 0.38)
+    _add_badge(slide, idx, "divisor_secao", 0.5, 0.38, dark_bg=True)
     subtitle = data.get("subtitulo") or ""
     if subtitle:
         add_text_box(slide, subtitle.upper(), 0.5, 2.1, 12.5, 0.72,
-                     26, True, C_TEXT_LIGHT, italic=True)
+                     22, True, C_GRAY_ON_DARK, italic=True)
     title = data.get("titulo") or "SEÇÃO"
-    add_text_box(slide, title, 0.5, 2.9, 12.5, 1.3, 48, True, C_BLUE)
+    fs_title = 56 if len(title) <= 20 else (48 if len(title) <= 32 else 38)
+    add_text_box(slide, title.upper(), 0.5, 2.85, 12.5, 1.5, fs_title, True, C_WHITE)
     support = data.get("texto_apoio") or ""
     if support:
-        add_text_box(slide, support, 0.5, 4.38, 12.5, 0.65, 14, False, C_TEXT_MED)
-    # colored bottom stripe from guide (fallback to brand colors)
+        add_text_box(slide, support, 0.5, 4.5, 12.5, 0.65, 14, False, C_GRAY_ON_DARK)
+    # bottom color stripe — SIT Barueri accent colors (teal, yellow, orange, blue)
     catalog_colors: list[str] = []
     for el in guide.get("catalogo_de_layouts", {}).get("divisor_secao", {}).get("elementos", []):
         if el.get("cores"):
             catalog_colors = el["cores"]
             break
     if not catalog_colors:
-        catalog_colors = ["#1675b8", "#16a34a", "#f59e0b", "#ef4444"]
+        catalog_colors = ["#00A99D", "#F5C518", "#F5A623", "#1460A8"]
     seg_w = SLIDE_WIDTH_IN / len(catalog_colors)
     for i, c in enumerate(catalog_colors):
         rect = slide.shapes.add_shape(
             MSO_SHAPE.RECTANGLE,
-            Inches(i * seg_w), Inches(SLIDE_HEIGHT_IN - 0.2),
-            Inches(seg_w), Inches(0.2)
+            Inches(i * seg_w), Inches(SLIDE_HEIGHT_IN - 0.25),
+            Inches(seg_w), Inches(0.25)
         )
         rect.fill.solid()
         rect.fill.fore_color.rgb = _color(c)
@@ -444,14 +476,14 @@ def _draw_content(slide, data: dict, style: dict, guide: dict, assets: Path) -> 
 
 
 def _draw_quote(slide, data: dict, style: dict, guide: dict, assets: Path) -> None:
-    add_background_rect(slide, C_DARK_BLUE)
+    add_background_rect(slide, C_NAVY_MED)
     idx = data.get("_slide_index", 1)
     _add_badge(slide, idx, "destaque_citacao", 0.45, 0.4, dark_bg=True)
     quote = data.get("citacao") or {}
     citation_text = quote.get("texto") if isinstance(quote, dict) else ""
     main_text = citation_text or data.get("texto_apoio") or data.get("titulo") or ""
     # decorative opening quote mark
-    add_text_box(slide, "“", 0.5, 0.75, 1.5, 1.5, 120, True, C_BLUE)
+    add_text_box(slide, "“", 0.5, 0.75, 1.5, 1.5, 120, True, C_TEAL)
     displayed = f"“{main_text}”" if citation_text else main_text
     add_text_box(slide, displayed, 0.65, 1.8, 12.0, 2.5, 32, True, C_WHITE,
                  italic=bool(citation_text))
@@ -584,7 +616,14 @@ def _draw_recognition(slide, data: dict, style: dict, guide: dict, assets: Path)
 
 
 def _draw_end(slide, data: dict, style: dict, guide: dict, assets: Path) -> None:
-    add_background_rect(slide, C_GREEN)
+    add_background_rect(slide, C_NAVY_DARK)
+    # decorative teal accent line above title
+    accent_line = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE, Inches(2.0), Inches(0.75), Inches(9.33), Inches(0.06)
+    )
+    accent_line.fill.solid()
+    accent_line.fill.fore_color.rgb = C_TEAL
+    accent_line.line.fill.background()
     idx = data.get("_slide_index", 1)
     _add_badge(slide, idx, "encerramento", 0.45, 0.4, dark_bg=True)
     title = data.get("titulo") or "OBRIGADO"
