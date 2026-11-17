@@ -29,7 +29,7 @@
       "amarelo_texto": "#FFD700"
     },
     "barra_inferior_ods": {
-      "uso": "Presente nos slides de conteúdo; ausente na capa, referências e encerramento.",
+      "uso": "Mostra apenas as ODS marcadas pelo usuário no projeto (campo ods do DTO), na capa, nos slides de conteúdo/indicadores/infográfico/reconhecimento e, com os nomes, no encerramento; sem ODS marcadas, nada é exibido. Ícones oficiais opcionais em assets/ods_01.png … ods_17.png; sem eles, o sistema desenha os quadrados nas cores oficiais.",
       "ods_icons_url_placeholder": "ods_goals_strip.png",
       "logos_adicionais": [
         "onubr.png",

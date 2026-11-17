@@ -10,6 +10,8 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 PPTX_STYLE_GUIDE_PATH = PROJECT_ROOT / "estiliza_o_e_configura_o_pptx.md"
 ASSETS_DIR = PROJECT_ROOT / "assets"
+# Recursos versionados (ex.: brasão de Barueri) — sempre disponíveis, ao contrário de assets/.
+RESOURCES_DIR = PROJECT_ROOT / "resources"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 PRESENTATION_CONTACT = {
     "nome": os.getenv("PRESENTATION_CONTACT_NAME", ""),

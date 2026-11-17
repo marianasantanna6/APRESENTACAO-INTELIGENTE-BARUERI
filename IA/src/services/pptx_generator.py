@@ -35,7 +35,7 @@ from pptx.oxml.xmlchemy import OxmlElement
 from pptx.util import Emu, Inches, Pt
 
 from config.pptx_style import load_style_guide, visual_limits
-from config.settings import ASSETS_DIR, PRESENTATION_CONTACT, PROJECT_ROOT
+from config.settings import ASSETS_DIR, PRESENTATION_CONTACT, PROJECT_ROOT, RESOURCES_DIR
 from services.chart_generator import chartable_kpis, generate_kpi_chart
 
 
@@ -81,7 +81,29 @@ FONT_TITLE = "Montserrat"
 FONT_BODY = "Calibri"
 
 LOGO_FILES = ["prefeitura_barueri.png", "sit.png", "inovacao_barueri.png", "tv_inovacao.png"]
-ODS_FILES = ["ods_goals_strip.png", "ods_strip.png"]
+BRASAO_FILE = RESOURCES_DIR / "brasao_barueri.png"
+BRAND_BLUE = "#1675B8"      # azul da marca do app (BarueriLogo, variante clara)
+
+# ODS da ONU — cores oficiais e nomes em português (ONU Brasil).
+ODS_INFO = {
+    1: ("#E5243B", "Erradicação da pobreza"),
+    2: ("#DDA63A", "Fome zero e agricultura sustentável"),
+    3: ("#4C9F38", "Saúde e bem-estar"),
+    4: ("#C5192D", "Educação de qualidade"),
+    5: ("#FF3A21", "Igualdade de gênero"),
+    6: ("#26BDE2", "Água potável e saneamento"),
+    7: ("#FCC30B", "Energia limpa e acessível"),
+    8: ("#A21942", "Trabalho decente e crescimento econômico"),
+    9: ("#FD6925", "Indústria, inovação e infraestrutura"),
+    10: ("#DD1367", "Redução das desigualdades"),
+    11: ("#FD9D24", "Cidades e comunidades sustentáveis"),
+    12: ("#BF8B2E", "Consumo e produção responsáveis"),
+    13: ("#3F7E44", "Ação contra a mudança global do clima"),
+    14: ("#0A97D9", "Vida na água"),
+    15: ("#56C02B", "Vida terrestre"),
+    16: ("#00689D", "Paz, justiça e instituições eficazes"),
+    17: ("#19486A", "Parcerias e meios de implementação"),
+}
 MIN_IMAGE_PX = (800, 500)   # regras_de_conteudo_e_concisao.imagens.qualidade_minima_px
 REFERENCES_PER_PAGE = 8
 
@@ -94,6 +116,7 @@ class RenderContext:
     limits: dict
     assets: Path
     warnings: list[str] = field(default_factory=list)
+    ods: list[int] = field(default_factory=list)
 
     def warn(self, message: str) -> None:
         text = f"Slide {self.slide_number}: {message}"
@@ -577,45 +600,117 @@ def place_image(slide, source, x: float, y: float, w: float, h: float, *, mode: 
 
 # ── Elementos institucionais ─────────────────────────────────────────────────
 
+def _mark_lines(h: float) -> list[tuple[str, float, bool]]:
+    return [("PREFEITURA DE", h * 72 * 0.2, True), ("BARUERI", h * 72 * 0.38, True),
+            ("SECRETARIA DE INOVAÇÃO E TECNOLOGIA", h * 72 * 0.13, True)]
+
+
+def _barueri_mark_width(assets: Path, h: float) -> float:
+    official = _asset("prefeitura_barueri.png", assets)
+    size = _image_size(official) if official else None
+    if size and size[1]:
+        return h * size[0] / size[1]
+    size = _image_size(BRASAO_FILE) if BRASAO_FILE.is_file() else None
+    crest_w = h * size[0] / size[1] if size and size[1] else 0.0
+    text_w = max(text_width_in(t, s, FONT_TITLE, b) for t, s, b in _mark_lines(h))
+    return crest_w + (0.1 if crest_w else 0.0) + text_w
+
+
+def _draw_barueri_mark(slide, assets: Path, x: float, y: float, h: float, *, dark_bg: bool) -> float:
+    '''Marca da Prefeitura: logo oficial (assets/prefeitura_barueri.png) ou brasão + assinatura,
+    como o componente BarueriLogo do app. Retorna a largura usada.'''
+    official = _asset("prefeitura_barueri.png", assets)
+    if official and place_image(slide, official, x, y, _barueri_mark_width(assets, h), h, name="logo_barueri"):
+        return _barueri_mark_width(assets, h)
+    cx = x
+    if BRASAO_FILE.is_file():
+        size = _image_size(BRASAO_FILE)
+        crest_w = h * size[0] / size[1]
+        place_image(slide, BRASAO_FILE, cx, y, crest_w, h, name="logo_barueri")
+        cx += crest_w + 0.1
+    colors = ([TEXT_SOFT, WHITE, TEXT_MUTED] if dark_bg else [BRAND_BLUE, BRAND_BLUE, LIGHT_MUTED])
+    line_y = y + h * 0.04
+    for (text, size, bold), color in zip(_mark_lines(h), colors):
+        line_h = size * 1.12 / 72
+        width = text_width_in(text, size, FONT_TITLE, bold) + 0.02
+        add_text(slide, text, cx, line_y, width, line_h, size=size, bold=bold, color=color, face=FONT_TITLE,
+                 max_lines=1, spacing=1.0, wrap=False, name="logo_barueri_texto")
+        line_y += line_h + h * 0.04
+    return _barueri_mark_width(assets, h)
+
+
 def _logo_group(slide, assets: Path, x: float, y: float, w: float, h: float, *, align: str = "right",
-                dark_bg: bool = True, names: list[str] | None = None) -> None:
-    '''Logos institucionais lado a lado; sem arquivos, usa a assinatura textual da SIT.'''
-    paths = [p for p in (_asset(n, assets) for n in (names or LOGO_FILES)) if p]
-    sizes = [(p, _image_size(p)) for p in paths]
+                dark_bg: bool = True, names: list[str] | None = None, mark: bool = True) -> None:
+    '''Marca de Barueri (sempre, quando ``mark``) seguida dos demais logos institucionais disponíveis.'''
+    others = [n for n in (names or LOGO_FILES) if n != "prefeitura_barueri.png"]
+    sizes = [(p, _image_size(p)) for p in (_asset(n, assets) for n in others) if p]
     sizes = [(p, s) for p, s in sizes if s and s[1]]
-    if sizes:
-        gap = 0.18
-        logo_h = h
-        widths = [logo_h * s[0] / s[1] for _, s in sizes]
-        total = sum(widths) + gap * (len(widths) - 1)
-        if total > w:
-            scale = (w - gap * (len(widths) - 1)) / sum(widths)
-            logo_h *= scale
-            widths = [wd * scale for wd in widths]
-            total = w
-        cx = x + (w - total if align == "right" else 0)
-        for (path, _), wd in zip(sizes, widths):
-            place_image(slide, path, cx, y + (h - logo_h) / 2, wd, logo_h, name="logo")
-            cx += wd + gap
+    gap = 0.22
+    logo_h = h
+    for _ in range(12):  # reduz a altura até o grupo caber na largura disponível
+        widths = ([_barueri_mark_width(assets, logo_h)] if mark else []) + [logo_h * s[0] / s[1] for _, s in sizes]
+        total = sum(widths) + gap * max(0, len(widths) - 1)
+        if total <= w or logo_h <= h * 0.5:
+            break
+        logo_h *= 0.92
+    if not widths:
         return
-    color = WHITE if dark_bg else LIGHT_TEXT
-    sub = TEXT_SOFT if dark_bg else LIGHT_MUTED
-    pp_align = PP_ALIGN.RIGHT if align == "right" else PP_ALIGN.LEFT
-    add_text(slide, "PREFEITURA DE BARUERI", x, y, w, h * 0.55, size=14, min_size=9, bold=True,
-             color=color, face=FONT_TITLE, align=pp_align, anchor=MSO_ANCHOR.BOTTOM, max_lines=1,
-             name="assinatura_prefeitura")
-    add_text(slide, "SECRETARIA DE INOVAÇÃO E TECNOLOGIA", x, y + h * 0.55, w, h * 0.45, size=9,
-             min_size=7, bold=True, italic=True, color=sub, face=FONT_TITLE, align=pp_align,
-             max_lines=1, name="assinatura_sit")
+    cx = x + (w - total if align == "right" else 0)
+    cy = y + (h - logo_h) / 2
+    if mark:
+        cx += _draw_barueri_mark(slide, assets, cx, cy, logo_h, dark_bg=dark_bg) + gap
+    for (path, _), wd in zip(sizes, widths[1 if mark else 0:]):
+        place_image(slide, path, cx, cy, wd, logo_h, name="logo")
+        cx += wd + gap
 
 
-def _ods_strip(slide, assets: Path, x: float, y: float, w: float, h: float) -> None:
-    '''Faixa ODS apenas com o arquivo oficial (não fabrica alinhamento a ODS sem o asset).'''
-    for name in ODS_FILES:
-        path = _asset(name, assets)
-        if path:
-            place_image(slide, path, x, y, w, h, mode="contain", name="logo")
-            return
+def _ods_strip(slide, ctx: RenderContext, x: float, y: float, w: float, h: float, *, dark: bool = True,
+               align: str = "right", titles: bool = False) -> None:
+    '''Ícones das ODS escolhidas pelo usuário no projeto (nada é exibido sem escolha).
+
+    Usa os ícones oficiais quando existirem em assets (``ods_01.png`` … ``ods_17.png``); senão desenha
+    o quadrado na cor oficial com número e, se couber, o nome do objetivo.'''
+    goals = [g for g in ctx.ods if g in ODS_INFO]
+    if not goals:
+        return
+    label = "OBJETIVOS DE DESENVOLVIMENTO SUSTENTÁVEL DA ONU"
+    label_h = 0.2
+    add_text(slide, label, x, y, w, label_h, size=7.5, min_size=6, bold=True, face=FONT_TITLE,
+             color=TEXT_MUTED if dark else LIGHT_MUTED, max_lines=1,
+             align=PP_ALIGN.RIGHT if align == "right" else (PP_ALIGN.CENTER if align == "center" else PP_ALIGN.LEFT),
+             name="ods_rotulo")
+    avail_h, gap, n = h - label_h - 0.04, 0.05, len(goals)
+    best = None
+    for rows in (1, 2, 3):
+        cols = math.ceil(n / rows)
+        tile = min((avail_h - gap * (rows - 1)) / rows, (w - gap * (cols - 1)) / cols)
+        if best is None or tile > best[0] + 1e-6:
+            best = (tile, rows, cols)
+    tile, rows, cols = best
+    tile = min(tile, 1.15)
+    row_w = cols * tile + gap * (cols - 1)
+    x0 = x + {"right": w - row_w, "center": (w - row_w) / 2}.get(align, 0)
+    y0 = y + label_h + 0.04
+    for i, goal in enumerate(goals):
+        r, c = divmod(i, cols)
+        tx, ty = x0 + c * (tile + gap), y0 + r * (tile + gap)
+        icon = _asset(f"ods_{goal:02d}.png", ctx.assets)
+        if icon and place_image(slide, icon, tx, ty, tile, tile, mode="contain", name="logo"):
+            continue
+        color, name = ODS_INFO[goal]
+        _rect(slide, tx, ty, tile, tile, color, name=f"ods_{goal:02d}")
+        if titles and tile >= 0.75:
+            num_size = tile * 72 * 0.34
+            add_text(slide, str(goal), tx + tile * 0.07, ty + tile * 0.04, tile * 0.86, num_size * 1.05 / 72,
+                     size=num_size, min_size=num_size * 0.6, bold=True, face=FONT_TITLE, max_lines=1,
+                     spacing=1.0, wrap=False, name="ods_numero")
+            add_text(slide, name.upper(), tx + tile * 0.07, ty + tile * 0.06 + num_size * 1.05 / 72,
+                     tile * 0.86, tile * 0.5, size=tile * 72 * 0.085, min_size=4.5, bold=True,
+                     face=FONT_TITLE, spacing=1.05, name="ods_titulo")
+        else:
+            add_text(slide, str(goal), tx, ty, tile, tile, size=tile * 72 * 0.5, min_size=tile * 72 * 0.3,
+                     bold=True, face=FONT_TITLE, align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, max_lines=1, spacing=1.0, wrap=False,
+                     name="ods_numero")
 
 
 def _sources_footer(slide, data: dict, x: float, y: float, w: float, *, dark: bool = True) -> None:
@@ -924,7 +1019,7 @@ def _draw_cover(slide, data: dict, ctx: RenderContext) -> None:
 
     _rect(slide, 0, 6.5, SLIDE_WIDTH_IN, 1.0, "#05082A", alpha=0.55, name="barra_logos")
     _logo_group(slide, assets, MARGIN_X, 6.65, 6.5, 0.7, align="left")
-    _ods_strip(slide, assets, 8.6, 6.6, CONTENT_RIGHT - 8.6, 0.8)
+    _ods_strip(slide, ctx, 7.6, 6.55, CONTENT_RIGHT - 7.6, 0.85)
 
 
 def _draw_divider(slide, data: dict, ctx: RenderContext) -> None:
@@ -943,7 +1038,7 @@ def _draw_divider(slide, data: dict, ctx: RenderContext) -> None:
 
     _logo_group(slide, assets, MARGIN_X, 0.3, 5.0, 0.62, align="left", names=LOGO_FILES[:2])
     if any(_asset(n, assets) for n in LOGO_FILES[2:]):
-        _logo_group(slide, assets, 8.3, 0.3, CONTENT_RIGHT - 8.3, 0.62, names=LOGO_FILES[2:])
+        _logo_group(slide, assets, 8.3, 0.3, CONTENT_RIGHT - 8.3, 0.62, names=LOGO_FILES[2:], mark=False)
 
     title = data.get("titulo") or "SEÇÃO"
     subtitle = data.get("subtitulo") or ""
@@ -1028,7 +1123,7 @@ def _draw_content(slide, data: dict, ctx: RenderContext) -> None:
                    ctx, max_pt=60, force_stack=True)
     _text_column(slide, data, rx, y, rw, CONTENT_BOTTOM, ctx, center=y == CONTENT_TOP)
     _sources_footer(slide, data, MARGIN_X, FOOTER_Y, 6.1)
-    _ods_strip(slide, ctx.assets, 9.3, FOOTER_Y - 0.05, CONTENT_RIGHT - 9.3, 0.75)
+    _ods_strip(slide, ctx, 9.3, FOOTER_Y - 0.05, CONTENT_RIGHT - 9.3, 0.75)
 
 
 def _draw_municipality(slide, data: dict, ctx: RenderContext) -> None:
@@ -1045,7 +1140,7 @@ def _draw_municipality(slide, data: dict, ctx: RenderContext) -> None:
                    max_pt=54, maximum=maximum, force_stack=True)
         _text_column(slide, data, MARGIN_X + 6.55, CONTENT_TOP, CONTENT_RIGHT - MARGIN_X - 6.55, CONTENT_BOTTOM, ctx)
         _sources_footer(slide, data, MARGIN_X, FOOTER_Y, 6.1)
-        _ods_strip(slide, ctx.assets, 9.3, FOOTER_Y - 0.05, CONTENT_RIGHT - 9.3, 0.75)
+        _ods_strip(slide, ctx, 9.3, FOOTER_Y - 0.05, CONTENT_RIGHT - 9.3, 0.75)
         return
     if kpis:
         kpi_h = min(_kpi_block_height(kpis, CONTENT_RIGHT - MARGIN_X, ctx, maximum) + 0.3, 2.9)
@@ -1062,7 +1157,7 @@ def _draw_municipality(slide, data: dict, ctx: RenderContext) -> None:
     else:
         _text_column(slide, data, MARGIN_X, y, CONTENT_RIGHT - MARGIN_X, CONTENT_BOTTOM, ctx)
     _sources_footer(slide, data, MARGIN_X, FOOTER_Y, 6.1)
-    _ods_strip(slide, ctx.assets, 9.3, FOOTER_Y - 0.05, CONTENT_RIGHT - 9.3, 0.75)
+    _ods_strip(slide, ctx, 9.3, FOOTER_Y - 0.05, CONTENT_RIGHT - 9.3, 0.75)
 
 
 def _draw_quote(slide, data: dict, ctx: RenderContext) -> None:
@@ -1249,7 +1344,7 @@ def _draw_infographic(slide, data: dict, ctx: RenderContext) -> None:
     else:
         _text_column(slide, data, MARGIN_X, text_top, CONTENT_RIGHT - MARGIN_X, CONTENT_BOTTOM, ctx)
     _sources_footer(slide, data, MARGIN_X, FOOTER_Y, 8.0)
-    _ods_strip(slide, ctx.assets, 9.3, FOOTER_Y - 0.05, CONTENT_RIGHT - 9.3, 0.75)
+    _ods_strip(slide, ctx, 9.3, FOOTER_Y - 0.05, CONTENT_RIGHT - 9.3, 0.75)
 
 
 def _draw_map(slide, data: dict, ctx: RenderContext) -> None:
@@ -1316,7 +1411,7 @@ def _draw_recognition(slide, data: dict, ctx: RenderContext) -> None:
                          color=TEXT_MUTED, align=PP_ALIGN.CENTER, ctx=ctx,
                          what=f"a descrição do reconhecimento {i + 1}", name="premio_descricao")
     _sources_footer(slide, data, MARGIN_X, FOOTER_Y, 8.0)
-    _ods_strip(slide, ctx.assets, 9.3, FOOTER_Y - 0.05, CONTENT_RIGHT - 9.3, 0.75)
+    _ods_strip(slide, ctx, 9.3, FOOTER_Y - 0.05, CONTENT_RIGHT - 9.3, 0.75)
 
 
 def _draw_end(slide, data: dict, ctx: RenderContext) -> None:
@@ -1325,7 +1420,7 @@ def _draw_end(slide, data: dict, ctx: RenderContext) -> None:
     qr = _asset("qr_code_contato.png", assets)
     if qr:
         place_image(slide, qr, MARGIN_X, 0.3, 1.2, 1.2, mode="contain", name="logo")
-    _ods_strip(slide, assets, 8.4, 0.3, CONTENT_RIGHT - 8.4, 0.8)
+    _ods_strip(slide, ctx, 6.4, 0.3, CONTENT_RIGHT - 6.4, 1.2, dark=False, titles=True)
     band_top = 6.0
     _rect(slide, 0, band_top, SLIDE_WIDTH_IN, SLIDE_HEIGHT_IN - band_top, WHITE, name="faixa_logos")
     _logo_group(slide, assets, 6.2, band_top + 0.3, CONTENT_RIGHT - 6.2, 0.75, dark_bg=False)
@@ -1422,10 +1517,11 @@ def criar_apresentacao(presentation: dict, caminho_saida: str | Path, assets_dir
     prs.slide_height = Inches(SLIDE_HEIGHT_IN)
     blank_layout = prs.slide_layouts[6]
     warnings: list[str] = []
+    ods = sorted({int(v) for v in (presentation.get("ods") or []) if str(v).isdigit() and 1 <= int(v) <= 17})
 
     def new_context() -> RenderContext:
         return RenderContext(slide_number=len(prs.slides._sldIdLst), limits=limits, assets=assets_path,
-                             warnings=warnings)
+                             warnings=warnings, ods=ods)
 
     slides = presentation["slides"]
     end_index = next(

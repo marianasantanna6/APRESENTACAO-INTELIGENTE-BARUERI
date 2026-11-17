@@ -56,6 +56,13 @@ def _output_path(title: str, presentation_id: str | None = None) -> Path:
     return OUTPUT_DIR / f"{slug}_{timestamp}.pptx"
 
 
+def _selected_ods(request_context: dict | None) -> list[int]:
+    """ODS marcadas pelo usuário no projeto (1–17), sem repetição e em ordem."""
+    project = (request_context or {}).get("projeto") or {}
+    values = project.get("ods") or []
+    return sorted({int(v) for v in values if isinstance(v, int) and 1 <= v <= 17})
+
+
 def _exception_chain(exc: Exception):
     current = exc
     visited = set()
@@ -303,6 +310,11 @@ def generate_research(
                 "Não foi possível consultar estas fontes durante a pesquisa: "
                 f"{', '.join(failed_sources)}."
             )
+
+        # As ODS vêm da escolha do usuário no projeto, nunca do modelo.
+        selected_ods = _selected_ods(request_context)
+        if selected_ods:
+            apresentacao["ods"] = selected_ods
 
         try:
             caminho = criar_apresentacao(
