@@ -43,6 +43,10 @@ class ResearchGenerationError(RuntimeError):
         super().__init__(message)
 
 
+# Respostas do modelo que violam o contrato/limites recebem até 2 pedidos de correção.
+MAX_GENERATION_ATTEMPTS_PER_MODEL = 3
+
+
 class ResearchModelRateLimitError(RuntimeError):
     """O provedor recusou a geração por limite de requisições/quota."""
 
@@ -238,7 +242,8 @@ def generate_research(
         }
         apresentacao = None
         claims = []
-        for tentativa in range(2):
+        for tentativa in range(MAX_GENERATION_ATTEMPTS_PER_MODEL):
+            pode_corrigir = tentativa < MAX_GENERATION_ATTEMPTS_PER_MODEL - 1
             try:
                 resposta = call_with_retry(
                     lambda: chain.invoke(entradas),
@@ -251,7 +256,7 @@ def generate_research(
                 )
             except OutputParserException as exc:
                 ultimo_erro = exc
-                if tentativa == 0:
+                if pode_corrigir:
                     entradas["feedback_validacao"] = f"A resposta não é um JSON válido: {exc}"
                     print(f"[AVISO] O modelo {modelo} retornou JSON inválido; tentando corrigir a resposta.")
                     continue
@@ -262,11 +267,14 @@ def generate_research(
                     raise
                 ultimo_erro = exc
                 print(f"[AVISO] O modelo {modelo} falhou ao gerar a resposta ({type(exc).__name__}).")
-                if _gemini_status(exc) == 429:
-                    break
-                if not _transient_gemini_error(exc):
-                    print("[ERRO] Falha permanente do provedor/modelo; não serão feitas novas chamadas de modelo.")
+                status = _gemini_status(exc)
+                if status in {401, 403}:
+                    # Credencial inválida ou sem permissão: nenhum outro modelo funcionaria.
+                    print("[ERRO] Falha de autenticação no provedor; não serão feitas novas chamadas de modelo.")
                     return None
+                if status == 404:
+                    print(f"[AVISO] O modelo {modelo} não existe ou foi descontinuado; tentando o próximo.")
+                # 429, 5xx, tempo esgotado ou modelo indisponível: tenta o próximo modelo da lista.
                 break
 
             try:
@@ -275,7 +283,7 @@ def generate_research(
                 apresentacao = candidate
             except ValueError as exc:
                 ultimo_erro = exc
-                if tentativa == 0:
+                if pode_corrigir:
                     entradas["resposta_anterior"] = json.dumps(resposta, ensure_ascii=False)
                     entradas["feedback_validacao"] = _repair_feedback(exc)
                     print(f"[AVISO] O modelo {modelo} retornou conteúdo inválido; tentando corrigir: {exc}")
