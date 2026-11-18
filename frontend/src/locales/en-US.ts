@@ -107,7 +107,7 @@ const enUS: I18nTranslations = {
       "Enhanced keyboard navigation disabled. The site remains navigable by Tab.",
     atalhosTitulo: "Active shortcuts",
     atalhosTeclas:
-      "Alt+1 Projects, Alt+2 My Account, Alt+3 Settings, Alt+4 Create Presentation, Alt+5 Data (when available).",
+      "Alt+1 Projects, Alt+2 My Account, Alt+3 Settings, Alt+4 Create Presentation, Alt+5 Administration (when available).",
     acessibilidadeInfo:
       "When active, keyboard navigation reinforces visible focus and enables shortcuts Alt+1 through Alt+5 to navigate the system.",
 

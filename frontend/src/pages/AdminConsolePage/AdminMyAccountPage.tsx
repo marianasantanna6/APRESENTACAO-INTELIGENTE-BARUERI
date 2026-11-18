@@ -47,12 +47,6 @@ const initialPasswordForm: PasswordFormState = {
   confirmPassword: "",
 };
 
-function waitForMockRequest(duration = 850) {
-  return new Promise<void>((resolve) => {
-    window.setTimeout(resolve, duration);
-  });
-}
-
 function LoadingLabel({ children }: { children: string }) {
   return (
     <>
@@ -247,8 +241,8 @@ export default function AdminMyAccountPage() {
       return "Preencha a senha atual, a nova senha e a confirmação.";
     }
 
-    if (passwordForm.newPassword.trim().length < 6) {
-      return "A nova senha precisa ter pelo menos 6 caracteres.";
+    if (passwordForm.newPassword.trim().length < 8) {
+      return "A nova senha precisa ter pelo menos 8 caracteres.";
     }
 
     if (passwordForm.newPassword === passwordForm.currentPassword) {
@@ -273,9 +267,8 @@ export default function AdminMyAccountPage() {
     }
 
     setIsSavingPassword(true);
-    await waitForMockRequest();
 
-    const result = changePassword({
+    const result = await changePassword({
       currentPassword: passwordForm.currentPassword,
       newPassword: passwordForm.newPassword,
     });

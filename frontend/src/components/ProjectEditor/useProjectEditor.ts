@@ -13,10 +13,8 @@ import type {
   OdsGoal,
   ProjectAward,
   ProjectCategory,
-  ProjectImage,
   ProjectIndicator,
   ProjectOfficialLink,
-  ProjectVideo,
   GovernmentArea,
   ProjectStatus,
 } from "../../types/project";
@@ -204,51 +202,6 @@ export function useProjectEditor(
     patch({ indicators: draft.indicators.filter((i) => i.id !== id) });
   }
 
-  // Imagens (mock upload — data URL simulada)
-  function addImage(file: File) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const url = e.target?.result as string;
-      const img: ProjectImage = {
-        id: generateId("img", file.name),
-        url,
-        caption: "",
-        isPrimary: draft.images.length === 0,
-        uploadedAt: new Date().toISOString(),
-      };
-      patch({ images: [...draft.images, img] });
-    };
-    reader.readAsDataURL(file);
-  }
-  function updateImage(id: string, changes: Partial<ProjectImage>) {
-    patch({ images: draft.images.map((i) => (i.id === id ? { ...i, ...changes } : i)) });
-  }
-  function removeImage(id: string) {
-    patch({ images: draft.images.filter((i) => i.id !== id) });
-  }
-  function setPrimaryImage(id: string) {
-    patch({
-      images: draft.images.map((i) => ({ ...i, isPrimary: i.id === id })),
-    });
-  }
-
-  // Vídeos
-  function addVideo() {
-    const vid: ProjectVideo = {
-      id: generateId("vid", draft.name || "proj"),
-      url: "",
-      title: "",
-      caption: "",
-    };
-    patch({ videos: [...draft.videos, vid] });
-  }
-  function updateVideo(id: string, changes: Partial<ProjectVideo>) {
-    patch({ videos: draft.videos.map((v) => (v.id === id ? { ...v, ...changes } : v)) });
-  }
-  function removeVideo(id: string) {
-    patch({ videos: draft.videos.filter((v) => v.id !== id) });
-  }
-
   // Links oficiais
   function addLink(url: string) {
     let label = url;
@@ -326,10 +279,6 @@ export function useProjectEditor(
     triggerSave,
     // Indicadores
     addIndicator, updateIndicator, removeIndicator,
-    // Imagens
-    addImage, updateImage, removeImage, setPrimaryImage,
-    // Vídeos
-    addVideo, updateVideo, removeVideo,
     // Links
     addLink, updateLink, removeLink,
     // Prêmios

@@ -34,8 +34,7 @@ export function canAccessPathForUser(
   }
 
   if (
-    requestedPath.startsWith(ROUTE_PATHS.adminData)
-    || requestedPath.startsWith(ROUTE_PATHS.adminAdministration)
+    requestedPath.startsWith(ROUTE_PATHS.adminAdministration)
     || requestedPath === ROUTE_PATHS.adminRoot
   ) {
     return canAccessAdminModules(user);

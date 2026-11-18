@@ -7,4 +7,3 @@ export { EMPTY_FILTERS } from "./ProjectFiltersBar";
 export { RoleBanner } from "./RoleBanner";
 export { ProjectViewModal } from "./ProjectViewModal";
 export { ConfirmDeleteModal } from "./ConfirmDeleteModal";
-export { AddToPresentationModal } from "./AddToPresentationModal";

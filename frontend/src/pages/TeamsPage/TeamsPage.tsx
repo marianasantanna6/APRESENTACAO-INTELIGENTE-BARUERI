@@ -281,7 +281,7 @@ export default function TeamsPage() {
 
   function handleViewPresentation(project: DraftProject) {
     setDetailProject(null);
-    navigate(`${ROUTE_PATHS.generatedPresentation}?id=${project.id}&returnTo=${ROUTE_PATHS.teams}`);
+    navigate(`${ROUTE_PATHS.generatedPresentation}?pid=${project.id}&returnTo=${ROUTE_PATHS.teams}`);
   }
 
   async function confirmRejectAction() {

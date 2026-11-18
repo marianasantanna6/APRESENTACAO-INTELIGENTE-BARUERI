@@ -1,10 +1,6 @@
 import type { PropsWithChildren } from "react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { canManageEmployees, canViewCrossTeamData, mapAccessLevel } from "../lib/accessControl";
-import {
-  mockApiIntegrations,
-  mockPresentations,
-} from "../mocks/adminMockData";
 import { authFetch } from "../lib/apiClient";
 import type { ActivityLogEntry, EmployeeDirectoryEntry, NewEmployeePayload, NewSetorPayload, NewTimePayload, SetorEntry, TimeEntry } from "../types/admin";
 import { useAuth } from "./AuthContext";
@@ -17,9 +13,7 @@ type EmployeeMutationResult = MutationResult;
 
 type AdminConsoleContextValue = {
   activityLog: ActivityLogEntry[];
-  apiIntegrations: typeof mockApiIntegrations;
   employees: EmployeeDirectoryEntry[];
-  presentations: typeof mockPresentations;
   setores: SetorEntry[];
   times: TimeEntry[];
   canManageEmployees: boolean;
@@ -47,8 +41,6 @@ function isInstitutionalEmail(value: string) {
 
 export function AdminConsoleProvider({ children }: PropsWithChildren) {
   const { user } = useAuth();
-  const [presentationsState] = useState(mockPresentations);
-  const [apiIntegrations] = useState(mockApiIntegrations);
   const [employeesState, setEmployeesState] = useState<EmployeeDirectoryEntry[]>([]);
   const [activityLogState, setActivityLogState] = useState<ActivityLogEntry[]>([]);
   const [setoresState, setSetoresState] = useState<SetorEntry[]>([]);
@@ -132,16 +124,6 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
   const allowCrossTeamData = canViewCrossTeamData(user);
   const allowEmployeeManagement = canManageEmployees(user);
   const allowHardDelete = !!(user?.head_manager || user?.master_admin);
-
-  const presentations = useMemo(
-    () =>
-      user
-        ? presentationsState.filter(
-            (presentation) => presentation.ownerUserId === user.id,
-          )
-        : [],
-    [presentationsState, user],
-  );
 
   const employees = useMemo(() => {
     if (!user) return [];
@@ -340,9 +322,7 @@ export function AdminConsoleProvider({ children }: PropsWithChildren) {
     <AdminConsoleContext.Provider
       value={{
         activityLog,
-        apiIntegrations,
         employees,
-        presentations,
         setores: setoresState,
         times: timesState,
         canManageEmployees: allowEmployeeManagement,

@@ -212,7 +212,6 @@ function ProjectCard({ project }: { project: ProjectSummary }) {
 
   function goToPresentation() {
     const params = new URLSearchParams({ pid: project.id });
-    if (project.slidesUrl) params.set("dlUrl", project.slidesUrl);
     navigate(`${ROUTE_PATHS.generatedPresentation}?${params.toString()}`);
   }
 

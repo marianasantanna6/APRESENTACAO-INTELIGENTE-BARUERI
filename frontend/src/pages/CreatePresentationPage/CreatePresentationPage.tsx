@@ -19,7 +19,6 @@ import {
   FiEdit2,
   FiFileText,
   FiGlobe,
-  FiImage,
   FiLink,
   FiLoader,
   FiTag,
@@ -29,26 +28,22 @@ import {
   FiX,
 } from "react-icons/fi";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { DEFAULT_PRESENTATION_FILTERS } from "../../api/presentation";
 import AuthenticatedHeader from "../../components/AuthenticatedHeader";
 import { AwardsSection } from "../../components/ProjectEditor/sections/AwardsSection";
 import { ClassificationSection } from "../../components/ProjectEditor/sections/ClassificationSection";
 import { IdentitySection } from "../../components/ProjectEditor/sections/IdentitySection";
 import { IndicatorsSection } from "../../components/ProjectEditor/sections/IndicatorsSection";
 import { LinksSection } from "../../components/ProjectEditor/sections/LinksSection";
-import { MediaSection } from "../../components/ProjectEditor/sections/MediaSection";
 import { OdsSection } from "../../components/ProjectEditor/sections/OdsSection";
 import { useProjectEditor } from "../../components/ProjectEditor/useProjectEditor";
 import { AdminConsoleContext } from "../../context/AdminConsoleContext";
 import { useAuth } from "../../context";
 import { canCreatePresentations } from "../../lib/accessControl";
 import { getPresentationsRouteForUser } from "../../lib/authRouting";
-import { templateService } from "../../services/templateService";
 import type { EventType } from "../../types/institutionalPresentation";
 import type { ProjectCategory } from "../../types/project";
 import { authFetch } from "../../lib/apiClient";
 import { ROUTE_PATHS } from "../../router/paths";
-import { buildPresentationSearchParams } from "../../router/presentationSearchParams";
 
 // ─── Dados estáticos ─────────────────────────────────────────────────────────
 
@@ -112,13 +107,12 @@ function CreatePresentationPage() {
   const [eventName, setEventName]   = useState("");
   const [eventType, setEventType]   = useState<EventType | "">("");
   const [audience, setAudience]     = useState("");
-  const [search, setSearch]         = useState(DEFAULT_PRESENTATION_FILTERS.query);
+  const [search, setSearch]         = useState("");
 
   // Categoria primária = primeira da lista; secundárias = restantes
   const primaryCategory = (ed.draft.categories[0] ?? "Todos") as string;
 
   // ── Template pré-carregado ──
-  const [templateBanner, setTemplateBanner] = useState<string | null>(null);
 
   // ── Validação etapa 1 ──
   const [step1Error, setStep1Error] = useState("");
@@ -202,25 +196,6 @@ function CreatePresentationPage() {
   // ── Salvando ──
   const [isSaving, setIsSaving]   = useState(false);
   const [saveError, setSaveError] = useState("");
-
-  // Pré-preenche o wizard a partir de um template (quando ?templateId= está na URL)
-  useEffect(() => {
-    const templateId = searchParams.get("templateId");
-    if (!templateId) return;
-
-    templateService.getTemplateById(templateId).then((template) => {
-      if (!template) return;
-
-      // Etapa 1 — contexto
-      if (template.eventName) setEventName(template.eventName);
-      if (template.eventType) setEventType(template.eventType);
-      if (template.categories.length > 0) {
-        ed.patch({ categories: template.categories });
-      }
-
-      setTemplateBanner(template.name);
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll-spy: destaca seção ativa no nav lateral
   useEffect(() => {
@@ -317,6 +292,8 @@ function CreatePresentationPage() {
         ...(ed.draft.implementationDate ? { implementation_date: ed.draft.implementationDate } : {}),
         ...(ed.draft.awards.length > 0 ? {
           awards: ed.draft.awards.map((a) => ({
+            // O backend exige "name" (CreateAwardDto); sem ele a criação falha com 400.
+            name: a.name || a.organization,
             institution: a.organization || a.name,
             year: parseInt(a.year, 10),
             description: a.description,
@@ -350,14 +327,7 @@ function CreatePresentationPage() {
       const project = await res.json() as { id: string; slides_url?: string };
 
       // Navega diretamente para a página de apresentação gerada
-      const params = buildPresentationSearchParams({
-        query:    search.trim() || DEFAULT_PRESENTATION_FILTERS.query,
-        category: primaryCategory,
-        year:     DEFAULT_PRESENTATION_FILTERS.year,
-      });
-      params.set("pid", project.id);
-      if (project.slides_url) params.set("dlUrl", `/projects/${project.id}/pptx`);
-      navigate(`${ROUTE_PATHS.generatedPresentation}?${params.toString()}`);
+      navigate(`${ROUTE_PATHS.generatedPresentation}?pid=${encodeURIComponent(project.id)}`);
     } catch {
       setSaveError("Erro ao salvar o projeto. Tente novamente.");
     } finally {
@@ -424,27 +394,6 @@ function CreatePresentationPage() {
               </div>
             )}
 
-            {/* Banner de template carregado */}
-            {templateBanner && (
-              <div className="mt-6 flex w-full items-center justify-between gap-3 rounded-2xl border border-[#fde68a] bg-[#fffbeb] px-5 py-3">
-                <div className="flex items-center gap-2.5">
-                  <FiBookOpen className="h-4.5 w-4.5 shrink-0 text-[#d97706]" />
-                  <p className="text-[0.86rem] text-[#92400e]">
-                    Wizard pré-preenchido a partir do template{" "}
-                    <strong className="font-bold">"{templateBanner}"</strong>.{" "}
-                    Revise os campos abaixo e avance quando estiver pronto.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setTemplateBanner(null)}
-                  className="shrink-0 rounded-full p-1 text-[#d97706] hover:bg-[#fde68a]/40"
-                  aria-label="Fechar aviso"
-                >
-                  <FiX className="h-4 w-4" />
-                </button>
-              </div>
-            )}
 
             {/* ── TOP: Search bar + categoria pills + CTA ── */}
             <div className="mt-8 w-full space-y-4">
@@ -532,7 +481,6 @@ function CreatePresentationPage() {
                         { id: "section-identity",       label: "Identidade",      icon: <FiFileText className="h-4 w-4" />,   filled: !!ed.draft.name, required: true },
                         { id: "section-classification", label: "Classificação",   icon: <FiTag className="h-4 w-4" />,        filled: ed.draft.categories.length > 0, required: true },
                         { id: "section-indicators",     label: "Indicadores",     icon: <FiTrendingUp className="h-4 w-4" />, filled: ed.draft.indicators.length > 0 },
-                        { id: "section-media",          label: "Mídia",           icon: <FiImage className="h-4 w-4" />,      filled: ed.draft.images.length + ed.draft.videos.length > 0 },
                         { id: "section-ods",            label: "ODS",             icon: <FiGlobe className="h-4 w-4" />,      filled: ed.draft.ods.length > 0 },
                         { id: "section-links",          label: "Links e Fontes",  icon: <FiLink className="h-4 w-4" />,       filled: ed.draft.officialLinks.length + ed.draft.sources.length > 0 },
                         { id: "section-awards",         label: "Prêmios",         icon: <FiAward className="h-4 w-4" />,      filled: ed.draft.awards.length > 0 },
@@ -683,18 +631,6 @@ function CreatePresentationPage() {
                   onAdd={ed.addIndicator}
                   onUpdate={ed.updateIndicator}
                   onRemove={ed.removeIndicator}
-                />
-
-                <MediaSection
-                  images={ed.draft.images}
-                  videos={ed.draft.videos}
-                  onAddImage={ed.addImage}
-                  onUpdateImage={ed.updateImage}
-                  onRemoveImage={ed.removeImage}
-                  onSetPrimary={ed.setPrimaryImage}
-                  onAddVideo={ed.addVideo}
-                  onUpdateVideo={ed.updateVideo}
-                  onRemoveVideo={ed.removeVideo}
                 />
 
                 <OdsSection

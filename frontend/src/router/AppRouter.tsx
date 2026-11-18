@@ -2,13 +2,10 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import {
   AdminAdministrationPage,
   AdminConsoleLayout,
-  AdminDataPage,
   AdminMyAccountPage,
   AdminProjectsPage,
   AdminSettingsPage,
-  AnalyticsPage,
   InstitutionalProjectsPage,
-  TemplatesPage,
 } from "../pages/AdminConsolePage";
 import CreatePresentationPage from "../pages/CreatePresentationPage";
 import { ForgotPasswordPage } from "../pages/ForgotPasswordPage";
@@ -52,14 +49,6 @@ export function AppRouter() {
             element={<InstitutionalProjectsPage />}
           />
           <Route
-            path={ROUTE_PATHS.templates}
-            element={<TemplatesPage />}
-          />
-          <Route
-            path={ROUTE_PATHS.analytics}
-            element={<AnalyticsPage />}
-          />
-          <Route
             path={ROUTE_PATHS.myAccount}
             element={<AdminMyAccountPage />}
           />
@@ -80,7 +69,6 @@ export function AppRouter() {
               path={ROUTE_PATHS.adminRoot}
               element={<Navigate to={ROUTE_PATHS.presentations} replace />}
             />
-            <Route path={ROUTE_PATHS.adminData} element={<AdminDataPage />} />
             <Route
               path={ROUTE_PATHS.adminAdministration}
               element={<AdminAdministrationPage />}

@@ -50,7 +50,7 @@ function SystemPreferencesRuntime() {
       } else if (event.key === "4" && canSeeCreateFlow) {
         nextPath = ROUTE_PATHS.createPresentation;
       } else if (event.key === "5" && canSeeAdminModules) {
-        nextPath = ROUTE_PATHS.adminData;
+        nextPath = ROUTE_PATHS.adminAdministration;
       }
 
       if (!nextPath || nextPath === location.pathname) {

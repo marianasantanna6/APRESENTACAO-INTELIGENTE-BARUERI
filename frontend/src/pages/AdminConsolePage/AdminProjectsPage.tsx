@@ -288,7 +288,7 @@ function ManagerProjectsView() {
                   {project.slidesUrl && (
                     <button
                       type="button"
-                      onClick={() => navigate(`${ROUTE_PATHS.generatedPresentation}?id=${project.id}&returnTo=${ROUTE_PATHS.presentations}`)}
+                      onClick={() => navigate(`${ROUTE_PATHS.generatedPresentation}?pid=${project.id}&returnTo=${ROUTE_PATHS.presentations}`)}
                       className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-[#1675b8] bg-[rgba(22,117,184,0.06)] py-2 text-[0.82rem] font-semibold text-[#1675b8] transition hover:bg-[rgba(22,117,184,0.12)]"
                     >
                       <FiEye className="h-3.5 w-3.5" />

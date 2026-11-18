@@ -128,7 +128,6 @@ export default function InstitutionalProjectsPage() {
     const summary = projects.find((p) => p.id === id);
     if (summary?.slidesUrl) {
       const params = new URLSearchParams({ pid: id });
-      params.set("dlUrl", summary.slidesUrl);
       params.set("returnTo", ROUTE_PATHS.institutionalProjects);
       navigate(`${ROUTE_PATHS.generatedPresentation}?${params.toString()}`);
       return;

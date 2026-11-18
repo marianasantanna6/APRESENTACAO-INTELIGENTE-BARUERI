@@ -14,7 +14,6 @@ import {
   FiClock,
   FiFileText,
   FiGlobe,
-  FiImage,
   FiLink,
   FiLoader,
   FiTag,
@@ -29,7 +28,6 @@ import { ClassificationSection } from "./sections/ClassificationSection";
 import { IdentitySection } from "./sections/IdentitySection";
 import { IndicatorsSection } from "./sections/IndicatorsSection";
 import { LinksSection } from "./sections/LinksSection";
-import { MediaSection } from "./sections/MediaSection";
 import { OdsSection } from "./sections/OdsSection";
 import { useProjectEditor } from "./useProjectEditor";
 import type { SaveStatus } from "./useProjectEditor";
@@ -123,12 +121,6 @@ export function ProjectEditor({ initial, onClose, onSaved }: Props) {
       label: "Indicadores",
       icon: <FiTrendingUp className="h-4 w-4" />,
       count: ed.draft.indicators.length,
-    },
-    {
-      id: "section-media",
-      label: "Mídia",
-      icon: <FiImage className="h-4 w-4" />,
-      count: ed.draft.images.length + ed.draft.videos.length,
     },
     {
       id: "section-ods",
@@ -313,18 +305,6 @@ export function ProjectEditor({ initial, onClose, onSaved }: Props) {
               onAdd={ed.addIndicator}
               onUpdate={ed.updateIndicator}
               onRemove={ed.removeIndicator}
-            />
-
-            <MediaSection
-              images={ed.draft.images}
-              videos={ed.draft.videos}
-              onAddImage={ed.addImage}
-              onUpdateImage={ed.updateImage}
-              onRemoveImage={ed.removeImage}
-              onSetPrimary={ed.setPrimaryImage}
-              onAddVideo={ed.addVideo}
-              onUpdateVideo={ed.updateVideo}
-              onRemoveVideo={ed.removeVideo}
             />
 
             <OdsSection

@@ -2,13 +2,13 @@ export type UserAccessLevel = "employee" | "admin_level_1" | "admin_level_2";
 
 export type AccountStatus = "active" | "inactive";
 
-export type MockUser = {
+/** Usuário autenticado, montado a partir da resposta de POST /login. */
+export type UserAccount = {
   id: string;
   name: string;
   cpf: string;
   email: string;
   username: string;
-  password: string;
   accessLevel: UserAccessLevel;
   /** Cargo explícito no novo modelo RBAC. Quando presente, tem prioridade sobre accessLevel. */
   role?: string;
@@ -24,4 +24,4 @@ export type MockUser = {
   teams?: Array<{ id: string; name: string; sectorId: string; sectorName: string; areaManager: boolean; approver: boolean }>;
 };
 
-export type AuthSessionUser = Omit<MockUser, "password">;
+export type AuthSessionUser = UserAccount;

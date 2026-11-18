@@ -2,7 +2,7 @@
  * Módulo: Projetos Institucionais
  *
  * Re-exporta tudo que pertence ao domínio de projetos:
- * tipos, serviço, mock e constantes relacionadas.
+ * tipos, serviço e constantes relacionadas.
  * As páginas e componentes deste domínio serão adicionados
  * aqui à medida que forem criados.
  */

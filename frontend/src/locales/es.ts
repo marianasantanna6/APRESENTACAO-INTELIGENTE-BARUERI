@@ -107,7 +107,7 @@ const es: I18nTranslations = {
       "Navegación por teclado reforzada desactivada. El sitio sigue siendo navegable con Tab.",
     atalhosTitulo: "Atajos activos",
     atalhosTeclas:
-      "Alt+1 Proyectos, Alt+2 Mi cuenta, Alt+3 Configuración, Alt+4 Crear presentación, Alt+5 Datos (cuando disponible).",
+      "Alt+1 Proyectos, Alt+2 Mi cuenta, Alt+3 Configuración, Alt+4 Crear presentación, Alt+5 Administración (cuando disponible).",
     acessibilidadeInfo:
       "Cuando está activa, la navegación por teclado refuerza el foco visible y habilita los atajos Alt+1 a Alt+5 para navegar por el sistema.",
 

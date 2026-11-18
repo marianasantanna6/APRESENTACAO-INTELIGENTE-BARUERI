@@ -37,12 +37,6 @@ const secondaryButtonClass =
 const subtlePanelClass =
   "theme-subtle-panel border border-[#edf1f5] bg-[#f9fbfd] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]";
 
-function waitForMockRequest(duration = 850) {
-  return new Promise<void>((resolve) => {
-    window.setTimeout(resolve, duration);
-  });
-}
-
 function LoadingLabel({ children }: { children: string }) {
   return (
     <>
@@ -348,7 +342,6 @@ export default function AdminSettingsPage() {
 
   async function handleSaveSettings() {
     setIsSaving(true);
-    await waitForMockRequest();
 
     const result = savePreferences();
 

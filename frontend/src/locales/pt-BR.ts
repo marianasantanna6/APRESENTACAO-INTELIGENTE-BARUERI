@@ -104,7 +104,7 @@ const ptBR = {
       "Navegação por teclado reforçada desativada. O site continua navegável por Tab.",
     atalhosTitulo: "Atalhos ativos",
     atalhosTeclas:
-      "Alt+1 Projetos, Alt+2 Minha conta, Alt+3 Configurações, Alt+4 Criar apresentação, Alt+5 Dados (quando disponível).",
+      "Alt+1 Projetos, Alt+2 Minha conta, Alt+3 Configurações, Alt+4 Criar apresentação, Alt+5 Administração (quando disponível).",
     acessibilidadeInfo:
       "Quando ativa, a navegação pelo teclado reforça o foco visível e libera atalhos Alt+1, Alt+2, Alt+3, Alt+4 e Alt+5 para navegar pelo sistema.",
 

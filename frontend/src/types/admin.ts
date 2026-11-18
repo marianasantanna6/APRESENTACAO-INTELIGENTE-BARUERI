@@ -7,7 +7,6 @@
  */
 
 import type { AccountStatus, UserAccessLevel } from "./auth";
-import type { PresentationFilters } from "./presentation";
 import type { IntegrationStatus } from "./integration";
 
 // ─── Re-exports para compatibilidade (código existente importa daqui) ────────
@@ -35,7 +34,7 @@ export type AdminPresentationSummary = {
   date: string;
   department: string;
   team: string;
-  filters: PresentationFilters;
+  filters: { query: string; category: string; year: string };
 };
 
 // ─── Integrações de API (listagem admin — legado) ─────────────────────────────
