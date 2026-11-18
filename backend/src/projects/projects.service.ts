@@ -5,6 +5,7 @@ import {
   NotFoundException,
   BadGatewayException,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -21,11 +22,42 @@ type AiPresentationFiles = {
 type StoredFile = { path: string; publicUrl: string };
 
 const AI_BASE_URL = 'http://localhost:8000';
+
+/**
+ * Bucket dos arquivos das apresentações (PPTX, imagens e PDF).
+ * SUPABASE_BUCKET_NAME é o nome antigo da variável (renomeada no commit 011a8c6)
+ * e continua aceito para .env antigos.
+ */
+function slidesBucketName(): string | undefined {
+  return (
+    process.env.SUPABASE_SLIDES_BUCKET || process.env.SUPABASE_BUCKET_NAME
+  );
+}
+
+/** Nomes das variáveis do Supabase que estão faltando no ambiente. */
+function missingSupabaseConfig(): string {
+  const missing = [
+    !process.env.SUPABASE_URL && 'SUPABASE_URL',
+    !process.env.SUPABASE_SECRET_KEY && 'SUPABASE_SECRET_KEY',
+    !slidesBucketName() && 'SUPABASE_SLIDES_BUCKET',
+  ].filter(Boolean);
+  return `Configuração do Supabase incompleta: defina ${missing.join(', ')} no .env do backend`;
+}
 const PPTX_CONTENT_TYPE =
   'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 
+/** Pastas do bucket de apresentações (um arquivo/pasta por apresentação, com o mesmo id). */
+const STORAGE_FOLDERS = {
+  pptx: 'PPTX',
+  json: 'JSON',
+  pdf: 'PDF',
+  images: 'imagens',
+} as const;
+
 @Injectable()
 export class ProjectsService {
+  private readonly logger = new Logger(ProjectsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
   ) {}
@@ -145,11 +177,19 @@ export class ProjectsService {
         const response = await fetch(`${AI_BASE_URL}${path}`, {
           signal: AbortSignal.timeout(30_000),
         });
-        if (!response.ok) return [];
+        if (!response.ok) {
+          this.logger.warn(
+            `Pré-visualização ignorada: a IA respondeu HTTP ${response.status} em ${path}`,
+          );
+          return [];
+        }
         const file = Buffer.from(await response.arrayBuffer());
         if (file.length === 0) return [];
         files.push(file);
-      } catch {
+      } catch (error) {
+        this.logger.warn(
+          `Pré-visualização ignorada: falha ao baixar ${path} da IA (${String(error)})`,
+        );
         return [];
       }
     }
@@ -274,10 +314,10 @@ export class ProjectsService {
 
     const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/+$/, '');
     const supabaseKey = process.env.SUPABASE_SECRET_KEY;
-    const bucketName = process.env.SUPABASE_SLIDES_BUCKET;
+    const bucketName = slidesBucketName();
 
     if (!supabaseUrl || !supabaseKey || !bucketName) {
-      throw new InternalServerErrorException('Configuração do Supabase incompleta');
+      throw new InternalServerErrorException(missingSupabaseConfig());
     }
 
     // Extrai o path relativo da URL pública: .../object/public/{bucket}/{path}
@@ -317,12 +357,10 @@ export class ProjectsService {
     const supabaseUrl =
       process.env.SUPABASE_URL?.replace(/\/+$/, '');
     const supabaseKey = process.env.SUPABASE_SECRET_KEY;
-    const bucketName = process.env.SUPABASE_SLIDES_BUCKET;
+    const bucketName = slidesBucketName();
 
     if (!supabaseUrl || !supabaseKey || !bucketName) {
-      throw new InternalServerErrorException(
-        'Configuração do Supabase incompleta',
-      );
+      throw new InternalServerErrorException(missingSupabaseConfig());
     }
 
     const encodedPath = path
@@ -373,18 +411,19 @@ export class ProjectsService {
   }
 
   /**
-   * Envia o PPTX e, quando existirem, as imagens dos slides e o PDF
-   * ({uuid}.pptx, {uuid}/slide_NN.webp, {uuid}/apresentacao.pdf).
+   * Envia o PPTX e, quando existirem, as imagens dos slides e o PDF:
+   * PPTX/{id}.pptx, imagens/{id}/slide_NN.webp e PDF/{id}.pdf.
    */
   private async uploadPresentationFiles(files: AiPresentationFiles): Promise<{
+    id: string;
     pptx: StoredFile;
     images: StoredFile[];
     pdf: StoredFile | null;
   }> {
-    const folder = randomUUID();
+    const id = randomUUID();
     const pptx = await this.uploadToSupabase(
       files.buffer,
-      `${folder}.pptx`,
+      `${STORAGE_FOLDERS.pptx}/${id}.pptx`,
       PPTX_CONTENT_TYPE,
     );
     const extra: StoredFile[] = [];
@@ -394,7 +433,7 @@ export class ProjectsService {
         const number = String(index + 1).padStart(2, '0');
         const stored = await this.uploadToSupabase(
           image,
-          `${folder}/slide_${number}.webp`,
+          `${STORAGE_FOLDERS.images}/${id}/slide_${number}.webp`,
           'image/webp',
         );
         extra.push(stored);
@@ -404,20 +443,25 @@ export class ProjectsService {
       if (files.pdf) {
         pdf = await this.uploadToSupabase(
           files.pdf,
-          `${folder}/apresentacao.pdf`,
+          `${STORAGE_FOLDERS.pdf}/${id}.pdf`,
           'application/pdf',
         );
         extra.push(pdf);
       }
-      return { pptx, images, pdf };
-    } catch {
+      return { id, pptx, images, pdf };
+    } catch (error) {
       // A pré-visualização é complementar: remove o que subiu e segue só com o PPTX.
+      this.logger.warn(
+        `Imagens/PDF da apresentação não foram enviados ao Supabase: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
       await Promise.all(
         extra.map((file) =>
           this.deletePptxFromSupabase(file.path).catch(() => undefined),
         ),
       );
-      return { pptx, images: [], pdf: null };
+      return { id, pptx, images: [], pdf: null };
     }
   }
 
@@ -427,12 +471,10 @@ export class ProjectsService {
     const supabaseUrl =
       process.env.SUPABASE_URL?.replace(/\/+$/, '');
     const supabaseKey = process.env.SUPABASE_SECRET_KEY;
-    const bucketName = process.env.SUPABASE_SLIDES_BUCKET;
+    const bucketName = slidesBucketName();
 
     if (!supabaseUrl || !supabaseKey || !bucketName) {
-      throw new Error(
-        'Configuração do Supabase incompleta',
-      );
+      throw new Error(missingSupabaseConfig());
     }
 
     const encodedPath = path
@@ -540,6 +582,20 @@ export class ProjectsService {
       imagens_slides: stored.images.map((image) => image.publicUrl),
       pdf_url: stored.pdf?.publicUrl ?? null,
     };
+    // Cópia do JSON da apresentação no bucket (JSON/{id}.json); o banco continua
+    // sendo a fonte usada pela interface, então uma falha aqui não interrompe a criação.
+    const storedJson = await this.uploadToSupabase(
+      Buffer.from(JSON.stringify(slidesJson, null, 2), 'utf-8'),
+      `${STORAGE_FOLDERS.json}/${stored.id}.json`,
+      'application/json',
+    ).catch((error: unknown) => {
+      this.logger.warn(
+        `JSON da apresentação não foi enviado ao Supabase: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return null;
+    });
 
     try {
       return await this.prisma.$transaction(async (tx) => {
@@ -815,7 +871,12 @@ export class ProjectsService {
       // A persistência falhou depois do upload:
       // tenta remover o arquivo do Storage.
       await Promise.all(
-        [storedSlides, ...stored.images, ...(stored.pdf ? [stored.pdf] : [])].map((file) =>
+        [
+          storedSlides,
+          ...stored.images,
+          ...(stored.pdf ? [stored.pdf] : []),
+          ...(storedJson ? [storedJson] : []),
+        ].map((file) =>
           this.deletePptxFromSupabase(file.path).catch(() => undefined),
         ),
       );

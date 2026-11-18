@@ -1,5 +1,5 @@
 
-import { Injectable, ConflictException, ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { normalizeText } from '../../common/normalizer';
@@ -14,6 +14,8 @@ type UpdateManagementInput = {
   email?: string;
   photo?: string | null;
   head_manager?: boolean;
+  /** Nova senha; só pode ser alterada pelo próprio usuário (valida current_password). */
+  new_password?: string;
 };
 
 @Injectable()
@@ -175,6 +177,16 @@ export class ManagementService {
 
     if (data.head_manager !== undefined) {
       updateData.head_manager = data.head_manager;
+    }
+
+    if (data.new_password !== undefined) {
+      if (actor.id !== userId) {
+        throw new ForbiddenException('Só é possível alterar a própria senha');
+      }
+      if (data.new_password.length < 8) {
+        throw new BadRequestException('A senha deve ter pelo menos 8 caracteres');
+      }
+      updateData.password = await bcrypt.hash(data.new_password, 10);
     }
 
     try {

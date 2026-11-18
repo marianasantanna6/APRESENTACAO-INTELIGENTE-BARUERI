@@ -36,6 +36,7 @@ export class ManagementController {
       email?: string;
       photo?: string | null;
       head_manager?: boolean;
+      new_password?: string;
     },
     @Req() req: any,
   ) {
